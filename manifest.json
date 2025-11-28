@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "LLM Chat Exporter",
+  "version": "0.1.0",
+  "description": "ChatGPT, Claude, Gemini 대화를 JSONL로 저장",
+
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads"
+  ],
+
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*"
+  ],
+
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+
+  "commands": {
+    "export-conversation": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "현재 대화를 JSONL로 저장"
+    }
+  }
+}

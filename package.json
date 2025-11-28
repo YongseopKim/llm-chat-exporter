@@ -1,0 +1,34 @@
+{
+  "name": "llm-chat-exporter",
+  "version": "1.0.0",
+  "description": "> ChatGPT, Claude, Gemini 웹 UI의 대화를 단축키 하나로 로컬에 아카이빙하는 Chrome Extension",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YongseopKim/llm-chat-exporter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/YongseopKim/llm-chat-exporter/issues"
+  },
+  "homepage": "https://github.com/YongseopKim/llm-chat-exporter#readme",
+  "devDependencies": {
+    "@types/chrome": "^0.1.31",
+    "@types/turndown": "^5.0.6",
+    "esbuild": "^0.27.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "turndown": "^7.2.2"
+  }
+}

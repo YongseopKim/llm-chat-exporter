@@ -104,16 +104,25 @@ git clone https://github.com/yourusername/llm-chat-exporter.git
 
 ## 프로젝트 상태
 
-🚧 **현재 Phase 1: DOM 셀렉터 검증 단계입니다** 🚧
+🚧 **현재 Phase 2.5: 테스트 환경 구축 단계입니다** 🚧
 
 - [x] 요구사항 정의
 - [x] 아키텍처 설계
-- [x] **Phase 1: DOM 셀렉터 분석 완료** (2025-11-29)
+- [x] **Phase 1: DOM 셀렉터 검증 완료** (2025-11-29)
   - ChatGPT, Claude, Gemini 샘플 HTML 구조 분석
   - 안정적인 셀렉터 우선순위 결정
   - Fallback 전략 수립
-- [ ] Phase 1: 실제 사이트에서 콘솔 검증
-- [ ] Phase 2: 익스텐션 골격 구현
+  - 실제 사이트에서 콘솔 검증 완료 (3개 플랫폼 모두 10개+ 메시지 추출 성공)
+  - [검증 결과 문서](./docs/phase1-validation-results.md)
+- [x] **Phase 2: 익스텐션 골격 구현 완료** (2025-11-29)
+  - TypeScript + esbuild 빌드 환경 구축
+  - manifest.json (Manifest V3)
+  - Background Script (Service Worker) - 단축키 리스너, 동적 Content Script 주입
+  - Content Script - 더미 데이터 반환
+  - 단축키(Ctrl+Shift+E)로 더미 JSONL 다운로드 성공
+- [ ] **Phase 2.5: 테스트 환경 구축** ← 현재
+  - Vitest로 단위 테스트
+  - Puppeteer로 E2E 테스트 (선택)
 - [ ] Phase 3: 핵심 유틸리티 구현
 - [ ] Phase 4: 사이트별 파서 구현
 - [ ] Phase 5: 통합 테스트 및 엣지 케이스 처리

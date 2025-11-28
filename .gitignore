@@ -1,3 +1,17 @@
-.git
+# Claude Code
 .claude
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
 .rsc

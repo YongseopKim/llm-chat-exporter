@@ -22,41 +22,70 @@
 
 ---
 
-### Phase 1: 프로토타입 검증 (최우선)
+### Phase 1: 프로토타입 검증 ✅ 완료 (2025-11-29)
 
 **목표**: 실제 DOM에서 메시지 추출이 가능한지 검증
 
 | 순서 | 작업                      | 체크리스트                                                                                                                         | 예상 난이도 |
 | ---- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1.1  | ChatGPT DOM 분석          | - [ ] 메시지 컨테이너 셀렉터 확인<br>- [ ] role 구분 방법 확인<br>- [ ] 콘텐츠 영역 추출<br>- [ ] 생성 중 버튼 확인                | ⭐ 하        |
-| 1.2  | Claude DOM 분석           | - [ ] 메시지 컨테이너 셀렉터 확인<br>- [ ] role 구분 방법 확인<br>- [ ] Artifacts 패널 구조 파악<br>- [ ] Virtualization 동작 확인 | ⭐⭐ 중       |
-| 1.3  | Gemini DOM 분석           | - [ ] Shadow DOM 사용 여부 확인<br>- [ ] 메시지 컨테이너 셀렉터<br>- [ ] Draft 답변 처리 방법                                      | ⭐⭐ 중       |
-| 1.4  | Console 프로토타입 테스트 | - [ ] 각 사이트에서 `console`로 셀렉터 검증<br>- [ ] 간단한 파싱 스크립트 실행<br>- [ ] Edge Case 확인 (빈 대화, 긴 대화)          | ⭐ 하        |
+| 1.1  | ChatGPT DOM 분석          | - [x] 메시지 컨테이너 셀렉터 확인<br>- [x] role 구분 방법 확인<br>- [x] 콘텐츠 영역 추출<br>- [x] 생성 중 버튼 확인                | ⭐ 하        |
+| 1.2  | Claude DOM 분석           | - [x] 메시지 컨테이너 셀렉터 확인<br>- [x] role 구분 방법 확인<br>- [x] Artifacts 패널 구조 파악<br>- [x] Virtualization 동작 확인 | ⭐⭐ 중       |
+| 1.3  | Gemini DOM 분석           | - [x] Shadow DOM 사용 여부 확인<br>- [x] 메시지 컨테이너 셀렉터<br>- [x] Draft 답변 처리 방법                                      | ⭐⭐ 중       |
+| 1.4  | Console 프로토타입 테스트 | - [x] 각 사이트에서 `console`로 셀렉터 검증<br>- [x] 간단한 파싱 스크립트 실행<br>- [x] Edge Case 확인 (빈 대화, 긴 대화)          | ⭐ 하        |
 
-**산출물**: `docs/dom-selectors.md` (각 사이트의 검증된 셀렉터 목록)
+**산출물**: `docs/phase1-validation-results.md` (검증 결과 문서)
 
-**완료 기준**: 세 사이트 모두에서 콘솔로 최소 10개 메시지 추출 성공
+**완료 기준**: 세 사이트 모두에서 콘솔로 최소 10개 메시지 추출 성공 ✅
+- ChatGPT: 12개 (6 user + 6 assistant)
+- Claude: 11개 (5 user + 6 assistant)
+- Gemini: 12개 (6 user + 6 assistant)
 
 ---
 
-### Phase 2: 익스텐션 골격 구현
+### Phase 2: 익스텐션 골격 구현 ✅ 완료 (2025-11-29)
 
 **목표**: 단축키 → Background → Content Script 메시지 흐름 구현
 
 | 순서 | 작업                | 체크리스트                                                                                                         | 예상 난이도 |
 | ---- | ------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------- |
-| 2.1  | Manifest 작성       | - [ ] manifest.json 생성<br>- [ ] permissions 설정<br>- [ ] commands 등록                                          | ⭐ 하        |
-| 2.2  | Background Script   | - [ ] 단축키 이벤트 리스너<br>- [ ] 현재 탭 URL 확인<br>- [ ] 지원 사이트 판별<br>- [ ] Content Script 메시지 전송 | ⭐ 하        |
-| 2.3  | Content Script 골격 | - [ ] 메시지 리스너 등록<br>- [ ] Background에 응답 반환<br>- [ ] 디버깅 로그 추가                                 | ⭐ 하        |
-| 2.4  | 다운로드 기능       | - [ ] chrome.downloads API 연동<br>- [ ] Blob 생성<br>- [ ] 파일명 생성 (타임스탬프)                               | ⭐ 하        |
-| 2.5  | 통합 테스트         | - [ ] 단축키 누르면 "Hello World" 다운로드<br>- [ ] 세 사이트 모두에서 동작 확인                                   | ⭐ 하        |
+| 2.1  | Manifest 작성       | - [x] manifest.json 생성<br>- [x] permissions 설정<br>- [x] commands 등록                                          | ⭐ 하        |
+| 2.2  | Background Script   | - [x] 단축키 이벤트 리스너<br>- [x] 현재 탭 URL 확인<br>- [x] 지원 사이트 판별<br>- [x] Content Script 동적 주입   | ⭐ 하        |
+| 2.3  | Content Script 골격 | - [x] 메시지 리스너 등록<br>- [x] Background에 응답 반환<br>- [x] 디버깅 로그 추가                                 | ⭐ 하        |
+| 2.4  | 다운로드 기능       | - [x] chrome.downloads API 연동<br>- [x] Data URL 방식 (Service Worker 호환)<br>- [x] 파일명 생성 (타임스탬프)     | ⭐ 하        |
+| 2.5  | 통합 테스트         | - [x] 단축키 누르면 더미 JSONL 다운로드<br>- [x] 세 사이트 모두에서 동작 확인                                      | ⭐ 하        |
 
 **산출물**:
 - `manifest.json`
-- `background.js`
-- `content/index.js` (골격)
+- `src/background.ts` → `dist/background.js`
+- `src/content/index.ts` → `dist/content.js`
+- `package.json`, `tsconfig.json`, `esbuild.config.mjs`
 
-**완료 기준**: 단축키로 더미 텍스트 파일 다운로드 성공
+**완료 기준**: 단축키로 더미 텍스트 파일 다운로드 성공 ✅
+
+---
+
+### Phase 2.5: 테스트 환경 구축
+
+**목표**: 자동화된 테스트 환경 구축으로 수동 테스트 최소화
+
+| 순서  | 작업           | 체크리스트                                                                                       | 예상 난이도 |
+| ----- | -------------- | ------------------------------------------------------------------------------------------------ | ----------- |
+| 2.5.1 | Vitest 설정    | - [ ] vitest 설치<br>- [ ] vitest.config.ts 생성<br>- [ ] chrome API 모킹 setup                  | ⭐ 하        |
+| 2.5.2 | 단위 테스트    | - [ ] background.test.ts (유틸리티 함수)<br>- [ ] content.test.ts                                | ⭐ 하        |
+| 2.5.3 | E2E 테스트     | - [ ] Puppeteer 설정 (선택)<br>- [ ] 전체 플로우 테스트 (선택)                                   | ⭐⭐ 중       |
+
+**기술 스택**:
+- **단위 테스트**: Vitest (ESM 네이티브 지원, esbuild 호환)
+- **E2E 테스트**: Puppeteer (선택)
+- **Chrome API 모킹**: 직접 구현
+
+**산출물**:
+- `vitest.config.ts`
+- `tests/unit/setup.ts`
+- `tests/unit/background.test.ts`
+- `tests/unit/content.test.ts`
+
+**완료 기준**: `npm run test` 성공, 기본 단위 테스트 통과
 
 ---
 
@@ -363,8 +392,9 @@ curl -o turndown.min.js https://unpkg.com/turndown/dist/turndown.js
 - [x] 요구사항 정의서 작성
 - [x] 아키텍처 설계 문서 작성
 - [x] 개발 계획 수립
-- [ ] **Phase 1: DOM 셀렉터 검증**
-- [ ] Phase 2: 익스텐션 골격 구현
+- [x] **Phase 1: DOM 셀렉터 검증** (2025-11-29 완료)
+- [x] **Phase 2: 익스텐션 골격 구현** (2025-11-29 완료)
+- [ ] **Phase 2.5: 테스트 환경 구축** ← 현재 단계
 - [ ] Phase 3: 공통 유틸리티 구현
 - [ ] Phase 4: ChatGPT Parser
 - [ ] Phase 4: Claude Parser
@@ -374,6 +404,6 @@ curl -o turndown.min.js https://unpkg.com/turndown/dist/turndown.js
 
 ---
 
-**다음 작업**: Phase 1.1 - ChatGPT DOM 분석 시작
+**다음 작업**: Phase 2.5.1 - Vitest 설정
 
 💡 **Tip**: 각 Phase를 완료할 때마다 `git commit`으로 체크포인트를 만드세요. DOM 구조 변경 시 이전 버전으로 롤백할 수 있습니다.
