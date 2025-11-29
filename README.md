@@ -106,7 +106,7 @@ git clone https://github.com/yourusername/llm-chat-exporter.git
 
 ## 프로젝트 상태
 
-🚀 **현재 Phase 3: 핵심 유틸리티 구현 단계입니다** 🚀
+🚀 **현재 Phase 4: 플랫폼별 파서 구현 단계입니다** 🚀
 
 - [x] 요구사항 정의
 - [x] 아키텍처 설계
@@ -128,8 +128,17 @@ git clone https://github.com/yourusername/llm-chat-exporter.git
   - E2E 테스트: Puppeteer 설정 (6개)
   - **전체 28개 테스트 통과, 유틸리티 커버리지 100%**
   - [테스트 설정 문서](./TEST_SETUP.md)
-- [ ] **Phase 3: 핵심 유틸리티 구현** ← 다음
-- [ ] Phase 4: 사이트별 파서 구현
+- [x] **Phase 3: 핵심 유틸리티 구현 완료** (2025-11-29)
+  - **Risk-first validation**: 브라우저 테스트로 기술 검증 (Shadow DOM 불필요 확인 → 2시간 절약)
+  - Parser interface & factory (Strategy 패턴)
+  - JSONL serializer (9 tests)
+  - HTML→Markdown converter with Turndown + custom rules (19 tests)
+  - Simplified scroller (fallback 버전, 7 tests)
+  - Integration tests (6 tests)
+  - **전체 82개 테스트 통과** (목표 40+의 205% 달성)
+  - Content script 통합 완료, 브라우저 테스트 성공
+  - [검증 결과 문서](./validation-results.md)
+- [ ] **Phase 4: 사이트별 파서 구현** ← 다음
 - [ ] Phase 5: 통합 테스트 및 엣지 케이스 처리
 
 ---

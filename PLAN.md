@@ -96,27 +96,36 @@
 
 ---
 
-### Phase 3: Parser 인터페이스 및 유틸리티
+### Phase 3: Parser 인터페이스 및 유틸리티 ✅ 완료 (2025-11-29)
 
 **목표**: 공통 로직 구현 (Parser Interface, Scroller, Converter)
 
-| 순서 | 작업                   | 체크리스트                                                                                                | 예상 난이도 |
-| ---- | ---------------------- | --------------------------------------------------------------------------------------------------------- | ----------- |
-| 3.1  | Parser 인터페이스 정의 | - [ ] `ChatParser` interface 작성<br>- [ ] `ParsedMessage` 타입 정의<br>- [ ] `ParserFactory` 클래스 작성 | ⭐ 하        |
-| 3.2  | Scroller 유틸리티      | - [ ] `scrollToLoadAll()` 구현<br>- [ ] MutationObserver 기반 안정화 감지<br>- [ ] Timeout/MaxRetry 추가  | ⭐⭐ 중       |
-| 3.3  | HTML → Markdown 변환   | - [ ] Turndown 라이브러리 추가<br>- [ ] 코드 블록 규칙 커스터마이징<br>- [ ] 테이블 변환 테스트           | ⭐ 하        |
-| 3.4  | JSONL 직렬화           | - [ ] `buildJsonl()` 함수 구현<br>- [ ] 메타데이터 라인 추가<br>- [ ] Timestamp ISO 8601 포맷             | ⭐ 하        |
-| 3.5  | Shadow DOM 유틸리티    | - [ ] `queryShadowSelector()` 구현<br>- [ ] Gemini에서 테스트                                             | ⭐⭐ 중       |
+| 순서 | 작업                   | 체크리스트                                                                                                         | 예상 난이도 |
+| ---- | ---------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------- |
+| 3.0  | **Risk-First 검증**    | - [x] Claude scroller 브라우저 검증 (❌ FAIL → 단순 fallback 채택)<br>- [x] Gemini Shadow DOM 검증 (❌ 불필요 → ~2h 절약)<br>- [x] Turndown 기능 검증 (⚠️ 78% → custom rules 추가) | ⭐⭐ 중       |
+| 3.1  | Parser 인터페이스 정의 | - [x] `ChatParser` interface 작성<br>- [x] `ParsedMessage` 타입 정의<br>- [x] `ParserFactory` 클래스 작성 (13 tests) | ⭐ 하        |
+| 3.2  | Scroller 유틸리티      | - [x] `scrollToLoadAll()` 구현 (simplified fallback)<br>- [x] ~~MutationObserver 기반 안정화 감지~~ (불필요)<br>- [x] Timeout 옵션 추가 (7 tests)  | ⭐⭐ 중       |
+| 3.3  | HTML → Markdown 변환   | - [x] Turndown 라이브러리 추가<br>- [x] 코드 블록 언어 보존 규칙<br>- [x] 테이블 변환 규칙 (19 tests)           | ⭐ 하        |
+| 3.4  | JSONL 직렬화           | - [x] `buildJsonl()` 함수 구현<br>- [x] 메타데이터 라인 추가<br>- [x] Timestamp ISO 8601 포맷 (9 tests)             | ⭐ 하        |
+| 3.5  | ~~Shadow DOM 유틸리티~~    | - [x] ~~`queryShadowSelector()` 구현~~ (브라우저 검증 결과 불필요)<br>- [x] ~~Gemini에서 테스트~~ (Shadow DOM 없음 확인)                                             | ~~⭐⭐ 중~~       |
 
 **산출물**:
-- `content/parsers/interface.ts`
-- `content/parsers/factory.ts`
-- `content/scroller.ts`
-- `content/converter.ts`
-- `content/serializer.ts`
-- `utils/dom.ts`
+- `src/content/parsers/interface.ts` (TypeScript 인터페이스)
+- `src/content/parsers/factory.ts` (13개 테스트)
+- `src/content/scroller.ts` (7개 테스트)
+- `src/content/converter.ts` (19개 테스트, Turndown + 2 custom rules)
+- `src/content/serializer.ts` (9개 테스트)
+- `tests/unit/content-integration.test.ts` (6개 통합 테스트)
+- `validation-results.md` (브라우저 검증 결과 문서)
+- ~~`utils/dom.ts`~~ (불필요, 구현 생략)
 
-**완료 기준**: 유닛 테스트 (console에서) 통과
+**완료 기준**: ✅
+- **전체 82개 테스트 통과** (목표 40+의 205% 달성)
+  - 기존 28개 (Phase 2.5)
+  - 신규 54개 (Phase 3: 13+9+19+7+6)
+- Content script 통합 완료 (`src/content/index.ts`)
+- 브라우저 테스트 성공 (3개 플랫폼, error JSON download 확인)
+- Background script 개선 (error 상황에서도 JSON 다운로드)
 
 ---
 
@@ -402,8 +411,8 @@ curl -o turndown.min.js https://unpkg.com/turndown/dist/turndown.js
 - [x] **Phase 1: DOM 셀렉터 검증** (2025-11-29 완료)
 - [x] **Phase 2: 익스텐션 골격 구현** (2025-11-29 완료)
 - [x] **Phase 2.5: 테스트 환경 구축** (2025-11-29 완료)
-- [ ] **Phase 3: 공통 유틸리티 구현** ← 다음 단계
-- [ ] Phase 4: ChatGPT Parser
+- [x] **Phase 3: 공통 유틸리티 구현** (2025-11-29 완료) ✅
+- [ ] **Phase 4: ChatGPT Parser** ← 다음 단계
 - [ ] Phase 4: Claude Parser
 - [ ] Phase 4: Gemini Parser
 - [ ] Phase 5: 통합 테스트
@@ -411,6 +420,6 @@ curl -o turndown.min.js https://unpkg.com/turndown/dist/turndown.js
 
 ---
 
-**다음 작업**: Phase 3.1 - Parser 인터페이스 정의
+**다음 작업**: Phase 4.1 - ChatGPT Parser 구현
 
 💡 **Tip**: 각 Phase를 완료할 때마다 `git commit`으로 체크포인트를 만드세요. DOM 구조 변경 시 이전 버전으로 롤백할 수 있습니다.
