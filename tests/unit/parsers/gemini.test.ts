@@ -261,39 +261,6 @@ describe('GeminiParser', () => {
   });
 
   // ============================================================
-  // getTitle() - 3 tests
-  // ============================================================
-
-  describe('getTitle', () => {
-    it('should extract title when present', () => {
-      const doc = createDOMFromHTML('<h1>Gemini Conversation</h1>');
-      global.document = doc as any;
-
-      const result = parser.getTitle();
-
-      expect(result).toBe('Gemini Conversation');
-    });
-
-    it('should return null when no title exists', () => {
-      const doc = createDOMFromHTML('<html><body></body></html>');
-      global.document = doc as any;
-
-      const result = parser.getTitle();
-
-      expect(result).toBeNull();
-    });
-
-    it('should return null when title is empty', () => {
-      const doc = createDOMFromHTML('<h1></h1>');
-      global.document = doc as any;
-
-      const result = parser.getTitle();
-
-      expect(result).toBeNull();
-    });
-  });
-
-  // ============================================================
   // loadAllMessages() - 3 tests
   // ============================================================
 

@@ -148,24 +148,6 @@ describe('buildJsonl', () => {
     expect(metaLine._meta).toBe(true);
   });
 
-  it('should include optional title in metadata', () => {
-    const messages: ParsedMessage[] = [
-      { role: 'user', contentHtml: '<p>Hello</p>', timestamp: '2025-11-29T10:00:00Z' }
-    ];
-    const metadata: ExportMetadata = {
-      platform: 'claude',
-      url: 'https://claude.ai/chat/abc',
-      title: 'My Conversation',
-      exported_at: '2025-11-29T10:01:00Z'
-    };
-
-    const jsonl = buildJsonl(messages, metadata);
-    const lines = jsonl.split('\n');
-    const metaLine = JSON.parse(lines[0]);
-
-    expect(metaLine.title).toBe('My Conversation');
-  });
-
   it('should produce valid JSON for each line', () => {
     const messages: ParsedMessage[] = [
       { role: 'user', contentHtml: '<p>Q1</p>', timestamp: '2025-11-29T10:00:00Z' },
@@ -193,7 +175,6 @@ describe('buildJsonl', () => {
     const metadata: ExportMetadata = {
       platform: 'gemini',
       url: 'https://gemini.google.com/app/xyz',
-      title: 'Test Chat',
       exported_at: '2025-11-29T12:00:00Z'
     };
 
@@ -204,7 +185,6 @@ describe('buildJsonl', () => {
     expect(metaLine._meta).toBe(true);
     expect(metaLine.platform).toBe('gemini');
     expect(metaLine.url).toBe('https://gemini.google.com/app/xyz');
-    expect(metaLine.title).toBe('Test Chat');
     expect(metaLine.exported_at).toBe('2025-11-29T12:00:00Z');
   });
 });

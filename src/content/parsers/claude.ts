@@ -216,30 +216,6 @@ export class ClaudeParser implements ChatParser {
   }
 
   /**
-   * Extract conversation title if available
-   *
-   * Claude may display conversation title in an h1 element.
-   * Returns null if no title element found or if title is empty.
-   *
-   * @returns Conversation title string, or null if not found
-   *
-   * @example
-   * const title = parser.getTitle();
-   * console.log(title ?? 'Untitled conversation');
-   */
-  getTitle(): string | null {
-    // Claude may have title in h1 (similar to ChatGPT/Gemini)
-    const titleElement = document.querySelector('h1');
-
-    if (!titleElement) {
-      return null;
-    }
-
-    const title = titleElement.textContent?.trim();
-    return title || null;
-  }
-
-  /**
    * Extract role from message node
    *
    * Claude uses hybrid approach for role detection:

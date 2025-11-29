@@ -70,7 +70,6 @@ async function exportConversation(): Promise<string> {
   const jsonl = buildJsonl(parsedMessages, {
     platform: getPlatformName(window.location.href) as any,
     url: window.location.href,
-    title: parser.getTitle() || undefined,
     exported_at: new Date().toISOString()
   });
 

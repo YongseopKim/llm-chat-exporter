@@ -257,41 +257,6 @@ describe('ChatGPTParser', () => {
   });
 
   // ============================================================
-  // getTitle() - 3 tests
-  // ============================================================
-
-  describe('getTitle', () => {
-    it('should extract title when present', () => {
-      const title = createMockTitle('My Conversation');
-      const doc = createDOMFromHTML('<html><body></body></html>');
-      doc.body.appendChild(title);
-      global.document = doc as any;
-
-      const result = parser.getTitle();
-
-      expect(result).toBe('My Conversation');
-    });
-
-    it('should return null when no title exists', () => {
-      const doc = createDOMFromHTML('<html><body></body></html>');
-      global.document = doc as any;
-
-      const result = parser.getTitle();
-
-      expect(result).toBeNull();
-    });
-
-    it('should return null when title is empty', () => {
-      const doc = createDOMFromHTML('<h1></h1>');
-      global.document = doc as any;
-
-      const result = parser.getTitle();
-
-      expect(result).toBeNull();
-    });
-  });
-
-  // ============================================================
   // loadAllMessages() - 3 tests
   // ============================================================
 

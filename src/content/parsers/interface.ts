@@ -49,12 +49,6 @@ export interface ChatParser {
    * @returns true if generation in progress
    */
   isGenerating(): boolean;
-
-  /**
-   * Extract the conversation title if available
-   * @returns Conversation title or null if not found
-   */
-  getTitle(): string | null;
 }
 
 /**
@@ -93,11 +87,6 @@ export interface ExportMetadata {
    * Full URL of the conversation
    */
   url: string;
-
-  /**
-   * Conversation title (optional)
-   */
-  title?: string;
 
   /**
    * ISO 8601 timestamp when export was performed

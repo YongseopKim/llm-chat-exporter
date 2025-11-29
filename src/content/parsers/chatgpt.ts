@@ -158,30 +158,6 @@ export class ChatGPTParser implements ChatParser {
   }
 
   /**
-   * Extract conversation title if available
-   *
-   * ChatGPT typically displays the conversation title in an h1 element.
-   * Returns null if no title element found or if title is empty.
-   *
-   * @returns Conversation title string, or null if not found
-   *
-   * @example
-   * const title = parser.getTitle();
-   * console.log(title ?? 'Untitled conversation');
-   */
-  getTitle(): string | null {
-    // ChatGPT typically has title in h1
-    const titleElement = document.querySelector('h1');
-
-    if (!titleElement) {
-      return null;
-    }
-
-    const title = titleElement.textContent?.trim();
-    return title || null;
-  }
-
-  /**
    * Extract role from message node
    *
    * Tries data-message-author-role first, then data-turn as fallback.

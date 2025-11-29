@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Data Ownership**: Users own their conversation data permanently
 
 ### Project Status
-🚀 Phase 4D Complete - All platform parsers implemented with 162 passing tests
+🚀 Phase 5 Complete - Extension ready for use with 156 passing tests
 
 **Completed Phases**:
 - ✅ Phase 0: Architecture & Planning
@@ -22,7 +22,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Phase 3: Core Utilities (2025-11-29)
 - ✅ Phase 4: Platform Parsers (ChatGPT, Claude, Gemini) (2025-11-29)
 - ✅ Phase 4D: Factory Integration (2025-11-29)
-- ⏳ Phase 5: Integration & Edge Cases (next)
+- ✅ Phase 5: Integration & Testing (2025-11-29)
+- ⏳ Phase 6: Documentation & Deployment (next)
 
 ## Development Commands
 
@@ -112,7 +113,7 @@ llm-chat-exporter/
 └── node_modules/
 ```
 
-**Test Stats**: 162 tests passing
+**Test Stats**: 156 tests passing
 
 ## Parser Interface Contract
 
@@ -125,7 +126,6 @@ interface ChatParser {
   getMessageNodes(): HTMLElement[];                // Collect message DOM nodes
   parseNode(node: HTMLElement): ParsedMessage;     // Extract role + content HTML
   isGenerating(): boolean;                         // Check if response in progress
-  getTitle(): string | null;                       // Extract conversation title
 }
 
 interface ParsedMessage {
@@ -137,23 +137,24 @@ interface ParsedMessage {
 
 ## Output Schema
 
-JSONL format with one message per line:
+JSONL format with metadata line followed by message lines:
 
 ```jsonl
-{"role": "user", "content": "...", "timestamp": "2025-11-28T10:00:00Z"}
-{"role": "assistant", "content": "...", "timestamp": "2025-11-28T10:00:05Z"}
+{"_meta":true,"platform":"chatgpt","url":"https://chatgpt.com/c/...","exported_at":"2025-11-29T10:00:00Z"}
+{"role":"user","content":"Hello","timestamp":"2025-11-29T10:00:05Z"}
+{"role":"assistant","content":"Hi there! How can I help?","timestamp":"2025-11-29T10:00:10Z"}
 ```
 
-### Fields
+### Metadata (First Line)
+- `_meta`: Always `true` (identifies this as metadata line)
+- `platform`: `"chatgpt"` | `"claude"` | `"gemini"`
+- `url`: Full conversation page URL
+- `exported_at`: ISO 8601 timestamp when export was performed
+
+### Message Fields (Lines 2+)
 - `role`: `"user"` | `"assistant"` (normalized across platforms)
 - `content`: Markdown-converted message body
-- `timestamp`: ISO 8601 datetime
-
-### Optional Metadata (future extension)
-- `platform`: `"chatgpt"` | `"claude"` | `"gemini"`
-- `url`: Conversation page URL
-- `title`: Conversation title (if parsable)
-- `message_index`: Sequential message number
+- `timestamp`: ISO 8601 datetime (message time or export time if unavailable)
 
 ## Critical Technical Challenges
 
