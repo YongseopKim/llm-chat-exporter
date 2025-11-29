@@ -3,46 +3,12 @@
  * 단축키 이벤트를 리스닝하고 Content Script와 통신
  */
 
-const SUPPORTED_HOSTS = ['chatgpt.com', 'claude.ai', 'gemini.google.com'];
+import { isSupportedUrl, generateFilename } from './utils/background-utils';
 
 interface ExportResponse {
   success: boolean;
   data?: string;
   error?: string;
-}
-
-/**
- * URL이 지원되는 사이트인지 확인
- */
-function isSupportedUrl(url: string | undefined): boolean {
-  if (!url) return false;
-  try {
-    const hostname = new URL(url).hostname;
-    return SUPPORTED_HOSTS.some((host) => hostname.includes(host));
-  } catch {
-    return false;
-  }
-}
-
-/**
- * URL에서 플랫폼 이름 추출
- */
-function getPlatformName(url: string): string {
-  const hostname = new URL(url).hostname;
-  if (hostname.includes('chatgpt.com')) return 'chatgpt';
-  if (hostname.includes('claude.ai')) return 'claude';
-  if (hostname.includes('gemini.google.com')) return 'gemini';
-  return 'unknown';
-}
-
-/**
- * 파일명 생성 (platform_YYYYMMDDTHHMMSS.jsonl)
- */
-function generateFilename(url: string): string {
-  const platform = getPlatformName(url);
-  const now = new Date();
-  const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0];
-  return `${platform}_${timestamp}.jsonl`;
 }
 
 /**

@@ -96,15 +96,17 @@ git clone https://github.com/yourusername/llm-chat-exporter.git
 ## 기술 스택
 
 - **Chrome Extension Manifest V3**
+- **TypeScript 5.9.3** + **esbuild**: 빌드 시스템
 - **Strategy Pattern**: 사이트별 파서 모듈화
 - **Turndown**: HTML → Markdown 변환
-- **Vanilla JavaScript/TypeScript**: 의존성 최소화
+- **Vitest**: 단위 테스트 프레임워크
+- **Puppeteer**: E2E 테스트 (Chrome 자동화)
 
 ---
 
 ## 프로젝트 상태
 
-🚧 **현재 Phase 2.5: 테스트 환경 구축 단계입니다** 🚧
+🚀 **현재 Phase 3: 핵심 유틸리티 구현 단계입니다** 🚀
 
 - [x] 요구사항 정의
 - [x] 아키텍처 설계
@@ -120,10 +122,13 @@ git clone https://github.com/yourusername/llm-chat-exporter.git
   - Background Script (Service Worker) - 단축키 리스너, 동적 Content Script 주입
   - Content Script - 더미 데이터 반환
   - 단축키(Ctrl+Shift+E)로 더미 JSONL 다운로드 성공
-- [ ] **Phase 2.5: 테스트 환경 구축** ← 현재
-  - Vitest로 단위 테스트
-  - Puppeteer로 E2E 테스트 (선택)
-- [ ] Phase 3: 핵심 유틸리티 구현
+- [x] **Phase 2.5: 테스트 환경 구축 완료** (2025-11-29)
+  - Vitest 설정 및 Chrome API 모킹
+  - 단위 테스트: background-utils (16개), content (6개)
+  - E2E 테스트: Puppeteer 설정 (6개)
+  - **전체 28개 테스트 통과, 유틸리티 커버리지 100%**
+  - [테스트 설정 문서](./TEST_SETUP.md)
+- [ ] **Phase 3: 핵심 유틸리티 구현** ← 다음
 - [ ] Phase 4: 사이트별 파서 구현
 - [ ] Phase 5: 통합 테스트 및 엣지 케이스 처리
 

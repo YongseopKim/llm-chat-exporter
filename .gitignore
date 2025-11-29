@@ -14,4 +14,9 @@ dist/
 *.log
 npm-debug.log*
 
+# Test coverage
+coverage/
+.vitest/
+test-results/
+
 .rsc
