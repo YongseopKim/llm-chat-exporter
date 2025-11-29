@@ -53,6 +53,15 @@ async function exportConversation(): Promise<string> {
   // 4. Get and parse message nodes
   console.log('LLM Chat Exporter: Parsing messages...');
   const nodes = parser.getMessageNodes();
+
+  // Check for empty conversation
+  if (nodes.length === 0) {
+    throw new Error(
+      'No messages found in this conversation. ' +
+      'Please ensure the conversation has at least one message before exporting.'
+    );
+  }
+
   const parsedMessages = nodes.map((node) => parser.parseNode(node));
 
   console.log(`LLM Chat Exporter: Found ${parsedMessages.length} messages`);

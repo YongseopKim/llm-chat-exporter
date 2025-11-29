@@ -60,6 +60,13 @@ chrome.commands.onCommand.addListener(async (command) => {
 
   if (!isSupportedUrl(tab.url)) {
     console.log('Unsupported site:', tab.url);
+    // Show user-friendly notification
+    chrome.notifications.create({
+      type: 'basic',
+      title: 'LLM Chat Exporter',
+      message: 'This site is not supported. Please use on ChatGPT, Claude, or Gemini.',
+      priority: 1
+    });
     return;
   }
 
@@ -72,9 +79,28 @@ chrome.commands.onCommand.addListener(async (command) => {
       // Success: download JSONL data
       await downloadJsonl(response.data, tab.url);
       console.log('Export completed successfully');
+
+      // Show success notification
+      const messageCount = response.data.split('\n').filter(line => line.trim()).length - 1; // -1 for metadata line
+      chrome.notifications.create({
+        type: 'basic',
+        title: 'Export Successful',
+        message: `Exported ${messageCount} messages to ${generateFilename(tab.url)}`,
+        priority: 1
+      });
     } else {
-      // Error: download error message as JSON for debugging
+      // Error: show user-friendly notification and download error details
       console.error('Export failed:', response.error);
+
+      // User-friendly error notification
+      chrome.notifications.create({
+        type: 'basic',
+        title: 'Export Failed',
+        message: response.error || 'An unknown error occurred. Check downloaded error file for details.',
+        priority: 2
+      });
+
+      // Still download error details for debugging
       const errorData = JSON.stringify({
         success: false,
         error: response.error,
@@ -86,7 +112,16 @@ chrome.commands.onCommand.addListener(async (command) => {
     }
   } catch (error) {
     console.error('Failed to execute content script:', error);
-    // Download error info
+
+    // Show error notification to user
+    chrome.notifications.create({
+      type: 'basic',
+      title: 'Export Failed',
+      message: 'Failed to initialize export. This may happen if the page is not fully loaded.',
+      priority: 2
+    });
+
+    // Download error info for debugging
     const errorData = JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : String(error),
