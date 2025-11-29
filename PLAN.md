@@ -212,6 +212,271 @@
 
 ---
 
+### Phase 7: UI 변경 대응 전략 - Configuration-Driven Architecture
+
+**목표**: 셀렉터를 외부 설정 파일로 분리하여 장기적 유지보수성 확보
+
+**배경**:
+- ChatGPT, Claude, Gemini는 연 3-6회 UI 업데이트 예상
+- 현재: 셀렉터가 TypeScript에 하드코딩 → 업데이트 시 30-60분 소요
+- 목표: Configuration-driven 아키텍처 → 업데이트 시 5-10분 (73% 단축)
+
+**핵심 설계 결정**:
+- **접근 방식**: Configuration-Driven (JSON 기반 설정)
+- **버전 관리**: 다중 UI 버전 동시 지원 (구 UI + 신 UI)
+- **장애 처리**: 현재 방식 유지 (완전 실패)
+- **구현 기간**: 1-2주 (중간 리소스)
+
+| 순서 | 작업                     | 체크리스트                                                                                                                           | 예상 난이도 | 예상 시간 |
+| ---- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ----------- | --------- |
+| 7.1  | Configuration 인프라 구축 | - [ ] `/config/selectors.json` 생성 (현재 셀렉터 추출, ~350줄)<br>- [ ] `/config/selectors.schema.json` 생성 (JSON Schema, ~100줄)<br>- [ ] `/src/content/parsers/config-loader.ts` 구현 (~200줄)<br>- [ ] `esbuild.config.mjs` 수정 (JSON 번들링)<br>- [ ] 빌드 테스트 (설정 파일 `dist/`에 포함 확인) | ⭐⭐ 중       | 2일 (Day 1-2) |
+| 7.2  | BaseParser 추상 클래스    | - [ ] `/src/content/parsers/base-parser.ts` 생성 (~180줄)<br>- [ ] `getNodesWithFallback()` 메서드 (통합 fallback 로직)<br>- [ ] `extractRoleFromConfig()` - attribute 전략<br>- [ ] `extractRoleFromConfig()` - hybrid 전략<br>- [ ] `extractRoleFromConfig()` - tagname 전략<br>- [ ] `extractContentFromConfig()` 구현<br>- [ ] BaseParser 단위 테스트 작성 (20 tests) | ⭐⭐ 중       | 3일 (Day 3-5) |
+| 7.3  | ChatGPTParser 리팩토링    | - [ ] ChatGPTParser가 BaseParser 상속<br>- [ ] 하드코딩된 셀렉터 제거 (lines 29-46)<br>- [ ] `MESSAGE_SELECTORS` → ConfigLoader 사용<br>- [ ] `CONTENT_SELECTORS` → ConfigLoader 사용<br>- [ ] BaseParser 메서드 활용<br>- [ ] 기존 25개 테스트 모두 통과 확인<br>- [ ] 수동 테스트 (실제 ChatGPT 페이지)<br>**코드 감소**: 217줄 → 60줄 (73% 감소) | ⭐⭐ 중       | 2일 (Day 6-7) |
+| 7.4  | ClaudeParser 리팩토링     | - [ ] ClaudeParser 리팩토링 (ChatGPT 패턴 동일)<br>- [ ] Hybrid 전략을 설정으로 이전<br>- [ ] `data-testid` + `data-is-streaming` 로직 설정화<br>- [ ] 25개 테스트 통과 확인<br>- [ ] 수동 테스트 (실제 Claude 페이지)<br>**코드 감소**: 322줄 → 80줄 (75% 감소) | ⭐⭐⭐ 상      | 1일 (Day 8) |
+| 7.5  | GeminiParser 리팩토링     | - [ ] GeminiParser 리팩토링<br>- [ ] Tagname 전략을 설정으로 이전 (`user-query`, `model-response`)<br>- [ ] Custom element mapping 설정화<br>- [ ] 25개 테스트 통과 확인<br>- [ ] 수동 테스트 (실제 Gemini 페이지)<br>**코드 감소**: 270줄 → 70줄 (74% 감소) | ⭐⭐ 중       | 1일 (Day 9) |
+| 7.6  | 검증 도구 & 문서화        | - [ ] `/scripts/validate-selectors.js` 구현 (~120줄)<br>- [ ] `/samples/metadata.json` 생성 (sample 버전 추적)<br>- [ ] `package.json`에 `validate:selectors` 스크립트 추가<br>- [ ] `npm run validate:selectors` 실행하여 전체 검증<br>- [ ] `/config/README.md` 작성 (셀렉터 업데이트 가이드)<br>- [ ] `CLAUDE.md` 업데이트 (새 아키텍처 반영)<br>- [ ] 최종 통합 테스트 (156 tests 통과) | ⭐ 하        | 1일 (Day 10) |
+
+**산출물**:
+
+**신규 파일 (6개)**:
+1. `/config/selectors.json` (~350줄) - 중앙 셀렉터 설정 파일
+2. `/config/selectors.schema.json` (~100줄) - JSON Schema 검증
+3. `/src/content/parsers/config-loader.ts` (~200줄) - Singleton 설정 로더
+4. `/src/content/parsers/base-parser.ts` (~180줄) - 추상 베이스 클래스
+5. `/scripts/validate-selectors.js` (~120줄) - CLI 검증 도구
+6. `/samples/metadata.json` (~50줄) - Sample HTML 메타데이터
+
+**수정 파일 (8개)**:
+1. `/src/content/parsers/chatgpt.ts` - 217줄 → 60줄
+2. `/src/content/parsers/claude.ts` - 322줄 → 80줄
+3. `/src/content/parsers/gemini.ts` - 270줄 → 70줄
+4. `/esbuild.config.mjs` - JSON 번들링 로직 추가
+5. `/package.json` - `validate:selectors` 스크립트
+6. `/CLAUDE.md` - 새 아키텍처 문서화
+7. `/config/README.md` - 설정 가이드 (신규)
+8. `/samples/README.md` - 버전 추적 섹션 추가
+
+**테스트 파일**:
+1. `/tests/unit/config-loader.test.ts` (~100줄, 15 tests)
+
+**완료 기준**:
+- ✅ 전체 156개 테스트 통과 (기존 테스트 모두 유지)
+- ✅ 3개 파서 모두 BaseParser 상속 완료
+- ✅ 셀렉터가 `/config/selectors.json`에서 로드됨
+- ✅ `npm run build` 성공 (selectors.json이 dist/에 번들링됨)
+- ✅ `npm run validate:selectors` 성공 (3개 플랫폼 모두 검증)
+- ✅ 수동 테스트 성공 (실제 3개 플랫폼 페이지에서 export)
+
+**설정 파일 구조 (selectors.json)**:
+
+```json
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-11-29",
+  "platforms": {
+    "chatgpt": {
+      "hostname": "chatgpt.com",
+      "versions": [
+        {
+          "id": "v1.0",
+          "description": "Initial ChatGPT UI (Nov 2025)",
+          "effectiveDate": "2025-11-29",
+          "deprecated": false,
+          "selectors": {
+            "messages": {
+              "primary": "[data-message-author-role]",
+              "fallbacks": ["[data-turn]", "article[data-testid^=\"conversation\"]"]
+            },
+            "content": {
+              "user": ".whitespace-pre-wrap",
+              "assistant": ".markdown"
+            },
+            "generation": {
+              "stopButton": "button[aria-label*=\"Stop\"]"
+            },
+            "metadata": {
+              "role": {
+                "strategy": "attribute",
+                "attribute": "data-message-author-role",
+                "fallback": "data-turn"
+              }
+            }
+          }
+        }
+      ],
+      "activeVersion": "v1.0"
+    }
+    // claude, gemini 유사 구조...
+  }
+}
+```
+
+**핵심 아키텍처 패턴**:
+
+1. **ConfigLoader (Singleton)**:
+```typescript
+export class ConfigLoader {
+  private static instance: ConfigLoader;
+  private config: SelectorConfig | null = null;
+
+  static getInstance(): ConfigLoader { /* ... */ }
+  loadConfig(): SelectorConfig { /* 캐싱 */ }
+  getActiveSelectors(hostname: string): PlatformSelectors | null { /* ... */ }
+}
+```
+
+2. **BaseParser (Abstract Class)**:
+```typescript
+export abstract class BaseParser implements ChatParser {
+  protected selectors: PlatformSelectors;
+
+  constructor(platformHostname: string) {
+    this.selectors = configLoader.getActiveSelectors(platformHostname);
+  }
+
+  protected getNodesWithFallback(): HTMLElement[] { /* 통합 로직 */ }
+  protected extractRoleFromConfig(node: HTMLElement): 'user' | 'assistant' { /* ... */ }
+  protected extractContentFromConfig(node: HTMLElement, role): string { /* ... */ }
+}
+```
+
+3. **리팩토링된 Parser (예: ChatGPT)**:
+```typescript
+export class ChatGPTParser extends BaseParser {
+  constructor() {
+    super('chatgpt.com');  // 설정 자동 로드
+  }
+
+  getMessageNodes(): HTMLElement[] {
+    return this.getNodesWithFallback();  // BaseParser 메서드
+  }
+
+  parseNode(node: HTMLElement): ParsedMessage {
+    const role = this.extractRoleFromConfig(node);
+    const contentHtml = this.extractContentFromConfig(node, role);
+    return { role, contentHtml, timestamp: undefined };
+  }
+}
+```
+
+**장점 (Tradeoffs)**:
+
+✅ **유지보수성**:
+- 셀렉터 업데이트 시간: 30-60분 → 5-10분 (73% 단축)
+- TypeScript 리컴파일 불필요 (JSON만 수정 후 빌드)
+- 중앙 집중식 관리 (모든 셀렉터가 한 파일에)
+- Git에서 변경 이력 명확
+
+✅ **버전 관리**:
+- 다중 UI 버전 동시 지원 (구 UI + 신 UI)
+- 점진적 마이그레이션 (`activeVersion` 변경만으로 전환)
+- 롤백 기능 (문제 시 이전 버전으로 즉시 복귀)
+- A/B 테스트 가능
+
+✅ **코드 품질**:
+- 파서 코드 평균 73% 감소 (270줄 → 70줄)
+- 코드 중복 제거 (BaseParser로 통합)
+- 테스트 용이성 향상
+- 확장성 (새 플랫폼 추가 시 설정만 추가)
+
+✅ **자동화**:
+- `npm run validate:selectors`로 즉시 검증
+- CI/CD 통합 가능 (GitHub Actions)
+- 에러 메시지에 설정 버전 자동 포함
+
+⚠️ **단점**:
+- 초기 구현 시간 (~1-2주)
+- 약간의 복잡도 증가 (설정 레이어)
+- Runtime 오버헤드 ~5% (2.0ms → 2.1ms, 무시 가능)
+- 개발자 학습 곡선 (설정 구조 이해 필요)
+
+**셀렉터 업데이트 워크플로우 (기존 vs 신규)**:
+
+**기존 방식 (30-60분)**:
+```
+UI 변경 감지
+  ↓ 10분: 브라우저에서 새 셀렉터 찾기
+  ↓ 10분: TypeScript 파일 수정 (chatgpt.ts, claude.ts, gemini.ts)
+  ↓ 5분: TypeScript 컴파일 오류 수정
+  ↓ 5분: npm run build
+  ↓ 10분: npm test (156 tests)
+  ↓ 5분: 수동 테스트 (실제 페이지)
+  ↓ 5-10분: Git commit/push
+총: 30-60분
+```
+
+**신규 방식 (5-10분)**:
+```
+UI 변경 감지
+  ↓ 3분: 브라우저에서 새 셀렉터 찾기
+  ↓ 2분: /config/selectors.json 편집 (JSON Schema가 자동 검증)
+  ↓ 30초: npm run validate:selectors (자동 검증)
+  ↓ 1분: npm run build (JSON만 번들링, TS 컴파일 불필요)
+  ↓ 2분: npm test (기존 테스트 통과 확인)
+  ↓ 1분: 수동 테스트
+총: 5-10분 (73% 단축)
+```
+
+**긴급 핫픽스 워크플로우**:
+```bash
+# 1. 설정 파일 수정 (2분)
+vim config/selectors.json
+
+# 2. 자동 검증 (30초)
+npm run validate:selectors
+
+# 3. 빌드 (30초)
+npm run build
+
+# 4. 수동 테스트 (3분)
+# Chrome에서 extension 로드 후 실제 페이지 테스트
+
+# 5. 배포 (2분)
+git add config/selectors.json
+git commit -m "fix: Update ChatGPT selectors for new UI"
+git push
+
+# 총: ~8분
+```
+
+**향후 확장 가능성 (Phase 8+, 선택)**:
+
+1. **Remote 설정 서버** (긴급 hotfix 배포)
+   - CDN 호스팅된 selectors.json
+   - Extension 재배포 없이 셀렉터 업데이트
+   - 프라이버시 고려 필요
+
+2. **커뮤니티 셀렉터 데이터베이스**
+   - 사용자가 작동하는 셀렉터 공유
+   - 크라우드소싱된 UI 변경 감지
+
+3. **자동 셀렉터 탐색 (ML 기반)**
+   - 휴리스틱 기반 대안 셀렉터 제안
+   - DOM 구조 분석으로 자동 발견
+
+**성공 지표**:
+
+| 지표                  | 구현 전 (현재)        | 구현 후 (목표)          |
+| --------------------- | --------------------- | ----------------------- |
+| 셀렉터 업데이트 시간   | 30-60분               | 5-10분                  |
+| 파서 코드 길이        | 평균 270줄             | 평균 70줄               |
+| 검증 방법             | 수동 (브라우저 콘솔)   | 자동 (`npm run validate`) |
+| 버전 관리             | 없음                  | 완전 지원 (rollback, A/B) |
+| 업데이트 난이도       | TypeScript 지식 필요   | JSON 편집만             |
+
+**위험 관리**:
+
+🟢 **낮은 위험**:
+- JSON 번들링: esbuild 네이티브 지원
+- BaseParser 패턴: 검증된 디자인 패턴
+- 기존 테스트: 156개 테스트가 regression 방지
+
+🟡 **중간 위험** (완화 전략 존재):
+- 마이그레이션 버그 → **완화**: 파서별 순차 마이그레이션, 테스트 우선
+- 설정 복잡도 증가 → **완화**: JSON Schema 검증, 명확한 문서
+
+---
+
 ## 단계별 상세 작업
 
 ### Phase 1.1: ChatGPT DOM 분석 (상세)
@@ -389,17 +654,21 @@ Phase 6 (문서화) [선택]
 
 ## 예상 난이도 및 시간
 
-| Phase     | 난이도 | 예상 시간     | 비고                              |
-| --------- | ------ | ------------- | --------------------------------- |
-| Phase 1   | ⭐ 하   | 2-3시간       | DOM 분석은 단순하지만 중요        |
-| Phase 2   | ⭐ 하   | 2-4시간       | 익스텐션 기본 구조                |
-| Phase 3   | ⭐⭐ 중  | 4-6시간       | Scroller 로직이 까다로움          |
-| Phase 4.1 | ⭐⭐ 중  | 3-5시간       | ChatGPT가 가장 단순               |
-| Phase 4.2 | ⭐⭐⭐ 상 | 6-8시간       | Claude Artifacts + Virtualization |
-| Phase 4.3 | ⭐⭐ 중  | 4-6시간       | Shadow DOM 처리                   |
-| Phase 5   | ⭐⭐ 중  | 4-6시간       | 디버깅 시간 포함                  |
-| Phase 6   | ⭐ 하   | 2-3시간       | 선택 사항                         |
-| **총합**  | -      | **27-41시간** | 약 1-2주 (파트타임 기준)          |
+| Phase     | 난이도 | 예상 시간     | 비고                              | 상태 |
+| --------- | ------ | ------------- | --------------------------------- | ---- |
+| Phase 1   | ⭐ 하   | 2-3시간       | DOM 분석은 단순하지만 중요        | ✅ 완료 |
+| Phase 2   | ⭐ 하   | 2-4시간       | 익스텐션 기본 구조                | ✅ 완료 |
+| Phase 2.5 | ⭐⭐ 중  | 3-4시간       | 테스트 환경 구축                  | ✅ 완료 |
+| Phase 3   | ⭐⭐ 중  | 4-6시간       | Scroller 로직이 까다로움          | ✅ 완료 |
+| Phase 4.A | ⭐⭐ 중  | 3-5시간       | ChatGPT가 가장 단순               | ✅ 완료 |
+| Phase 4.B | ⭐⭐ 중  | 4-6시간       | Gemini Custom elements            | ✅ 완료 |
+| Phase 4.C | ⭐⭐⭐ 상 | 6-8시간       | Claude Artifacts + Virtualization | ✅ 완료 |
+| Phase 4.D | ⭐ 하   | 1-2시간       | Factory 통합                      | ✅ 완료 |
+| Phase 5   | ⭐⭐ 중  | 4-6시간       | 디버깅 시간 포함                  | ✅ 완료 |
+| Phase 6   | ⭐ 하   | 2-3시간       | 문서화 (선택 사항)                | ⏸️ 보류 |
+| **Phase 7** | **⭐⭐ 중** | **10일 (1-2주)** | **Configuration-Driven 아키텍처** | ⬜ 계획 |
+| **총합 (Phase 1-5)** | - | **~30시간** | 약 1주 (파트타임 기준) | ✅ 완료 |
+| **총합 (Phase 7 포함)** | - | **~40-50시간** | 약 2-3주 추가 | ⬜ 미착수 |
 
 ---
 
@@ -444,14 +713,30 @@ curl -o turndown.min.js https://unpkg.com/turndown/dist/turndown.js
 - [x] **Phase 2: 익스텐션 골격 구현** (2025-11-29 완료)
 - [x] **Phase 2.5: 테스트 환경 구축** (2025-11-29 완료)
 - [x] **Phase 3: 공통 유틸리티 구현** (2025-11-29 완료) ✅
-- [ ] **Phase 4: ChatGPT Parser** ← 다음 단계
-- [ ] Phase 4: Claude Parser
-- [ ] Phase 4: Gemini Parser
-- [ ] Phase 5: 통합 테스트
-- [ ] Phase 6: 문서화 (선택)
+- [x] **Phase 4A: ChatGPT Parser** (2025-11-29 완료)
+- [x] **Phase 4B: Gemini Parser** (2025-11-29 완료)
+- [x] **Phase 4C: Claude Parser** (2025-11-29 완료)
+- [x] **Phase 4D: Factory 통합** (2025-11-29 완료)
+- [x] **Phase 5: 통합 테스트** (2025-11-29 완료) ✅
+- [ ] Phase 6: 문서화 (선택, 보류)
+- [ ] **Phase 7: Configuration-Driven 아키텍처** ← 다음 단계 (선택)
+  - [ ] 7.1: Configuration 인프라 구축
+  - [ ] 7.2: BaseParser 추상 클래스
+  - [ ] 7.3: ChatGPTParser 리팩토링
+  - [ ] 7.4: ClaudeParser 리팩토링
+  - [ ] 7.5: GeminiParser 리팩토링
+  - [ ] 7.6: 검증 도구 & 문서화
 
 ---
 
-**다음 작업**: Phase 4.1 - ChatGPT Parser 구현
+**현재 상태**: Phase 5 완료 - Extension 사용 가능 ✅
 
-💡 **Tip**: 각 Phase를 완료할 때마다 `git commit`으로 체크포인트를 만드세요. DOM 구조 변경 시 이전 버전으로 롤백할 수 있습니다.
+**다음 선택지**:
+1. **Phase 7 진행**: UI 변경 대응을 위한 Configuration-Driven 아키텍처로 리팩토링 (1-2주)
+2. **Phase 6 진행**: 문서화 및 배포 준비 (2-3시간)
+3. **실사용 테스트**: 현재 상태로 실제 환경에서 사용해보며 개선점 발견
+
+💡 **Tip**:
+- Phase 7은 **장기 유지보수성**을 위한 투자입니다. 당장 필요하지 않다면 Phase 6 또는 실사용을 먼저 진행해도 됩니다.
+- 각 Phase를 완료할 때마다 `git commit`으로 체크포인트를 만드세요.
+- Phase 7을 진행한다면, 파서별 순차 마이그레이션을 권장합니다 (ChatGPT → Gemini → Claude).

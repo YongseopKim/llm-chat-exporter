@@ -36,11 +36,20 @@ npm install
 # Build extension (TypeScript → JavaScript via esbuild)
 npm run build
 
-# Run all tests (162 tests)
+# Run all tests (156 tests)
 npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with UI
+npm run test:ui
 
 # Run tests with coverage
 npm run test:coverage
+
+# Build in watch mode (auto-rebuild on changes)
+npm run watch
 
 # Load extension in Chrome
 # 1. Navigate to chrome://extensions/
@@ -202,17 +211,20 @@ JSONL format with metadata line followed by message lines:
 - ✅ 82 tests passing
 
 ### Phase 4: Platform Parsers ✅ COMPLETE (2025-11-29)
-- ✅ **ChatGPTParser**: Fallback selector chain (28 tests)
-- ✅ **ClaudeParser**: Hybrid selectors + streaming detection (28 tests)
-- ✅ **GeminiParser**: Custom element handling (28 tests)
+- ✅ **ChatGPTParser**: Fallback selector chain (25 tests)
+- ✅ **ClaudeParser**: Hybrid selectors + streaming detection (25 tests)
+- ✅ **GeminiParser**: Custom element handling (25 tests)
 - ✅ **Factory Integration**: 4 tests
-- ✅ 162 total tests passing
+- ✅ 162 total tests passing initially
 
-### Phase 5: Integration & Edge Cases ⏳ NEXT
-- End-to-end testing across all platforms
-- Error handling (unsupported sites, generating responses, empty conversations)
-- Long conversation testing (100+ messages)
-- Rich content testing (code blocks, tables, LaTeX, images)
+### Phase 5: Integration & Edge Cases ✅ COMPLETE (2025-11-29)
+- ✅ End-to-end testing integration ready
+- ✅ Error handling (unsupported sites, generating responses, empty conversations)
+- ✅ Chrome notifications system integrated
+- ✅ Title functionality removed (unreliable DOM selectors across platforms)
+- ✅ 156 tests passing
+- ⏸️ Long conversation testing (100+ messages) - manual testing by user
+- ⏸️ Rich content testing - manual testing by user
 
 ## Testing Strategy
 
@@ -231,11 +243,12 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - Test during response generation (should gracefully error)
 - Test on empty conversations
 
-**Current Test Coverage** (Phase 4D):
-- 162 tests passing across 11 test files
-- Unit tests: Background utils (16), Content (6), Parsers (84), Utilities (48)
+**Current Test Coverage** (Phase 5):
+- 156 tests passing across 11 test files
+- Unit tests: Background utils (16), Content (6), Parsers (75), Utilities (48)
 - E2E tests: Extension flow (6), Integration (2)
 - Coverage: Core utilities 100%, Parsers 95%+
+- Note: Title-related tests (9) removed in Phase 5 due to unreliable selectors
 
 ## Important Constraints
 
@@ -245,6 +258,26 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - **Privacy**: No external network requests, all processing local
 - **Images**: Store URLs/placeholders only, no binary download
 - **Timestamps**: May fall back to export time if not available in DOM
+- **Title**: Not extracted (removed in Phase 5 - unstable selectors across platforms)
+
+## Important Design Decisions
+
+### Title Extraction (Removed in Phase 5)
+**Decision**: Do not extract conversation titles
+**Rationale**:
+- Platform-specific title selectors are highly unstable (UI changes frequently)
+- Generic `h1` selector produces incorrect results (e.g., Gemini sidebar "최근")
+- Best-effort approach still lacks reliability
+- Title is non-essential metadata for core export functionality
+- Better to have no field than unreliable data
+
+### Notification System (Added in Phase 5)
+**Decision**: Use Chrome Notifications API for user feedback
+**Implementation**:
+- Success: Shows message count and filename
+- Error: User-friendly messages + detailed error file download
+- Unsupported site: Clear warning about supported platforms
+- Empty conversation: Validation prevents empty exports
 
 ## Known Risks
 
