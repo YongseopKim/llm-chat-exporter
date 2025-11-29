@@ -1,8 +1,18 @@
 /**
  * Content Script
  * Background Script의 메시지를 받아 대화 내용을 추출
- * Phase 2: 더미 데이터 반환
+ *
+ * Phase 3: Core utilities integrated
+ * - Parser Factory (returns null until Phase 4)
+ * - Scroller (simplified fallback)
+ * - Serializer (JSONL builder)
+ * - Converter (HTML→Markdown with Turndown)
  */
+
+import { ParserFactory } from './parsers/factory';
+import { scrollToLoadAll } from './scroller';
+import { buildJsonl } from './serializer';
+import { getPlatformName } from '../utils/background-utils';
 
 interface ExportMessage {
   type: 'EXPORT_CONVERSATION';
@@ -15,7 +25,52 @@ interface ExportResponse {
 }
 
 /**
- * 메시지 리스너 등록
+ * Main export function
+ * Orchestrates parser, scroller, and serializer
+ */
+async function exportConversation(): Promise<string> {
+  console.log('LLM Chat Exporter: Starting export...');
+
+  // 1. Get parser for current platform
+  const parser = ParserFactory.getParser(window.location.href);
+  if (!parser) {
+    // Phase 3: Parsers not implemented yet
+    throw new Error(
+      'Platform parser not implemented yet (Phase 4 pending). ' +
+      `Current platform: ${getPlatformName(window.location.href)}`
+    );
+  }
+
+  // 2. Check if response is generating
+  if (parser.isGenerating()) {
+    throw new Error('Response is still generating. Please wait until it completes.');
+  }
+
+  // 3. Load all messages (scroll to ensure all messages are in DOM)
+  console.log('LLM Chat Exporter: Loading all messages...');
+  await parser.loadAllMessages();
+
+  // 4. Get and parse message nodes
+  console.log('LLM Chat Exporter: Parsing messages...');
+  const nodes = parser.getMessageNodes();
+  const parsedMessages = nodes.map((node) => parser.parseNode(node));
+
+  console.log(`LLM Chat Exporter: Found ${parsedMessages.length} messages`);
+
+  // 5. Build JSONL with metadata
+  const jsonl = buildJsonl(parsedMessages, {
+    platform: getPlatformName(window.location.href) as any,
+    url: window.location.href,
+    title: parser.getTitle() || undefined,
+    exported_at: new Date().toISOString()
+  });
+
+  console.log('LLM Chat Exporter: Export complete');
+  return jsonl;
+}
+
+/**
+ * Message listener - handles export requests from background script
  */
 chrome.runtime.onMessage.addListener(
   (
@@ -26,20 +81,22 @@ chrome.runtime.onMessage.addListener(
     if (message.type === 'EXPORT_CONVERSATION') {
       console.log('LLM Chat Exporter: Export request received');
 
-      // Phase 2: 더미 데이터 반환
-      // Phase 3/4에서 실제 파싱 로직으로 교체 예정
-      const dummyMessages = [
-        { role: 'user', content: 'Hello, this is a test message.', timestamp: new Date().toISOString() },
-        { role: 'assistant', content: 'Hi! This is a dummy response from LLM Chat Exporter. The extension is working correctly!', timestamp: new Date().toISOString() },
-      ];
+      // Execute export asynchronously
+      exportConversation()
+        .then((jsonl) => {
+          sendResponse({ success: true, data: jsonl });
+        })
+        .catch((error) => {
+          console.error('LLM Chat Exporter: Export failed', error);
+          sendResponse({
+            success: false,
+            error: error.message || 'Unknown error occurred'
+          });
+        });
 
-      const jsonl = dummyMessages.map((msg) => JSON.stringify(msg)).join('\n');
-
-      sendResponse({ success: true, data: jsonl });
+      // Return true to indicate async response
+      return true;
     }
-
-    // 비동기 응답을 위해 true 반환
-    return true;
   }
 );
 

@@ -69,13 +69,31 @@ chrome.commands.onCommand.addListener(async (command) => {
     const response = await executeContentScript(tab.id);
 
     if (response.success && response.data) {
+      // Success: download JSONL data
       await downloadJsonl(response.data, tab.url);
       console.log('Export completed successfully');
     } else {
+      // Error: download error message as JSON for debugging
       console.error('Export failed:', response.error);
+      const errorData = JSON.stringify({
+        success: false,
+        error: response.error,
+        timestamp: new Date().toISOString(),
+        url: tab.url
+      }, null, 2);
+      await downloadJsonl(errorData, tab.url);
+      console.log('Error details downloaded for debugging');
     }
   } catch (error) {
     console.error('Failed to execute content script:', error);
+    // Download error info
+    const errorData = JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+      url: tab.url
+    }, null, 2);
+    await downloadJsonl(errorData, tab.url);
   }
 });
 
