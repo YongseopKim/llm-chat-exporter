@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { ParserFactory } from '../../src/content/parsers/factory';
+import { ChatGPTParser } from '../../src/content/parsers/chatgpt';
+import { ClaudeParser } from '../../src/content/parsers/claude';
+import { GeminiParser } from '../../src/content/parsers/gemini';
 
 describe('ParserFactory', () => {
   // Platform detection tests
@@ -7,25 +10,24 @@ describe('ParserFactory', () => {
     const url = 'https://chatgpt.com/c/abc123';
     const parser = ParserFactory.getParser(url);
 
-    // Phase 3: parsers not implemented yet, should return null
     // Phase 4: should return ChatGPTParser instance
-    expect(parser).toBeNull();
+    expect(parser).toBeInstanceOf(ChatGPTParser);
   });
 
   it('should recognize Claude URL', () => {
     const url = 'https://claude.ai/chat/xyz789';
     const parser = ParserFactory.getParser(url);
 
-    // Phase 3: parsers not implemented yet
-    expect(parser).toBeNull();
+    // Phase 4: should return ClaudeParser instance
+    expect(parser).toBeInstanceOf(ClaudeParser);
   });
 
   it('should recognize Gemini URL', () => {
     const url = 'https://gemini.google.com/app/conversation123';
     const parser = ParserFactory.getParser(url);
 
-    // Phase 3: parsers not implemented yet
-    expect(parser).toBeNull();
+    // Phase 4: should return GeminiParser instance
+    expect(parser).toBeInstanceOf(GeminiParser);
   });
 
   // Unsupported platforms
@@ -47,7 +49,7 @@ describe('ParserFactory', () => {
     const parser = ParserFactory.getParser(url);
 
     // Should still recognize as ChatGPT
-    expect(parser).toBeNull(); // Phase 3
+    expect(parser).toBeInstanceOf(ChatGPTParser);
   });
 
   it('should handle URL with hash', () => {
@@ -55,7 +57,7 @@ describe('ParserFactory', () => {
     const parser = ParserFactory.getParser(url);
 
     // Should still recognize as Claude
-    expect(parser).toBeNull(); // Phase 3
+    expect(parser).toBeInstanceOf(ClaudeParser);
   });
 
   it('should be case-insensitive for hostname', () => {
@@ -65,8 +67,8 @@ describe('ParserFactory', () => {
     const parser1 = ParserFactory.getParser(url1);
     const parser2 = ParserFactory.getParser(url2);
 
-    expect(parser1).toBeNull(); // Phase 3
-    expect(parser2).toBeNull(); // Phase 3
+    expect(parser1).toBeInstanceOf(ChatGPTParser);
+    expect(parser2).toBeInstanceOf(ClaudeParser);
   });
 
   // Edge cases
@@ -94,7 +96,7 @@ describe('ParserFactory', () => {
   it('should recognize ChatGPT with www', () => {
     const url = 'https://www.chatgpt.com/c/abc123';
     const parser = ParserFactory.getParser(url);
-    expect(parser).toBeNull(); // Phase 3
+    expect(parser).toBeInstanceOf(ChatGPTParser);
   });
 
   it('should recognize different ChatGPT paths', () => {
@@ -106,7 +108,7 @@ describe('ParserFactory', () => {
 
     urls.forEach(url => {
       const parser = ParserFactory.getParser(url);
-      expect(parser).toBeNull(); // Phase 3, all should be recognized
+      expect(parser).toBeInstanceOf(ChatGPTParser); // Phase 4, all should be recognized
     });
   });
 });
