@@ -1,0 +1,64 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-11-29",
+  "platforms": {
+    "chatgpt": {
+      "hostname": "chatgpt.com",
+      "selectors": {
+        "messages": {
+          "primary": "[data-message-author-role]",
+          "fallbacks": [
+            "[data-turn]",
+            "article[data-testid^=\"conversation\"]"
+          ]
+        },
+        "content": {
+          "user": ".whitespace-pre-wrap",
+          "assistant": ".markdown"
+        },
+        "generation": "button[aria-label*=\"Stop\"]",
+        "role": {
+          "strategy": "attribute",
+          "attributes": ["data-message-author-role", "data-turn"]
+        }
+      }
+    },
+    "claude": {
+      "hostname": "claude.ai",
+      "selectors": {
+        "messages": {
+          "combined": "[data-testid=\"user-message\"], [data-is-streaming], [data-testid=\"assistant-message\"]"
+        },
+        "content": {
+          "user": ".whitespace-pre-wrap",
+          "assistant": ".standard-markdown, .progressive-markdown"
+        },
+        "generation": "[data-is-streaming=\"true\"]",
+        "role": {
+          "strategy": "hybrid",
+          "userTestId": "user-message",
+          "assistantTestId": "assistant-message",
+          "streamingAttribute": "data-is-streaming"
+        }
+      }
+    },
+    "gemini": {
+      "hostname": "gemini.google.com",
+      "selectors": {
+        "messages": {
+          "combined": "user-query, model-response"
+        },
+        "content": {
+          "user": ".query-text",
+          "assistant": ".response-container-content"
+        },
+        "generation": "button[aria-label*=\"Stop\"]",
+        "role": {
+          "strategy": "tagname",
+          "userTag": "user-query",
+          "assistantTag": "model-response"
+        }
+      }
+    }
+  }
+}
