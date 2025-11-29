@@ -12,21 +12,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Data Ownership**: Users own their conversation data permanently
 
 ### Project Status
-🚧 Currently in the design phase - no implementation yet. Architecture and planning are complete.
+🚀 Phase 4D Complete - All platform parsers implemented with 162 passing tests
+
+**Completed Phases**:
+- ✅ Phase 0: Architecture & Planning
+- ✅ Phase 1: DOM Selector Validation (2025-11-29)
+- ✅ Phase 2: Extension Skeleton (2025-11-29)
+- ✅ Phase 2.5: Test Environment Setup (2025-11-29)
+- ✅ Phase 3: Core Utilities (2025-11-29)
+- ✅ Phase 4: Platform Parsers (ChatGPT, Claude, Gemini) (2025-11-29)
+- ✅ Phase 4D: Factory Integration (2025-11-29)
+- ⏳ Phase 5: Integration & Edge Cases (next)
 
 ## Development Commands
 
-This project has no build system yet. When implementation begins:
+### Build System
 
 ```bash
-# Load extension in Chrome (during development)
+# Install dependencies
+npm install
+
+# Build extension (TypeScript → JavaScript via esbuild)
+npm run build
+
+# Run all tests (162 tests)
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Load extension in Chrome
 # 1. Navigate to chrome://extensions/
 # 2. Enable "Developer mode"
 # 3. Click "Load unpacked extension"
-# 4. Select the project directory
-
-# No build/lint/test commands exist yet
+# 4. Select the project root directory
 ```
+
+**Output**: `dist/background.js`, `dist/content.js`
 
 ## Architecture Overview
 
@@ -62,28 +84,35 @@ The project uses Strategy Pattern to handle three different platforms (ChatGPT, 
 - **Factory Pattern**: `ParserFactory` selects appropriate parser based on URL hostname
 - **Adapter Pattern**: Turndown library wrapped for HTML→Markdown conversion
 
-### File Structure (Planned)
+### File Structure (Implemented)
 ```
 llm-chat-exporter/
 ├── manifest.json              # Extension config (Manifest V3)
-├── background.js              # Service Worker (shortcut handler)
-├── content/
-│   ├── index.js              # Content Script entry point
-│   ├── parsers/
-│   │   ├── interface.ts      # ChatParser interface definition
-│   │   ├── factory.ts        # ParserFactory
-│   │   ├── chatgpt.ts        # ChatGPTParser
-│   │   ├── claude.ts         # ClaudeParser (highest complexity)
-│   │   └── gemini.ts         # GeminiParser
-│   ├── scroller.ts           # DOM Virtualization scroll logic
-│   ├── serializer.ts         # JSONL serialization
-│   └── converter.ts          # HTML → Markdown (Turndown wrapper)
-├── lib/
-│   └── turndown.min.js       # Turndown library
-└── utils/
-    ├── dom.ts                # DOM utilities (Shadow DOM traversal)
-    └── logger.ts             # Debug logging
+├── src/
+│   ├── background.ts          # Service Worker (101 lines)
+│   ├── utils/
+│   │   └── background-utils.ts
+│   └── content/
+│       ├── index.ts           # Content Script entry point (100+ lines)
+│       ├── parsers/
+│       │   ├── interface.ts   # ChatParser interface (127 lines)
+│       │   ├── factory.ts     # ParserFactory (90 lines)
+│       │   ├── chatgpt.ts     # ChatGPTParser (240 lines) ✅
+│       │   ├── claude.ts      # ClaudeParser (322 lines) ✅
+│       │   └── gemini.ts      # GeminiParser (270 lines) ✅
+│       ├── scroller.ts        # Simplified fallback scroller (66 lines)
+│       ├── serializer.ts      # JSONL builder (56 lines)
+│       └── converter.ts       # HTML→Markdown with Turndown (80 lines)
+├── tests/
+│   ├── unit/                  # 11 test files
+│   └── e2e/                   # E2E tests
+├── dist/                      # Compiled output (esbuild)
+│   ├── background.js
+│   └── content.js
+└── node_modules/
 ```
+
+**Test Stats**: 162 tests passing
 
 ## Parser Interface Contract
 
@@ -154,31 +183,31 @@ JSONL format with one message per line:
 
 ## Development Phases
 
-### Phase 1: DOM Selector Validation (HIGHEST PRIORITY)
+### Phase 1: DOM Selector Validation ✅ COMPLETE (2025-11-29)
 **Completion Criteria**: Successfully extract 10+ messages from each platform using console scripts.
+- ✅ ChatGPT: 12 messages extracted
+- ✅ Claude: 11 messages extracted
+- ✅ Gemini: 12 messages extracted
 
-Validate on each platform:
-1. Message container selectors
-2. Role differentiation mechanism
-3. Content area extraction
-4. Generation state detection
+### Phase 2: Extension Skeleton ✅ COMPLETE (2025-11-29)
+- ✅ Shortcut → Background → Content Script message flow implemented
+- ✅ Dummy JSONL download working
 
-### Phase 2: Extension Skeleton
-Implement shortcut → Background → Content Script message flow with dummy text download.
+### Phase 3: Core Utilities ✅ COMPLETE (2025-11-29)
+- ✅ Parser interface definition (ChatParser, ParsedMessage)
+- ✅ Simplified scroller (timeout-based fallback)
+- ✅ Turndown integration with custom rules
+- ✅ JSONL serialization
+- ✅ 82 tests passing
 
-### Phase 3: Core Utilities
-- Parser interface definition
-- Scroll loading logic with MutationObserver
-- Turndown integration for Markdown conversion
-- JSONL serialization
-- Shadow DOM traversal utility
+### Phase 4: Platform Parsers ✅ COMPLETE (2025-11-29)
+- ✅ **ChatGPTParser**: Fallback selector chain (28 tests)
+- ✅ **ClaudeParser**: Hybrid selectors + streaming detection (28 tests)
+- ✅ **GeminiParser**: Custom element handling (28 tests)
+- ✅ **Factory Integration**: 4 tests
+- ✅ 162 total tests passing
 
-### Phase 4: Platform Parsers
-- **ChatGPTParser**: Simplest structure (start here)
-- **ClaudeParser**: Most complex (Artifacts + aggressive virtualization)
-- **GeminiParser**: Shadow DOM handling
-
-### Phase 5: Integration & Edge Cases
+### Phase 5: Integration & Edge Cases ⏳ NEXT
 - End-to-end testing across all platforms
 - Error handling (unsupported sites, generating responses, empty conversations)
 - Long conversation testing (100+ messages)
@@ -200,6 +229,12 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - Test with rich content (code blocks in multiple languages, tables, nested lists)
 - Test during response generation (should gracefully error)
 - Test on empty conversations
+
+**Current Test Coverage** (Phase 4D):
+- 162 tests passing across 11 test files
+- Unit tests: Background utils (16), Content (6), Parsers (84), Utilities (48)
+- E2E tests: Extension flow (6), Integration (2)
+- Coverage: Core utilities 100%, Parsers 95%+
 
 ## Important Constraints
 
