@@ -36,6 +36,23 @@ export function createDOMFromHTML(html: string): Document {
 }
 
 /**
+ * Load edge case sample HTML file
+ *
+ * @param platform - Platform name (chatgpt, claude, gemini)
+ * @param caseId - Edge case identifier (e.g., '000', '001')
+ * @returns HTML string content
+ */
+export function loadEdgeCaseHTML(platform: 'chatgpt' | 'claude' | 'gemini', caseId: string): string {
+  const samplePath = path.join(__dirname, '../../../../samples/edges', `${platform}_${caseId}.html`);
+
+  if (!fs.existsSync(samplePath)) {
+    throw new Error(`Edge case sample file not found: ${samplePath}`);
+  }
+
+  return fs.readFileSync(samplePath, 'utf-8');
+}
+
+/**
  * Get message count from sample HTML (for validation)
  *
  * @param platform - Platform name

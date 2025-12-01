@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Data Ownership**: Users own their conversation data permanently
 
 ### Project Status
-🚀 Phase 7 Complete - Configuration-Driven Architecture with 203 passing tests
+🚀 Phase 7 Complete - Configuration-Driven Architecture with 209 passing tests
 
 **Completed Phases**:
 - ✅ Phase 0: Architecture & Planning
@@ -37,7 +37,7 @@ npm install
 # Build extension (TypeScript → JavaScript via esbuild)
 npm run build
 
-# Run all tests (203 tests)
+# Run all tests (209 tests)
 npm test
 
 # Validate selector configuration
@@ -89,7 +89,7 @@ The project uses Strategy Pattern to handle three different platforms (ChatGPT, 
          ↓
 [Parser Strategy Layer]
   ├─ ChatGPTParser
-  ├─ ClaudeParser (most complex: Artifacts + aggressive DOM virtualization)
+  ├─ ClaudeParser (most complex: Artifacts + aggressive DOM virtualization + Thinking blocks)
   └─ GeminiParser (Shadow DOM handling)
 ```
 
@@ -118,7 +118,7 @@ llm-chat-exporter/
 │       │   ├── config-types.ts # TypeScript types for config
 │       │   ├── config-loader.ts # Configuration loader singleton
 │       │   ├── chatgpt.ts     # ChatGPTParser (31 lines, extends BaseParser)
-│       │   ├── claude.ts      # ClaudeParser (38 lines, extends BaseParser)
+│       │   ├── claude.ts      # ClaudeParser (104 lines, extends BaseParser, handles edge cases)
 │       │   └── gemini.ts      # GeminiParser (36 lines, extends BaseParser)
 │       ├── scroller.ts        # Scroll utility
 │       ├── serializer.ts      # JSONL builder
@@ -126,7 +126,7 @@ llm-chat-exporter/
 ├── scripts/
 │   └── validate-selectors.js  # CLI selector validation
 ├── tests/
-│   ├── unit/                  # 13 test files
+│   ├── unit/                  # 14 test files
 │   └── e2e/                   # E2E tests
 ├── dist/                      # Compiled output (esbuild)
 │   ├── background.js
@@ -134,7 +134,7 @@ llm-chat-exporter/
 └── node_modules/
 ```
 
-**Test Stats**: 203 tests passing (47 new tests for Phase 7)
+**Test Stats**: 209 tests passing (47 new tests for Phase 7, 6 new edge case tests)
 
 ## Parser Interface Contract
 
@@ -200,11 +200,18 @@ JSONL format with metadata line followed by message lines:
 **Problem**: Code/previews render in separate DOM tree from main chat.
 **Approach**: Either include placeholder `[Artifact: {title}]` in content or parse artifact panel separately.
 
-### 4. Gemini Shadow DOM
+### 4. Claude Thinking Blocks & Web Search (Solved)
+**Problem**: Assistant messages may contain multiple `.standard-markdown` blocks (thinking, web search, main response). Using `querySelector()` extracts only the first block, missing the actual response.
+**Solution**: Override `extractContent()` in ClaudeParser to:
+- Find all `.standard-markdown` elements
+- Filter out collapsed blocks (`overflow-hidden` with `height: 0px`)
+- Concatenate visible content only
+
+### 5. Gemini Shadow DOM
 **Problem**: Gemini may use Web Components with Shadow DOM, making standard `querySelector` fail.
 **Solution**: Implement recursive `queryShadowSelector()` utility.
 
-### 5. Generating Responses
+### 6. Generating Responses
 **Problem**: Exporting incomplete responses during generation.
 **Solution**: Check for "Stop generating" button existence before export, throw error if generating.
 
@@ -229,7 +236,7 @@ JSONL format with metadata line followed by message lines:
 
 ### Phase 4: Platform Parsers ✅ COMPLETE (2025-11-29)
 - ✅ **ChatGPTParser**: Fallback selector chain (25 tests)
-- ✅ **ClaudeParser**: Hybrid selectors + streaming detection (25 tests)
+- ✅ **ClaudeParser**: Hybrid selectors + streaming detection (25 tests) + Edge cases (6 tests)
 - ✅ **GeminiParser**: Custom element handling (25 tests)
 - ✅ **Factory Integration**: 4 tests
 - ✅ 162 total tests passing initially
@@ -261,8 +268,8 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - Test on empty conversations
 
 **Current Test Coverage** (Phase 7):
-- 203 tests passing across 13 test files
-- Unit tests: Background utils (16), Content (6), Parsers (75), Utilities (48), ConfigLoader (16), BaseParser (31)
+- 209 tests passing across 14 test files
+- Unit tests: Background utils (16), Content (6), Parsers (81), Utilities (48), ConfigLoader (16), BaseParser (31)
 - E2E tests: Extension flow (6), Integration (2)
 - Coverage: Core utilities 100%, Parsers 95%+, Config system 100%
 - Note: Title-related tests (9) removed in Phase 5 due to unreliable selectors
