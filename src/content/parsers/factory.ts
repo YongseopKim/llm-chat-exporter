@@ -17,6 +17,7 @@ import type { ChatParser } from './interface';
 import { ChatGPTParser } from './chatgpt';
 import { ClaudeParser } from './claude';
 import { GeminiParser } from './gemini';
+import { GrokParser } from './grok';
 
 /**
  * Parser Factory - Platform-based parser selection
@@ -52,6 +53,10 @@ export class ParserFactory {
         return new GeminiParser();
       }
 
+      if (hostname.includes('grok.com')) {
+        return new GrokParser();
+      }
+
       // Unsupported platform
       return null;
 
@@ -81,7 +86,8 @@ export class ParserFactory {
       return (
         hostname.includes('chatgpt.com') ||
         hostname.includes('claude.ai') ||
-        hostname.includes('gemini.google.com')
+        hostname.includes('gemini.google.com') ||
+        hostname.includes('grok.com')
       );
     } catch {
       return false;

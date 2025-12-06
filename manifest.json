@@ -2,7 +2,11 @@
   "manifest_version": 3,
   "name": "LLM Chat Exporter",
   "version": "0.1.0",
-  "description": "ChatGPT, Claude, Gemini 대화를 JSONL로 저장",
+  "description": "ChatGPT, Claude, Gemini, Grok 대화를 JSONL로 저장",
+
+  "icons": {
+    "48": "icons/icon48.png"
+  },
 
   "permissions": [
     "activeTab",
@@ -14,7 +18,8 @@
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://claude.ai/*",
-    "https://gemini.google.com/*"
+    "https://gemini.google.com/*",
+    "https://grok.com/*"
   ],
 
   "background": {

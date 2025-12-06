@@ -89,8 +89,8 @@ function validatePlatform(name, config) {
     }
   }
 
-  // Validate generation selector
-  if (!selectors.generation) {
+  // Validate generation selector (can be empty string for platforms that don't need it)
+  if (selectors.generation === undefined || selectors.generation === null) {
     errors.push(`Missing 'selectors.generation' for ${name}`);
   }
 
@@ -122,6 +122,14 @@ function validatePlatform(name, config) {
           }
           if (!selectors.role.assistantTag) {
             errors.push(`Missing 'role.assistantTag' for tagname strategy in ${name}`);
+          }
+          break;
+        case 'sibling-button':
+          if (!selectors.role.userMarker) {
+            errors.push(`Missing 'role.userMarker' for sibling-button strategy in ${name}`);
+          }
+          if (!selectors.role.assistantMarker) {
+            errors.push(`Missing 'role.assistantMarker' for sibling-button strategy in ${name}`);
           }
           break;
         default:
@@ -164,7 +172,7 @@ function validate() {
     }
 
     // Validate required platforms
-    const requiredPlatforms = ['chatgpt', 'claude', 'gemini'];
+    const requiredPlatforms = ['chatgpt', 'claude', 'gemini', 'grok'];
 
     header('Platform Validation');
 

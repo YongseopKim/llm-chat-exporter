@@ -59,6 +59,24 @@
           "assistantTag": "model-response"
         }
       }
+    },
+    "grok": {
+      "hostname": "grok.com",
+      "selectors": {
+        "messages": {
+          "primary": ".message-bubble"
+        },
+        "content": {
+          "user": ".message-bubble",
+          "assistant": ".message-bubble"
+        },
+        "generation": "",
+        "role": {
+          "strategy": "sibling-button",
+          "userMarker": "button[aria-label='Edit']",
+          "assistantMarker": "button[aria-label='Regenerate']"
+        }
+      }
     }
   }
 }

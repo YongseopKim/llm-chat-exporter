@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Grok Sample Conversation</title>
+</head>
+<body>
+  <main class="h-dvh flex-grow flex-shrink relative">
+    <div class="w-full h-full overflow-y-auto">
+      <div class="relative flex w-full flex-col items-center pt-20 pb-4">
+        <!-- User Message 1 -->
+        <div class="relative group flex flex-col justify-center w-full max-w-[var(--content-max-width)]">
+          <div class="message-bubble relative rounded-3xl text-primary min-h-7 prose dark:prose-invert break-words prose-p">
+            <p>Hello, can you explain what a blockchain is?</p>
+          </div>
+          <div class="order-first sticky hidden top-1"></div>
+          <div class="action-buttons h-8 mt-0.5 flex flex-row flex-wrap">
+            <button aria-label="Edit">Edit</button>
+            <button aria-label="Copy">Copy</button>
+          </div>
+          <div></div>
+        </div>
+
+        <!-- Assistant Message 1 -->
+        <div class="relative group flex flex-col justify-center w-full max-w-[var(--content-max-width)]">
+          <div class="message-bubble relative rounded-3xl text-primary min-h-7 prose dark:prose-invert break-words prose-p">
+            <p>A blockchain is a distributed ledger technology that maintains a continuously growing list of records called blocks.</p>
+            <ul>
+              <li>Each block contains a cryptographic hash of the previous block</li>
+              <li>Transaction data is stored in a tamper-resistant way</li>
+              <li>No single entity controls the entire chain</li>
+            </ul>
+            <p>This makes blockchains ideal for recording transactions in a verifiable and permanent way.</p>
+          </div>
+          <div class="order-first sticky hidden top-1"></div>
+          <div class="action-buttons h-8 mt-0.5 flex flex-row flex-wrap">
+            <button aria-label="Regenerate">Regenerate</button>
+            <button aria-label="Read Aloud">Read</button>
+            <button aria-label="Start thread">Thread</button>
+            <button aria-label="Copy">Copy</button>
+            <button aria-label="Share link">Share</button>
+            <button aria-label="Like">Like</button>
+            <button aria-label="Dislike">Dislike</button>
+            <button aria-label="More actions">More</button>
+          </div>
+          <div></div>
+        </div>
+
+        <!-- User Message 2 -->
+        <div class="relative group flex flex-col justify-center w-full max-w-[var(--content-max-width)]">
+          <div class="message-bubble relative rounded-3xl text-primary min-h-7 prose dark:prose-invert break-words prose-p">
+            <p>Can you show me a simple Python example?</p>
+          </div>
+          <div class="order-first sticky hidden top-1"></div>
+          <div class="action-buttons h-8 mt-0.5 flex flex-row flex-wrap">
+            <button aria-label="Edit">Edit</button>
+            <button aria-label="Copy">Copy</button>
+          </div>
+          <div></div>
+        </div>
+
+        <!-- Assistant Message 2 with code block -->
+        <div class="relative group flex flex-col justify-center w-full max-w-[var(--content-max-width)]">
+          <div class="message-bubble relative rounded-3xl text-primary min-h-7 prose dark:prose-invert break-words prose-p">
+            <p>Here's a simple Python example of a basic block structure:</p>
+            <pre><code class="language-python">import hashlib
+import time
+
+class Block:
+    def __init__(self, data, previous_hash):
+        self.timestamp = time.time()
+        self.data = data
+        self.previous_hash = previous_hash
+        self.hash = self.calculate_hash()
+
+    def calculate_hash(self):
+        block_string = f"{self.timestamp}{self.data}{self.previous_hash}"
+        return hashlib.sha256(block_string.encode()).hexdigest()
+</code></pre>
+            <p>This creates a block with timestamp, data, and cryptographic hash linking.</p>
+          </div>
+          <div class="order-first sticky hidden top-1"></div>
+          <div class="action-buttons h-8 mt-0.5 flex flex-row flex-wrap">
+            <button aria-label="Regenerate">Regenerate</button>
+            <button aria-label="Read Aloud">Read</button>
+            <button aria-label="Start thread">Thread</button>
+            <button aria-label="Copy">Copy</button>
+            <button aria-label="Share link">Share</button>
+            <button aria-label="Like">Like</button>
+            <button aria-label="Dislike">Dislike</button>
+            <button aria-label="More actions">More</button>
+          </div>
+          <div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

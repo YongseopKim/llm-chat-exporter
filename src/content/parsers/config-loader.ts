@@ -83,7 +83,7 @@ export class ConfigLoader {
    * Validate configuration on load
    */
   private validateConfig(): void {
-    const requiredPlatforms: PlatformKey[] = ['chatgpt', 'claude', 'gemini'];
+    const requiredPlatforms: PlatformKey[] = ['chatgpt', 'claude', 'gemini', 'grok'];
 
     for (const platform of requiredPlatforms) {
       const config = this.config.platforms[platform];
@@ -118,8 +118,8 @@ export class ConfigLoader {
         throw new Error(`ConfigLoader: Missing content selectors for '${platform}'`);
       }
 
-      // Validate generation selector
-      if (!selectors.generation) {
+      // Validate generation selector (can be empty string for platforms that don't need it)
+      if (selectors.generation === undefined || selectors.generation === null) {
         throw new Error(`ConfigLoader: Missing generation selector for '${platform}'`);
       }
 
@@ -161,6 +161,14 @@ export class ConfigLoader {
         if (!role.userTag || !role.assistantTag) {
           throw new Error(
             `ConfigLoader: Missing userTag or assistantTag for 'tagname' strategy in '${platform}'`
+          );
+        }
+        break;
+
+      case 'sibling-button':
+        if (!role.userMarker || !role.assistantMarker) {
+          throw new Error(
+            `ConfigLoader: Missing userMarker or assistantMarker for 'sibling-button' strategy in '${platform}'`
           );
         }
         break;

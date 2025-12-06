@@ -7,11 +7,12 @@ import { isSupportedUrl, getPlatformName, generateFilename, SUPPORTED_HOSTS } fr
 
 describe('background-utils', () => {
   describe('SUPPORTED_HOSTS', () => {
-    it('should contain three platforms', () => {
-      expect(SUPPORTED_HOSTS).toHaveLength(3);
+    it('should contain four platforms', () => {
+      expect(SUPPORTED_HOSTS).toHaveLength(4);
       expect(SUPPORTED_HOSTS).toContain('chatgpt.com');
       expect(SUPPORTED_HOSTS).toContain('claude.ai');
       expect(SUPPORTED_HOSTS).toContain('gemini.google.com');
+      expect(SUPPORTED_HOSTS).toContain('grok.com');
     });
   });
 
@@ -29,6 +30,11 @@ describe('background-utils', () => {
     it('should return true for Gemini URL', () => {
       expect(isSupportedUrl('https://gemini.google.com/app/789')).toBe(true);
       expect(isSupportedUrl('https://gemini.google.com/')).toBe(true);
+    });
+
+    it('should return true for Grok URL', () => {
+      expect(isSupportedUrl('https://grok.com/chat/123')).toBe(true);
+      expect(isSupportedUrl('https://grok.com/')).toBe(true);
     });
 
     it('should return false for unsupported site', () => {
@@ -62,6 +68,11 @@ describe('background-utils', () => {
       expect(getPlatformName('https://gemini.google.com/')).toBe('gemini');
     });
 
+    it('should extract grok platform name', () => {
+      expect(getPlatformName('https://grok.com/chat/123')).toBe('grok');
+      expect(getPlatformName('https://grok.com/')).toBe('grok');
+    });
+
     it('should return unknown for unsupported site', () => {
       expect(getPlatformName('https://example.com')).toBe('unknown');
     });
@@ -81,6 +92,11 @@ describe('background-utils', () => {
     it('should generate filename with gemini prefix', () => {
       const filename = generateFilename('https://gemini.google.com/app/789');
       expect(filename).toMatch(/^gemini_\d{8}T\d{6}\.jsonl$/);
+    });
+
+    it('should generate filename with grok prefix', () => {
+      const filename = generateFilename('https://grok.com/chat/123');
+      expect(filename).toMatch(/^grok_\d{8}T\d{6}\.jsonl$/);
     });
 
     it('should generate filename with correct timestamp format', () => {

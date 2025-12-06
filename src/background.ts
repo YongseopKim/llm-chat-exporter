@@ -22,7 +22,7 @@ async function downloadJsonl(data: string, url: string): Promise<void> {
   await chrome.downloads.download({
     url: dataUrl,
     filename: filename,
-    saveAs: true,
+    saveAs: false,
   });
 }
 
@@ -63,8 +63,9 @@ chrome.commands.onCommand.addListener(async (command) => {
     // Show user-friendly notification
     chrome.notifications.create({
       type: 'basic',
+      iconUrl: 'icons/icon48.png',
       title: 'LLM Chat Exporter',
-      message: 'This site is not supported. Please use on ChatGPT, Claude, or Gemini.',
+      message: 'This site is not supported. Please use on ChatGPT, Claude, Gemini, or Grok.',
       priority: 1
     });
     return;
@@ -84,6 +85,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       const messageCount = response.data.split('\n').filter(line => line.trim()).length - 1; // -1 for metadata line
       chrome.notifications.create({
         type: 'basic',
+        iconUrl: 'icons/icon48.png',
         title: 'Export Successful',
         message: `Exported ${messageCount} messages to ${generateFilename(tab.url)}`,
         priority: 1
@@ -95,6 +97,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       // User-friendly error notification
       chrome.notifications.create({
         type: 'basic',
+        iconUrl: 'icons/icon48.png',
         title: 'Export Failed',
         message: response.error || 'An unknown error occurred. Check downloaded error file for details.',
         priority: 2
@@ -116,6 +119,7 @@ chrome.commands.onCommand.addListener(async (command) => {
     // Show error notification to user
     chrome.notifications.create({
       type: 'basic',
+      iconUrl: 'icons/icon48.png',
       title: 'Export Failed',
       message: 'Failed to initialize export. This may happen if the page is not fully loaded.',
       priority: 2

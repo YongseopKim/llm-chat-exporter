@@ -107,3 +107,51 @@ export function createMockMessageWithTable(tableHTML: string): HTMLElement {
   `);
   return dom.window.document.querySelector('article') as HTMLElement;
 }
+
+/**
+ * Create a mock user message element for Grok
+ *
+ * @param content - HTML content of the message
+ * @returns HTMLElement with Grok user message structure
+ */
+export function createMockGrokUserMessage(content: string): HTMLElement {
+  const dom = new JSDOM(`
+    <div class="relative group flex flex-col justify-center w-full">
+      <div class="message-bubble relative rounded-3xl text-primary prose">${content}</div>
+      <div class="order-first sticky hidden top-1"></div>
+      <div class="action-buttons h-8 mt-0.5 flex flex-row flex-wrap">
+        <button aria-label="Edit">Edit</button>
+        <button aria-label="Copy">Copy</button>
+      </div>
+      <div></div>
+    </div>
+  `);
+  return dom.window.document.querySelector('.message-bubble') as HTMLElement;
+}
+
+/**
+ * Create a mock assistant message element for Grok
+ *
+ * @param content - HTML content of the message
+ * @returns HTMLElement with Grok assistant message structure
+ */
+export function createMockGrokAssistantMessage(content: string): HTMLElement {
+  const dom = new JSDOM(`
+    <div class="relative group flex flex-col justify-center w-full">
+      <div class="message-bubble relative rounded-3xl text-primary prose">${content}</div>
+      <div class="order-first sticky hidden top-1"></div>
+      <div class="action-buttons h-8 mt-0.5 flex flex-row flex-wrap">
+        <button aria-label="Regenerate">Regenerate</button>
+        <button aria-label="Read Aloud">Read</button>
+        <button aria-label="Start thread">Thread</button>
+        <button aria-label="Copy">Copy</button>
+        <button aria-label="Share link">Share</button>
+        <button aria-label="Like">Like</button>
+        <button aria-label="Dislike">Dislike</button>
+        <button aria-label="More actions">More</button>
+      </div>
+      <div></div>
+    </div>
+  `);
+  return dom.window.document.querySelector('.message-bubble') as HTMLElement;
+}

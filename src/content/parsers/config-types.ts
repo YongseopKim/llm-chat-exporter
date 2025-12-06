@@ -10,8 +10,9 @@
  * - attribute: Read role from data attributes (ChatGPT)
  * - hybrid: Check multiple attributes with priority (Claude)
  * - tagname: Determine role from element tag name (Gemini)
+ * - sibling-button: Determine role from sibling button aria-label (Grok)
  */
-export type RoleStrategy = 'attribute' | 'hybrid' | 'tagname';
+export type RoleStrategy = 'attribute' | 'hybrid' | 'tagname' | 'sibling-button';
 
 /**
  * Message selector configuration
@@ -59,6 +60,12 @@ export interface RoleConfig {
   userTag?: string;
   /** Tag name for assistant messages */
   assistantTag?: string;
+
+  // For 'sibling-button' strategy (Grok)
+  /** Selector for button indicating user message */
+  userMarker?: string;
+  /** Selector for button indicating assistant message */
+  assistantMarker?: string;
 }
 
 /**
@@ -98,10 +105,11 @@ export interface SelectorConfig {
     chatgpt: PlatformConfig;
     claude: PlatformConfig;
     gemini: PlatformConfig;
+    grok: PlatformConfig;
   };
 }
 
 /**
  * Platform key type
  */
-export type PlatformKey = 'chatgpt' | 'claude' | 'gemini';
+export type PlatformKey = 'chatgpt' | 'claude' | 'gemini' | 'grok';
