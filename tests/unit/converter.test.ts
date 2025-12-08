@@ -185,4 +185,160 @@ describe('htmlToMarkdown', () => {
     const md = htmlToMarkdown(html).trim();
     expect(md).toBe('');
   });
+
+  // ============================================================
+  // ChatGPT/Grok Code Block Cleaning
+  // ============================================================
+
+  describe('Code Block Cleaning', () => {
+    it('should extract code from ChatGPT code block structure', () => {
+      // ChatGPT wraps code in complex structure with language label and copy button
+      const html = `<pre class="overflow-visible!">
+        <div class="contain-inline-size rounded-2xl">
+          <div class="flex items-center text-xs">python</div>
+          <div class="sticky top-9">
+            <div class="absolute end-0">
+              <button aria-label="복사">코드 복사</button>
+            </div>
+          </div>
+          <div class="overflow-y-auto p-4">
+            <code class="whitespace-pre! language-python"><span><span>print("hello")</span></span></code>
+          </div>
+        </div>
+      </pre>`;
+      const md = htmlToMarkdown(html);
+      expect(md).toContain('```python');
+      expect(md).toContain('print("hello")');
+      expect(md).not.toContain('복사');
+      expect(md).not.toContain('코드 복사');
+    });
+
+    it('should extract code from Grok code block structure', () => {
+      // Grok uses data-testid="code-block" with shiki syntax highlighting
+      const html = `<div data-testid="code-block">
+        <div class="border border-warm-gray-100">
+          <div class="flex flex-row px-4 py-2">
+            <span class="font-mono text-xs text-secondary">text</span>
+          </div>
+          <div class="sticky w-full right-2">
+            <div class="absolute bottom-1 right-1">
+              <button aria-label="자동 줄바꿈"></button>
+              <button><span>복사</span></button>
+            </div>
+          </div>
+          <div class="shiki not-prose">
+            <pre class="shiki slack-ochin"><code><span class="line"><span>Input Log → State Machine</span></span>
+<span class="line"><span>Leader 제안 → 과반 커밋</span></span></code></pre>
+          </div>
+        </div>
+      </div>`;
+      const md = htmlToMarkdown(html);
+      expect(md).toContain('```text');
+      expect(md).toContain('Input Log → State Machine');
+      expect(md).toContain('Leader 제안 → 과반 커밋');
+      expect(md).not.toContain('복사');
+    });
+
+    it('should preserve multiline code with proper whitespace', () => {
+      const html = `<pre class="overflow-visible!">
+        <div class="contain-inline-size">
+          <div>text</div>
+          <div class="overflow-y-auto p-4">
+            <code class="language-text"><span><span>          +----------------------+
+          |  Deterministic       |
+  input ->|  State Machine       |-> output
+          +----------------------+</span></span></code>
+          </div>
+        </div>
+      </pre>`;
+      const md = htmlToMarkdown(html);
+      expect(md).toContain('+----------------------+');
+      expect(md).toContain('Deterministic');
+      expect(md).toContain('State Machine');
+    });
+
+    it('should handle code block without copy button', () => {
+      // Standard pre/code structure should still work
+      const html = '<pre><code class="language-python">def foo(): pass</code></pre>';
+      const md = htmlToMarkdown(html);
+      expect(md).toContain('```python');
+      expect(md).toContain('def foo(): pass');
+    });
+  });
+
+  // ============================================================
+  // KaTeX Math Extraction
+  // ============================================================
+
+  describe('KaTeX Math Extraction', () => {
+    it('should extract LaTeX from block math (katex-display)', () => {
+      const html = `<span class="katex-display"><span class="katex">
+        <span class="katex-mathml">
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+            <semantics>
+              <mrow></mrow>
+              <annotation encoding="application/x-tex">x^2 + y^2 = z^2</annotation>
+            </semantics>
+          </math>
+        </span>
+        <span class="katex-html" aria-hidden="true">rendered content</span>
+      </span></span>`;
+      const md = htmlToMarkdown(html);
+      expect(md).toContain('$$x^2 + y^2 = z^2$$');
+      expect(md).not.toContain('rendered content');
+    });
+
+    it('should extract LaTeX from inline math (katex without display)', () => {
+      const html = `<span class="katex">
+        <span class="katex-mathml">
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <semantics>
+              <mrow></mrow>
+              <annotation encoding="application/x-tex">E = mc^2</annotation>
+            </semantics>
+          </math>
+        </span>
+        <span class="katex-html" aria-hidden="true">rendered</span>
+      </span>`;
+      const md = htmlToMarkdown(html);
+      expect(md).toContain('$E = mc^2$');
+      expect(md).not.toContain('$$'); // Should not be block math
+    });
+
+    it('should handle complex LaTeX expressions', () => {
+      const latex = String.raw`S_n = Apply(Apply(...Apply(S_0, Tx_1) ..., Tx_{n-1}), Tx_n)`;
+      const html = `<span class="katex-display"><span class="katex">
+        <span class="katex-mathml">
+          <math><semantics><mrow></mrow>
+            <annotation encoding="application/x-tex">${latex}</annotation>
+          </semantics></math>
+        </span>
+      </span></span>`;
+      const md = htmlToMarkdown(html);
+      expect(md).toContain(`$$${latex}$$`);
+    });
+
+    it('should handle inline math within paragraph', () => {
+      const html = `<p>The formula <span class="katex">
+        <span class="katex-mathml"><math><semantics><mrow></mrow>
+          <annotation encoding="application/x-tex">a^2 + b^2</annotation>
+        </semantics></math></span>
+      </span> is Pythagorean.</p>`;
+      const md = htmlToMarkdown(html);
+      expect(md).toContain('$a^2 + b^2$');
+      expect(md).toContain('Pythagorean');
+    });
+
+    it('should not double-wrap math when katex is inside katex-display', () => {
+      // The inner katex should not be processed separately
+      const html = `<span class="katex-display"><span class="katex">
+        <span class="katex-mathml"><math><semantics><mrow></mrow>
+          <annotation encoding="application/x-tex">\\sum_{i=1}^n i</annotation>
+        </semantics></math></span>
+      </span></span>`;
+      const md = htmlToMarkdown(html);
+      // Should have exactly one block math, not nested
+      expect(md.match(/\$\$/g)?.length).toBe(2); // Opening and closing $$
+    });
+  });
 });

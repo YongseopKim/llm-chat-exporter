@@ -2,18 +2,74 @@
  * HTML to Markdown Converter
  *
  * Uses Turndown library to convert LLM conversation HTML to Markdown.
- * Includes custom rules for code blocks, tables, and complex structures.
+ * Includes custom rules for code blocks, tables, KaTeX math, and complex structures.
  *
- * Based on validation results (78% success rate):
+ * Features:
  * - Code blocks: ✅ Works with language preservation
+ * - ChatGPT/Grok code block cleaning: ✅ Removes UI elements (copy buttons, language labels)
+ * - KaTeX math: ✅ Extracts LaTeX source from rendered formulas
  * - Lists: ✅ Works with nesting
  * - Emphasis: ✅ Works
  * - Links: ✅ Works
- * - Tables: ❌ Needs custom rule
- * - Complex HTML: ⚠️ May need improvement
+ * - Tables: ✅ Custom rule for proper conversion
  */
 
 import TurndownService from 'turndown';
+
+/**
+ * Clean code block HTML from ChatGPT and Grok
+ *
+ * These platforms wrap code blocks in complex structures with UI elements
+ * (language labels, copy buttons) that need to be removed before conversion.
+ *
+ * @param html - Raw HTML string
+ * @returns Cleaned HTML with simplified <pre><code> structure
+ */
+function cleanCodeBlockHtml(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+
+  // ChatGPT: <pre> contains divs with language label, copy button, and code
+  // Structure: <pre><div>...<code class="language-X">content</code>...</div></pre>
+  doc.querySelectorAll('pre').forEach((pre) => {
+    const codeEl = pre.querySelector('code');
+    if (codeEl && pre.querySelector('div')) {
+      // This is a ChatGPT-style wrapped code block
+      const langMatch = codeEl.className.match(/language-(\w+)/);
+      const lang = langMatch ? langMatch[1] : '';
+
+      // Create clean structure with just the code content
+      const cleanCode = document.createElement('code');
+      cleanCode.className = lang ? `language-${lang}` : '';
+      cleanCode.textContent = codeEl.textContent || '';
+
+      // Replace pre content with clean code
+      pre.innerHTML = '';
+      pre.appendChild(cleanCode);
+    }
+  });
+
+  // Grok: [data-testid="code-block"] contains header, buttons, and shiki pre/code
+  doc.querySelectorAll('[data-testid="code-block"]').forEach((block) => {
+    const codeEl = block.querySelector('pre code');
+    if (codeEl) {
+      // Get language from the language label span
+      const langSpan = block.querySelector('.text-secondary');
+      const lang = langSpan?.textContent?.trim() || '';
+
+      // Create clean pre/code structure
+      const cleanPre = document.createElement('pre');
+      const cleanCode = document.createElement('code');
+      cleanCode.className = lang ? `language-${lang}` : '';
+      cleanCode.textContent = codeEl.textContent || '';
+      cleanPre.appendChild(cleanCode);
+
+      // Replace the entire block with clean pre
+      block.replaceWith(cleanPre);
+    }
+  });
+
+  return doc.body.innerHTML;
+}
 
 // Configure Turndown service
 const turndownService = new TurndownService({
@@ -106,6 +162,52 @@ turndownService.addRule('table', {
 });
 
 /**
+ * Custom Rule 3: KaTeX Block Math ($$...$$)
+ * Extracts LaTeX source from rendered KaTeX display math
+ */
+turndownService.addRule('mathBlockKatex', {
+  filter: (node) => {
+    return (
+      node.nodeName === 'SPAN' &&
+      (node as HTMLElement).classList.contains('katex-display')
+    );
+  },
+  replacement: (_content, node) => {
+    const element = node as HTMLElement;
+    const annotation = element.querySelector(
+      'annotation[encoding="application/x-tex"]'
+    );
+    const latex = annotation?.textContent || '';
+    return latex ? `\n$$${latex}$$\n` : '';
+  }
+});
+
+/**
+ * Custom Rule 4: KaTeX Inline Math ($...$)
+ * Extracts LaTeX source from rendered KaTeX inline math
+ * Only matches .katex that is NOT inside .katex-display (to avoid double processing)
+ */
+turndownService.addRule('mathInlineKatex', {
+  filter: (node) => {
+    if (node.nodeName !== 'SPAN') return false;
+    const element = node as HTMLElement;
+    // Must have .katex class but NOT be inside .katex-display
+    return (
+      element.classList.contains('katex') &&
+      !element.closest('.katex-display')
+    );
+  },
+  replacement: (_content, node) => {
+    const element = node as HTMLElement;
+    const annotation = element.querySelector(
+      'annotation[encoding="application/x-tex"]'
+    );
+    const latex = annotation?.textContent || '';
+    return latex ? `$${latex}$` : '';
+  }
+});
+
+/**
  * Convert HTML to Markdown
  *
  * @param html - HTML string to convert
@@ -121,7 +223,9 @@ export function htmlToMarkdown(html: string): string {
   }
 
   try {
-    return turndownService.turndown(html);
+    // Preprocess: Clean code blocks from ChatGPT/Grok UI elements
+    const cleanedHtml = cleanCodeBlockHtml(html);
+    return turndownService.turndown(cleanedHtml);
   } catch (error) {
     console.error('Turndown conversion failed:', error);
     // Fallback: return plain text
