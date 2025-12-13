@@ -12,11 +12,25 @@ interface ExportResponse {
 }
 
 /**
+ * JSONL 데이터의 첫 줄(메타데이터)에서 title 추출
+ */
+function extractTitleFromJsonl(data: string): string | undefined {
+  try {
+    const firstLine = data.split('\n')[0];
+    const meta = JSON.parse(firstLine);
+    return meta.title;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * JSONL 데이터를 파일로 다운로드
  * Service Worker에서는 URL.createObjectURL을 사용할 수 없으므로 Data URL 사용
  */
 async function downloadJsonl(data: string, url: string): Promise<void> {
-  const filename = generateFilename(url);
+  const title = extractTitleFromJsonl(data);
+  const filename = generateFilename(url, title);
   const dataUrl = 'data:application/jsonl;charset=utf-8,' + encodeURIComponent(data);
 
   await chrome.downloads.download({
@@ -83,11 +97,12 @@ chrome.commands.onCommand.addListener(async (command) => {
 
       // Show success notification
       const messageCount = response.data.split('\n').filter(line => line.trim()).length - 1; // -1 for metadata line
+      const title = extractTitleFromJsonl(response.data);
       chrome.notifications.create({
         type: 'basic',
         iconUrl: 'icons/icon48.png',
         title: 'Export Successful',
-        message: `Exported ${messageCount} messages to ${generateFilename(tab.url)}`,
+        message: `Exported ${messageCount} messages to ${generateFilename(tab.url, title)}`,
         priority: 1
       });
     } else {

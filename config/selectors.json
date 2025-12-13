@@ -20,6 +20,11 @@
         "role": {
           "strategy": "attribute",
           "attributes": ["data-message-author-role", "data-turn"]
+        },
+        "title": {
+          "strategy": "document-title",
+          "prefixPattern": "^ChatGPT\\s*[-–—]\\s*",
+          "emojiPattern": "^[\\p{Emoji_Presentation}\\p{Extended_Pictographic}]\\s*"
         }
       }
     },
@@ -39,6 +44,11 @@
           "userTestId": "user-message",
           "assistantTestId": "assistant-message",
           "streamingAttribute": "data-is-streaming"
+        },
+        "title": {
+          "strategy": "selector",
+          "selector": "div.truncate.font-base-bold",
+          "emojiPattern": "^[\\p{Emoji}\\p{Emoji_Presentation}\\p{Extended_Pictographic}][\\uFE0E\\uFE0F]?\\s*"
         }
       }
     },
@@ -57,6 +67,11 @@
           "strategy": "tagname",
           "userTag": "user-query",
           "assistantTag": "model-response"
+        },
+        "title": {
+          "strategy": "selector",
+          "selector": "span.conversation-title",
+          "emojiPattern": "^[\\p{Emoji}\\p{Emoji_Presentation}\\p{Extended_Pictographic}][\\uFE0E\\uFE0F]?\\s*"
         }
       }
     },
@@ -75,6 +90,11 @@
           "strategy": "sibling-button",
           "userMarker": "button[aria-label='Edit']",
           "assistantMarker": "button[aria-label='Regenerate']"
+        },
+        "title": {
+          "strategy": "document-title",
+          "suffixPattern": "\\s*[-–—]\\s*Grok$",
+          "emojiPattern": "^[\\p{Emoji_Presentation}\\p{Extended_Pictographic}]\\s*"
         }
       }
     }

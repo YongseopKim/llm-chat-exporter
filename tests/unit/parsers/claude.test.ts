@@ -318,4 +318,38 @@ describe('ClaudeParser', () => {
       expect(global.window.scrollTo).toHaveBeenCalled();
     });
   });
+
+  // ============================================================
+  // getTitle() - 2 tests
+  // ============================================================
+
+  describe('getTitle', () => {
+    it('should extract title from DOM selector', () => {
+      const doc = createDOMFromHTML(`
+        <html>
+          <body>
+            <h1 class="TBD">My Claude Conversation</h1>
+          </body>
+        </html>
+      `);
+      // Mock querySelector to return the title element
+      const mockDoc = {
+        querySelector: vi.fn().mockReturnValue({ textContent: 'My Claude Conversation' }),
+        querySelectorAll: doc.querySelectorAll.bind(doc),
+      };
+      global.document = mockDoc as any;
+
+      expect(parser.getTitle()).toBe('My Claude Conversation');
+    });
+
+    it('should return undefined when title element not found', () => {
+      const mockDoc = {
+        querySelector: vi.fn().mockReturnValue(null),
+        querySelectorAll: vi.fn().mockReturnValue([]),
+      };
+      global.document = mockDoc as any;
+
+      expect(parser.getTitle()).toBeUndefined();
+    });
+  });
 });

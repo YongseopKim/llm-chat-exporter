@@ -302,4 +302,43 @@ describe('GrokParser', () => {
       expect(global.window.scrollTo).toHaveBeenCalled();
     });
   });
+
+  // ============================================================
+  // getTitle() - 2 tests
+  // ============================================================
+
+  describe('getTitle', () => {
+    it('should extract title from document.title removing suffix', () => {
+      const mockDoc = {
+        title: 'AI Discussion - Grok',
+        querySelector: vi.fn().mockReturnValue(null),
+        querySelectorAll: vi.fn().mockReturnValue([]),
+      };
+      global.document = mockDoc as any;
+
+      expect(parser.getTitle()).toBe('AI Discussion');
+    });
+
+    it('should handle suffix with en-dash', () => {
+      const mockDoc = {
+        title: 'Zcash – Grok',
+        querySelector: vi.fn().mockReturnValue(null),
+        querySelectorAll: vi.fn().mockReturnValue([]),
+      };
+      global.document = mockDoc as any;
+
+      expect(parser.getTitle()).toBe('Zcash');
+    });
+
+    it('should remove emoji from title', () => {
+      const mockDoc = {
+        title: '🎯 Tech Talk - Grok',
+        querySelector: vi.fn().mockReturnValue(null),
+        querySelectorAll: vi.fn().mockReturnValue([]),
+      };
+      global.document = mockDoc as any;
+
+      expect(parser.getTitle()).toBe('Tech Talk');
+    });
+  });
 });

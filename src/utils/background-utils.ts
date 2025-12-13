@@ -31,10 +31,24 @@ export function getPlatformName(url: string): string {
 }
 
 /**
- * 파일명 생성 (platform_YYYYMMDDTHHMMSS.jsonl)
+ * 파일명에 사용할 수 없는 문자를 _로 대체
  */
-export function generateFilename(url: string): string {
+export function sanitizeFilename(name: string): string {
+  return name.replace(/[/\\:*?"<>|]/g, '_');
+}
+
+/**
+ * 파일명 생성 (platform_{title}.jsonl 또는 platform_timestamp.jsonl)
+ */
+export function generateFilename(url: string, title?: string): string {
   const platform = getPlatformName(url);
+
+  if (title) {
+    const sanitizedTitle = sanitizeFilename(title);
+    return `${platform}_${sanitizedTitle}.jsonl`;
+  }
+
+  // Fallback to timestamp if no title
   const now = new Date();
   const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0];
   return `${platform}_${timestamp}.jsonl`;

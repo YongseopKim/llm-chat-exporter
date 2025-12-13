@@ -292,4 +292,30 @@ describe('GeminiParser', () => {
       expect(global.window.scrollTo).toHaveBeenCalled();
     });
   });
+
+  // ============================================================
+  // getTitle() - 2 tests
+  // ============================================================
+
+  describe('getTitle', () => {
+    it('should extract title from DOM selector', () => {
+      const mockDoc = {
+        querySelector: vi.fn().mockReturnValue({ textContent: 'My Gemini Chat' }),
+        querySelectorAll: vi.fn().mockReturnValue([]),
+      };
+      global.document = mockDoc as any;
+
+      expect(parser.getTitle()).toBe('My Gemini Chat');
+    });
+
+    it('should return undefined when title element not found', () => {
+      const mockDoc = {
+        querySelector: vi.fn().mockReturnValue(null),
+        querySelectorAll: vi.fn().mockReturnValue([]),
+      };
+      global.document = mockDoc as any;
+
+      expect(parser.getTitle()).toBeUndefined();
+    });
+  });
 });

@@ -15,6 +15,33 @@
 export type RoleStrategy = 'attribute' | 'hybrid' | 'tagname' | 'sibling-button';
 
 /**
+ * Title extraction strategy types
+ * - document-title: Extract from document.title with pattern cleaning (ChatGPT, Grok)
+ * - selector: Extract from DOM element using CSS selector (Claude, Gemini)
+ */
+export type TitleStrategy = 'document-title' | 'selector';
+
+/**
+ * Title extraction configuration
+ */
+export interface TitleConfig {
+  /** Strategy for extracting title */
+  strategy: TitleStrategy;
+
+  // For 'document-title' strategy (ChatGPT/Grok)
+  /** Regex pattern to remove prefix (e.g., "ChatGPT - ") */
+  prefixPattern?: string;
+  /** Regex pattern to remove suffix (e.g., " - Grok") */
+  suffixPattern?: string;
+  /** Regex pattern to remove leading emoji */
+  emojiPattern?: string;
+
+  // For 'selector' strategy (Claude/Gemini)
+  /** CSS selector to find title element */
+  selector?: string;
+}
+
+/**
  * Message selector configuration
  */
 export interface MessageSelectors {
@@ -80,6 +107,8 @@ export interface PlatformSelectors {
   generation: string;
   /** Role extraction configuration */
   role: RoleConfig;
+  /** Title extraction configuration (optional) */
+  title?: TitleConfig;
 }
 
 /**

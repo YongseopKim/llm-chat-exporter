@@ -138,6 +138,31 @@ function validatePlatform(name, config) {
     }
   }
 
+  // Validate title config (optional but should be valid if present)
+  if (selectors.title) {
+    if (!selectors.title.strategy) {
+      errors.push(`Missing 'title.strategy' for ${name}`);
+    } else {
+      switch (selectors.title.strategy) {
+        case 'document-title':
+          if (!selectors.title.prefixPattern) {
+            warnings.push(`Missing 'title.prefixPattern' for document-title strategy in ${name}`);
+          }
+          // emojiPattern is optional
+          break;
+        case 'selector':
+          if (!selectors.title.selector) {
+            errors.push(`Missing 'title.selector' for selector strategy in ${name}`);
+          } else if (selectors.title.selector === 'TBD') {
+            warnings.push(`Title selector is 'TBD' (placeholder) for ${name} - needs browser verification`);
+          }
+          break;
+        default:
+          errors.push(`Unknown title strategy '${selectors.title.strategy}' in ${name}`);
+      }
+    }
+  }
+
   return { errors, warnings };
 }
 
@@ -188,7 +213,10 @@ function validate() {
       if (errors.length === 0) {
         success(`${platform}: All required fields present`);
         console.log(`   Hostname: ${config.platforms[platform].hostname}`);
-        console.log(`   Strategy: ${config.platforms[platform].selectors.role.strategy}`);
+        console.log(`   Role Strategy: ${config.platforms[platform].selectors.role.strategy}`);
+        if (config.platforms[platform].selectors.title) {
+          console.log(`   Title Strategy: ${config.platforms[platform].selectors.title.strategy}`);
+        }
       } else {
         error(`${platform}: ${errors.length} error(s)`);
         errors.forEach((e) => console.log(`   - ${e}`));

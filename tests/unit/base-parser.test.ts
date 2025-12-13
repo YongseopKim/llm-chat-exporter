@@ -355,6 +355,246 @@ describe('BaseParser', () => {
     });
   });
 
+  describe('getTitle - document-title strategy', () => {
+    it('should extract title from document.title for ChatGPT', () => {
+      const parser = new TestParser('chatgpt');
+      const mockDoc = {
+        title: 'ChatGPT - My Test Conversation',
+        querySelector: vi.fn(),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBe('My Test Conversation');
+    });
+
+    it('should remove emoji from title', () => {
+      const parser = new TestParser('chatgpt');
+      const mockDoc = {
+        title: 'ChatGPT - 🚀 My Test Conversation',
+        querySelector: vi.fn(),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBe('My Test Conversation');
+    });
+
+    it('should handle title with suffix pattern (Grok)', () => {
+      const parser = new TestParser('grok');
+      const mockDoc = {
+        title: 'AI Discussion - Grok',
+        querySelector: vi.fn(),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBe('AI Discussion');
+    });
+
+    it('should return undefined for empty document.title', () => {
+      const parser = new TestParser('chatgpt');
+      const mockDoc = {
+        title: '',
+        querySelector: vi.fn(),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBeUndefined();
+    });
+
+    it('should return undefined for title with only prefix', () => {
+      const parser = new TestParser('chatgpt');
+      const mockDoc = {
+        title: 'ChatGPT - ',
+        querySelector: vi.fn(),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBeUndefined();
+    });
+
+    it('should handle different dash characters', () => {
+      const parser = new TestParser('chatgpt');
+      const mockDoc = {
+        title: 'ChatGPT – Test with en-dash',
+        querySelector: vi.fn(),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBe('Test with en-dash');
+    });
+
+    it('should handle em-dash in prefix (ChatGPT)', () => {
+      const parser = new TestParser('chatgpt');
+      const mockDoc = {
+        title: 'ChatGPT—Test with em-dash',
+        querySelector: vi.fn(),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBe('Test with em-dash');
+    });
+
+    it('should handle em-dash in suffix (Grok)', () => {
+      const parser = new TestParser('grok');
+      const mockDoc = {
+        title: 'Test with em-dash—Grok',
+        querySelector: vi.fn(),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBe('Test with em-dash');
+    });
+  });
+
+  describe('getTitle - selector strategy', () => {
+    it('should extract title from DOM element for Claude', () => {
+      const parser = new TestParser('claude');
+      const mockElement = {
+        textContent: 'My Claude Chat',
+      };
+      const mockDoc = {
+        querySelector: vi.fn().mockReturnValue(mockElement),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBe('My Claude Chat');
+    });
+
+    it('should return undefined when selector finds no element', () => {
+      const parser = new TestParser('claude');
+      const mockDoc = {
+        querySelector: vi.fn().mockReturnValue(null),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBeUndefined();
+    });
+
+    it('should return undefined when element has empty text', () => {
+      const parser = new TestParser('gemini');
+      const mockElement = {
+        textContent: '   ',
+      };
+      const mockDoc = {
+        querySelector: vi.fn().mockReturnValue(mockElement),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBeUndefined();
+    });
+
+    it('should trim whitespace from selector result', () => {
+      const parser = new TestParser('claude');
+      const mockElement = {
+        textContent: '  Title with spaces  ',
+      };
+      const mockDoc = {
+        querySelector: vi.fn().mockReturnValue(mockElement),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBe('Title with spaces');
+    });
+
+    it('should remove emoji from selector result when emojiPattern provided (Claude)', () => {
+      const parser = new TestParser('claude');
+      const mockElement = {
+        textContent: '☑️Zcash',
+      };
+      const mockDoc = {
+        querySelector: vi.fn().mockReturnValue(mockElement),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBe('Zcash');
+    });
+
+    it('should remove emoji from selector result when emojiPattern provided (Gemini)', () => {
+      const parser = new TestParser('gemini');
+      const mockElement = {
+        textContent: '🎯 Tech Discussion',
+      };
+      const mockDoc = {
+        querySelector: vi.fn().mockReturnValue(mockElement),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const title = parser.getTitle();
+      expect(title).toBe('Tech Discussion');
+    });
+  });
+
+  describe('getTitle - error handling', () => {
+    it('should log warning but not throw on selector error', () => {
+      const parser = new TestParser('claude');
+      const mockDoc = {
+        querySelector: vi.fn().mockImplementation(() => {
+          throw new Error('Selector error');
+        }),
+        querySelectorAll: vi.fn(),
+      };
+      global.document = mockDoc as any;
+
+      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const title = parser.getTitle();
+      expect(title).toBeUndefined();
+      expect(consoleWarn).toHaveBeenCalled();
+
+      consoleWarn.mockRestore();
+    });
+
+    // This test must be last in this describe block since it modifies global.document in a way
+    // that cannot be fully restored by afterEach
+    it('should return undefined on document.title access error', () => {
+      const parser = new TestParser('chatgpt');
+      const savedDocument = global.document;
+
+      Object.defineProperty(global, 'document', {
+        get: () => {
+          throw new Error('Document not accessible');
+        },
+        configurable: true,
+      });
+
+      const title = parser.getTitle();
+      expect(title).toBeUndefined();
+
+      // Restore document for other tests
+      Object.defineProperty(global, 'document', {
+        value: savedDocument,
+        writable: true,
+        configurable: true,
+      });
+    });
+  });
+
   describe('content extraction', () => {
     it('should use correct content selector for user (ChatGPT)', () => {
       const parser = new TestParser('chatgpt');

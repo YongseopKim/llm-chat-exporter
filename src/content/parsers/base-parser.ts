@@ -12,7 +12,7 @@
  */
 
 import type { ChatParser, ParsedMessage } from './interface';
-import type { PlatformSelectors, PlatformKey } from './config-types';
+import type { PlatformSelectors, PlatformKey, TitleConfig } from './config-types';
 import { ConfigLoader } from './config-loader';
 import { scrollToLoadAll } from '../scroller';
 
@@ -326,5 +326,116 @@ export abstract class BaseParser implements ChatParser {
     const selector = this.selectors.content[role];
     const contentElement = node.querySelector(selector);
     return contentElement?.innerHTML || '';
+  }
+
+  /**
+   * Get conversation title using configured strategy
+   *
+   * Dispatches to appropriate extraction method based on configuration.
+   * Returns undefined if title cannot be extracted or config not provided.
+   *
+   * @returns Title string or undefined
+   */
+  getTitle(): string | undefined {
+    const titleConfig = this.selectors.title;
+
+    // No title configuration - return undefined
+    if (!titleConfig) {
+      return undefined;
+    }
+
+    try {
+      switch (titleConfig.strategy) {
+        case 'document-title':
+          return this.extractTitleFromDocument(titleConfig);
+        case 'selector':
+          return this.extractTitleFromSelector(titleConfig);
+        default:
+          console.warn(
+            `${this.platformName}: Unknown title strategy '${(titleConfig as TitleConfig).strategy}'`
+          );
+          return undefined;
+      }
+    } catch (error) {
+      // Log error but don't throw - title is optional
+      console.warn(`${this.platformName}: Failed to extract title`, error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Extract title from document.title with pattern cleaning
+   *
+   * Process:
+   * 1. Get document.title
+   * 2. Remove prefix (e.g., "ChatGPT - ")
+   * 3. Remove leading emoji
+   * 4. Trim whitespace
+   *
+   * @private
+   * @param config - Title configuration
+   * @returns Cleaned title or undefined
+   */
+  private extractTitleFromDocument(config: TitleConfig): string | undefined {
+    let title = document.title;
+
+    if (!title || title.trim() === '') {
+      return undefined;
+    }
+
+    // Remove prefix (e.g., "ChatGPT - ")
+    if (config.prefixPattern) {
+      const prefixRegex = new RegExp(config.prefixPattern, 'u');
+      title = title.replace(prefixRegex, '');
+    }
+
+    // Remove suffix (e.g., " - Grok")
+    if (config.suffixPattern) {
+      const suffixRegex = new RegExp(config.suffixPattern, 'u');
+      title = title.replace(suffixRegex, '');
+    }
+
+    // Remove leading emoji
+    if (config.emojiPattern) {
+      const emojiRegex = new RegExp(config.emojiPattern, 'u');
+      title = title.replace(emojiRegex, '');
+    }
+
+    title = title.trim();
+
+    return title || undefined;
+  }
+
+  /**
+   * Extract title from DOM element using selector
+   *
+   * @private
+   * @param config - Title configuration
+   * @returns Title text or undefined
+   */
+  private extractTitleFromSelector(config: TitleConfig): string | undefined {
+    if (!config.selector) {
+      return undefined;
+    }
+
+    const element = document.querySelector(config.selector);
+
+    if (!element) {
+      return undefined;
+    }
+
+    let title = element.textContent?.trim();
+
+    if (!title) {
+      return undefined;
+    }
+
+    // Remove leading emoji if pattern provided
+    if (config.emojiPattern) {
+      const emojiRegex = new RegExp(config.emojiPattern, 'u');
+      title = title.replace(emojiRegex, '').trim();
+    }
+
+    return title || undefined;
   }
 }

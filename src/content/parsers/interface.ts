@@ -49,6 +49,12 @@ export interface ChatParser {
    * @returns true if generation in progress
    */
   isGenerating(): boolean;
+
+  /**
+   * Get conversation title
+   * @returns Title string or undefined if not available
+   */
+  getTitle(): string | undefined;
 }
 
 /**
@@ -81,7 +87,7 @@ export interface ExportMetadata {
   /**
    * Platform identifier
    */
-  platform: 'chatgpt' | 'claude' | 'gemini';
+  platform: 'chatgpt' | 'claude' | 'gemini' | 'grok';
 
   /**
    * Full URL of the conversation
@@ -92,6 +98,11 @@ export interface ExportMetadata {
    * ISO 8601 timestamp when export was performed
    */
   exported_at: string;
+
+  /**
+   * Conversation title (optional)
+   */
+  title?: string;
 }
 
 /**

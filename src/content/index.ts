@@ -67,10 +67,12 @@ async function exportConversation(): Promise<string> {
   console.log(`LLM Chat Exporter: Found ${parsedMessages.length} messages`);
 
   // 5. Build JSONL with metadata
+  const title = parser.getTitle();
   const jsonl = buildJsonl(parsedMessages, {
     platform: getPlatformName(window.location.href) as any,
     url: window.location.href,
-    exported_at: new Date().toISOString()
+    exported_at: new Date().toISOString(),
+    ...(title && { title })
   });
 
   console.log('LLM Chat Exporter: Export complete');

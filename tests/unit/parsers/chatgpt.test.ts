@@ -290,4 +290,43 @@ describe('ChatGPTParser', () => {
       expect(global.window.scrollTo).toHaveBeenCalled();
     });
   });
+
+  // ============================================================
+  // getTitle() - 3 tests
+  // ============================================================
+
+  describe('getTitle', () => {
+    it('should extract title from document.title removing prefix', () => {
+      const mockDoc = {
+        title: 'ChatGPT - My Conversation',
+        querySelector: vi.fn().mockReturnValue(null),
+        querySelectorAll: vi.fn().mockReturnValue([]),
+      };
+      global.document = mockDoc as any;
+
+      expect(parser.getTitle()).toBe('My Conversation');
+    });
+
+    it('should remove emoji from title after prefix', () => {
+      const mockDoc = {
+        title: 'ChatGPT - 🎨 Creative Chat',
+        querySelector: vi.fn().mockReturnValue(null),
+        querySelectorAll: vi.fn().mockReturnValue([]),
+      };
+      global.document = mockDoc as any;
+
+      expect(parser.getTitle()).toBe('Creative Chat');
+    });
+
+    it('should return undefined for empty title after cleanup', () => {
+      const mockDoc = {
+        title: 'ChatGPT - ',
+        querySelector: vi.fn().mockReturnValue(null),
+        querySelectorAll: vi.fn().mockReturnValue([]),
+      };
+      global.document = mockDoc as any;
+
+      expect(parser.getTitle()).toBeUndefined();
+    });
+  });
 });
