@@ -1,5 +1,7 @@
 # LLM Chat Exporter
 
+**English** | [한국어](README.ko.md)
+
 A Chrome Extension that exports conversations from ChatGPT, Claude, and Gemini web UIs to JSONL format with a single keyboard shortcut.
 
 ## Introduction
@@ -210,43 +212,6 @@ MIT License
 Copyright (c) 2025
 
 This project is for personal use. Please comply with the terms of service of ChatGPT, Claude, and Gemini.
-
----
-
-# 한국어 안내
-
-## 프로젝트 소개
-
-**LLM Chat Exporter**는 ChatGPT, Claude, Gemini 웹 인터페이스의 대화를 API 없이 DOM 파싱으로 추출하여 JSONL 파일로 저장하는 Chrome 확장 프로그램입니다.
-
-### 핵심 가치
-
-- **컨텍스트 보존**: 웹 UI 그대로의 대화 경험 보존
-- **로컬 우선**: 모든 처리가 브라우저 내에서 완결
-- **데이터 소유권**: 대화 내용을 로컬에 영구 보존
-
-## 사용 방법
-
-1. ChatGPT, Claude, 또는 Gemini에서 대화 페이지 열기
-2. `Ctrl+Shift+E` (Mac: `Cmd+Shift+E`) 누르기
-3. JSONL 파일 자동 다운로드
-
-## 사용 사례
-
-- LLM 대화를 로컬 지식 베이스로 구축
-- 중요한 대화 백업 및 아카이빙
-- RAG 파이프라인 입력 데이터로 활용
-- 대화 기록 분석 및 학습 자료 활용
-
-## 개발 환경 구축
-
-```bash
-git clone https://github.com/YongseopKim/llm-chat-exporter.git
-cd llm-chat-exporter
-npm install
-npm run build
-npm test  # 203개 테스트 실행
-```
 
 ---
 
