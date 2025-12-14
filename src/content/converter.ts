@@ -65,6 +65,8 @@ function cleanCodeBlockHtml(html: string): string {
   });
 
   // Grok: [data-testid="code-block"] contains header, buttons, and shiki pre/code
+  // Shiki wraps each line in <span class="line">, which may lose newlines when
+  // innerHTML is captured from the browser DOM
   doc.querySelectorAll('[data-testid="code-block"]').forEach((block) => {
     const codeEl = block.querySelector('pre code');
     if (codeEl) {
@@ -72,11 +74,24 @@ function cleanCodeBlockHtml(html: string): string {
       const langSpan = block.querySelector('.text-secondary');
       const lang = langSpan?.textContent?.trim() || '';
 
+      // Extract content preserving newlines from Shiki's .line structure
+      const lines = codeEl.querySelectorAll('.line');
+      let content: string;
+      if (lines.length > 0) {
+        // Shiki structure: join each .line element's text with newlines
+        content = Array.from(lines)
+          .map((line) => line.textContent || '')
+          .join('\n');
+      } else {
+        // Fallback: use textContent directly
+        content = codeEl.textContent || '';
+      }
+
       // Create clean pre/code structure
       const cleanPre = document.createElement('pre');
       const cleanCode = document.createElement('code');
       cleanCode.className = lang ? `language-${lang}` : '';
-      cleanCode.textContent = codeEl.textContent || '';
+      cleanCode.textContent = content;
       cleanPre.appendChild(cleanCode);
 
       // Replace the entire block with clean pre

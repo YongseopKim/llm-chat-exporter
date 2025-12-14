@@ -239,6 +239,70 @@ describe('htmlToMarkdown', () => {
       expect(md).not.toContain('복사');
     });
 
+    it('should extract mermaid code from Grok Shiki structure with proper newlines', () => {
+      // Real Grok DOM structure from user report - Shiki wraps each line in <span class="line">
+      // Issue: newlines between <span class="line"> elements were lost, causing inline code output
+      const html = `<div data-testid="code-block">
+        <div class="border border-warm-gray-100">
+          <div class="flex flex-row px-4 py-2 h-10 items-center">
+            <span class="font-mono text-xs text-secondary">mermaid</span>
+          </div>
+          <div class="shiki not-prose">
+            <pre class="shiki slack-ochin"><code><span class="line"><span>flowchart TD</span></span>
+<span class="line"><span>    subgraph Phase1 ["Phase 1: Security Core"]</span></span>
+<span class="line"><span>        Bank[Bank / Institution]</span></span>
+<span class="line"><span>    end</span></span></code></pre>
+          </div>
+        </div>
+      </div>`;
+      const md = htmlToMarkdown(html);
+
+      // Must be fenced code block with mermaid language
+      expect(md).toContain('```mermaid');
+      expect(md).toContain('```');
+
+      // Must NOT be inline code (single backtick)
+      expect(md).not.toMatch(/^`[^`]/);
+
+      // Must preserve newlines (each line should be separate)
+      expect(md).toContain('flowchart TD');
+      expect(md).toContain('subgraph Phase1');
+      expect(md).toContain('Bank[Bank / Institution]');
+      expect(md).toContain('end');
+
+      // Verify newlines are preserved by checking the content has multiple lines
+      const codeBlockMatch = md.match(/```mermaid\n([\s\S]*?)\n```/);
+      expect(codeBlockMatch).not.toBeNull();
+      if (codeBlockMatch) {
+        const codeContent = codeBlockMatch[1];
+        const lines = codeContent.split('\n');
+        expect(lines.length).toBeGreaterThanOrEqual(4);
+      }
+    });
+
+    it('should handle Grok Shiki structure WITHOUT newlines between line spans', () => {
+      // This is the actual problem case - when innerHTML is obtained from browser,
+      // newlines between <span class="line"> elements may be lost
+      // All line spans are on one continuous line without newlines
+      const html = `<div data-testid="code-block"><div class="border"><div class="flex"><span class="text-secondary">mermaid</span></div><div class="shiki"><pre class="shiki"><code><span class="line"><span>flowchart TD</span></span><span class="line"><span>    subgraph Phase1</span></span><span class="line"><span>        Bank[Bank]</span></span><span class="line"><span>    end</span></span></code></pre></div></div></div>`;
+      const md = htmlToMarkdown(html);
+
+      // Must be fenced code block with mermaid language, NOT inline code
+      expect(md).toContain('```mermaid');
+
+      // Each line should be on a separate line in the output
+      const codeBlockMatch = md.match(/```mermaid\n([\s\S]*?)\n```/);
+      expect(codeBlockMatch).not.toBeNull();
+      if (codeBlockMatch) {
+        const codeContent = codeBlockMatch[1];
+        const lines = codeContent.split('\n');
+        // Should have 4 separate lines even though input had no newlines
+        expect(lines.length).toBeGreaterThanOrEqual(4);
+        expect(lines[0]).toContain('flowchart TD');
+        expect(lines[1]).toContain('subgraph Phase1');
+      }
+    });
+
     it('should preserve multiline code with proper whitespace', () => {
       const html = `<pre class="overflow-visible!">
         <div class="contain-inline-size">
