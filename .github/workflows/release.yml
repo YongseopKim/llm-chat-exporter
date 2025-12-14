@@ -1,0 +1,97 @@
+# Build and release Chrome extension on every push to main branch
+# Version format: v{manifest_version}-{YYYYMMDD}.{short_sha}
+# Example: v0.1.0-20251214.861c374
+
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Validate selectors
+        run: npm run validate:selectors
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Extract version info
+        id: version
+        run: |
+          MANIFEST_VERSION=$(jq -r '.version' manifest.json)
+          DATE=$(date +'%Y%m%d')
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          RELEASE_TAG="v${MANIFEST_VERSION}-${DATE}.${SHORT_SHA}"
+          RELEASE_NAME="LLM Chat Exporter ${MANIFEST_VERSION} (${DATE})"
+          echo "manifest_version=${MANIFEST_VERSION}" >> $GITHUB_OUTPUT
+          echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Create ZIP artifact
+        run: |
+          mkdir -p release
+          zip -r release/llm-chat-exporter-${{ steps.version.outputs.release_tag }}.zip \
+            manifest.json \
+            dist/background.js \
+            dist/content.js \
+            icons/icon48.png \
+            config/selectors.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.release_tag }}
+          name: ${{ steps.version.outputs.release_name }}
+          body: |
+            ## LLM Chat Exporter ${{ steps.version.outputs.manifest_version }}
+
+            **Commit:** `${{ github.sha }}`
+            **Date:** ${{ github.event.head_commit.timestamp }}
+
+            ### Changes
+            ${{ github.event.head_commit.message }}
+
+            ### Installation
+            1. Download the ZIP file below
+            2. Extract to a folder
+            3. Open `chrome://extensions/`
+            4. Enable "Developer mode"
+            5. Click "Load unpacked" and select the extracted folder
+
+            ### Supported Platforms
+            - ChatGPT (chatgpt.com)
+            - Claude (claude.ai)
+            - Gemini (gemini.google.com)
+            - Grok (grok.com)
+          files: |
+            release/llm-chat-exporter-${{ steps.version.outputs.release_tag }}.zip
+          draft: false
+          prerelease: false
