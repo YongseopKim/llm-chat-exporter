@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Data Ownership**: Users own their conversation data permanently
 
 ### Project Status
-🚀 Phase 7 Complete - Configuration-Driven Architecture with 294 passing tests
+🚀 Phase 7 Complete - Configuration-Driven Architecture with 301 passing tests
 
 **Completed Phases**:
 - ✅ Phase 0: Architecture & Planning
@@ -134,7 +134,7 @@ llm-chat-exporter/
 └── node_modules/
 ```
 
-**Test Stats**: 294 tests passing (includes Mermaid compatibility tests)
+**Test Stats**: 301 tests passing (includes Mermaid compatibility tests)
 
 ## Parser Interface Contract
 
@@ -230,7 +230,7 @@ doc.querySelectorAll('svg').forEach((el) => el.remove());
 - Structure: `.mpr-container` > `.mpr-source` (hidden original) + `.mpr-rendered` (SVG)
 - LLM Chat Exporter extracts from `.mpr-source`, ignores rendered SVG
 
-**Known Issue - Grok**: Grok renders Mermaid natively before Mermaid Preserving Renderer can intercept, resulting in loss of original source code.
+**Grok Mermaid Handling**: Grok renders Mermaid natively, but provides a "원본 보기" (View Source) button. GrokParser automatically clicks this button during export to convert SVG back to source code.
 
 ## Development Phases
 
@@ -285,7 +285,7 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - Test on empty conversations
 
 **Current Test Coverage**:
-- 294 tests passing across 15 test files
+- 301 tests passing across 15 test files
 - Unit tests: Background utils (16), Content (6), Parsers (108 including Grok), Converter (33 including Mermaid), Utilities (48), ConfigLoader (16), BaseParser (31)
 - E2E tests: Extension flow (6), Integration (2)
 - Coverage: Core utilities 100%, Parsers 95%+, Config system 100%, Mermaid handling 100%
@@ -299,7 +299,7 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - **Images**: Store URLs/placeholders only, no binary download
 - **Timestamps**: May fall back to export time if not available in DOM
 - **Title**: Not extracted (removed in Phase 5 - unstable selectors across platforms)
-- **Mermaid on Grok**: Original source code lost due to Grok's native rendering
+- **Mermaid on Grok**: Auto-converts via "원본 보기" button click during export
 
 ## Important Design Decisions
 

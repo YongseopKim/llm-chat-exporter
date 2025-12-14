@@ -8,6 +8,11 @@
  * - USER: parent has button[aria-label="Edit"]
  * - ASSISTANT: parent has button[aria-label="Regenerate"]
  *
+ * Mermaid Handling:
+ * - Grok renders Mermaid natively to SVG, losing original source
+ * - "원본 보기" button reveals the original Mermaid code
+ * - This parser auto-clicks that button to extract source code
+ *
  * @see config/selectors.json for current selectors
  */
 
@@ -53,6 +58,53 @@ export class GrokParser extends BaseParser {
    */
   override isGenerating(): boolean {
     return false;
+  }
+
+  /**
+   * Load all messages and convert Mermaid SVGs to code blocks
+   *
+   * Overrides base to handle Mermaid conversion before parsing.
+   * This ensures DOM changes from button clicks have time to complete.
+   */
+  override async loadAllMessages(): Promise<void> {
+    // First, do the normal scroll loading
+    await super.loadAllMessages();
+
+    // Then convert all Mermaid SVGs to code blocks
+    await this.convertAllMermaidToCodeBlocks();
+  }
+
+  /**
+   * Convert all rendered Mermaid SVG diagrams to code blocks
+   *
+   * Grok renders Mermaid natively, replacing source with SVG.
+   * Clicking "원본 보기" button reveals the original code.
+   *
+   * Waits for DOM changes to complete after clicking.
+   */
+  private async convertAllMermaidToCodeBlocks(): Promise<void> {
+    // Find all rendered Mermaid containers on the page
+    // Selector: .group\/mermaid (escaped for CSS, actual class is "group/mermaid")
+    const mermaidContainers = document.querySelectorAll('.group\\/mermaid');
+
+    if (mermaidContainers.length === 0) {
+      return;
+    }
+
+    // Click all "원본 보기" buttons
+    mermaidContainers.forEach((container) => {
+      const viewSourceBtn = container.querySelector(
+        'button[aria-label="원본 보기"]'
+      ) as HTMLElement | null;
+
+      if (viewSourceBtn) {
+        viewSourceBtn.click();
+      }
+    });
+
+    // Wait for React to update the DOM
+    // A small delay is needed for state changes to propagate
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   /**

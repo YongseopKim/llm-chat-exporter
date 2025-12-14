@@ -155,3 +155,72 @@ export function createMockGrokAssistantMessage(content: string): HTMLElement {
   `);
   return dom.window.document.querySelector('.message-bubble') as HTMLElement;
 }
+
+/**
+ * Create a mock Grok assistant message with rendered Mermaid SVG
+ *
+ * This simulates Grok's native Mermaid rendering where the source code
+ * is replaced with an SVG, but a "원본 보기" button is available.
+ *
+ * @param mermaidSource - Original Mermaid source code
+ * @returns HTMLElement with rendered Mermaid structure
+ */
+export function createMockGrokMermaidRendered(mermaidSource: string): HTMLElement {
+  const dom = new JSDOM(`
+    <div class="relative group flex flex-col justify-center w-full">
+      <div class="message-bubble relative rounded-3xl text-primary prose">
+        <p>Here is a diagram:</p>
+        <div dir="auto" class="not-prose">
+          <div class="group/mermaid w-full relative bg-surface-l1 rounded-xl overflow-hidden border border-border p-4">
+            <div class="mermaid flex flex-col items-center">
+              <svg aria-roledescription="flowchart-v2" role="graphics-document document" viewBox="0 0 500 300">
+                <text>Rendered SVG</text>
+              </svg>
+            </div>
+            <div class="absolute top-2 right-2 flex flex-row gap-1">
+              <button type="button" aria-label="원본 보기" data-mermaid-source="${mermaidSource.replace(/"/g, '&quot;')}">
+                <svg width="16" height="16"></svg>
+              </button>
+              <button type="button" aria-label="다운로드">
+                <svg width="16" height="16"></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="action-buttons h-8 mt-0.5 flex flex-row flex-wrap">
+        <button aria-label="Regenerate">Regenerate</button>
+      </div>
+    </div>
+  `);
+  return dom.window.document.querySelector('.message-bubble') as HTMLElement;
+}
+
+/**
+ * Create a mock Grok code block (after clicking "원본 보기")
+ *
+ * @param code - Code content
+ * @param language - Language identifier
+ * @returns HTMLElement with Grok code block structure
+ */
+export function createMockGrokCodeBlock(code: string, language: string = 'mermaid'): HTMLElement {
+  const dom = new JSDOM(`
+    <div class="relative group flex flex-col justify-center w-full">
+      <div class="message-bubble relative rounded-3xl text-primary prose">
+        <p>Here is a diagram:</p>
+        <div data-testid="code-block">
+          <div class="flex flex-row px-4 py-2 h-10 items-center">
+            <span class="font-mono text-xs text-secondary">${language}</span>
+          </div>
+          <div class="shiki not-prose">
+            <pre class="shiki"><code><span class="line"><span>${code}</span></span></code></pre>
+          </div>
+        </div>
+      </div>
+      <div class="action-buttons h-8 mt-0.5 flex flex-row flex-wrap">
+        <button aria-label="Regenerate">Regenerate</button>
+      </div>
+    </div>
+  `);
+  return dom.window.document.querySelector('.message-bubble') as HTMLElement;
+}

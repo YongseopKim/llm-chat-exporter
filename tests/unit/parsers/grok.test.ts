@@ -12,6 +12,8 @@ import { loadSampleHTML, createDOMFromHTML } from './shared/fixtures';
 import {
   createMockGrokUserMessage,
   createMockGrokAssistantMessage,
+  createMockGrokMermaidRendered,
+  createMockGrokCodeBlock,
 } from './shared/mocks';
 
 describe('GrokParser', () => {
@@ -339,6 +341,96 @@ describe('GrokParser', () => {
       global.document = mockDoc as any;
 
       expect(parser.getTitle()).toBe('Tech Talk');
+    });
+  });
+
+  // ============================================================
+  // Mermaid Handling - 5 tests
+  // ============================================================
+
+  describe('Mermaid handling', () => {
+    it('should click "원본 보기" button during loadAllMessages', async () => {
+      // Create a document with Mermaid container
+      const doc = createDOMFromHTML(`
+        <html><body>
+          <div class="group/mermaid w-full relative">
+            <div class="mermaid"><svg></svg></div>
+            <button type="button" aria-label="원본 보기" id="viewSourceBtn"></button>
+          </div>
+        </body></html>
+      `);
+      global.document = doc as any;
+      global.window = { scrollTo: vi.fn() } as any;
+
+      // Add click spy to the button
+      const viewSourceBtn = doc.querySelector('#viewSourceBtn') as HTMLElement;
+      const clickSpy = vi.fn();
+      viewSourceBtn.addEventListener('click', clickSpy);
+
+      // loadAllMessages should trigger button click
+      await parser.loadAllMessages();
+
+      expect(clickSpy).toHaveBeenCalled();
+    });
+
+    it('should handle message with already converted Mermaid code block', () => {
+      const mermaidCode = 'flowchart TD\n    A --> B';
+      const node = createMockGrokCodeBlock(mermaidCode);
+
+      const parsed = parser.parseNode(node);
+
+      expect(parsed.role).toBe('assistant');
+      expect(parsed.contentHtml).toContain('data-testid="code-block"');
+      expect(parsed.contentHtml).toContain('mermaid');
+    });
+
+    it('should click multiple "원본 보기" buttons during loadAllMessages', async () => {
+      const doc = createDOMFromHTML(`
+        <html><body>
+          <div class="group/mermaid w-full relative">
+            <div class="mermaid"><svg></svg></div>
+            <button type="button" aria-label="원본 보기" id="btn1"></button>
+          </div>
+          <div class="group/mermaid w-full relative">
+            <div class="mermaid"><svg></svg></div>
+            <button type="button" aria-label="원본 보기" id="btn2"></button>
+          </div>
+        </body></html>
+      `);
+      global.document = doc as any;
+      global.window = { scrollTo: vi.fn() } as any;
+
+      const btn1 = doc.querySelector('#btn1') as HTMLElement;
+      const btn2 = doc.querySelector('#btn2') as HTMLElement;
+      const click1 = vi.fn();
+      const click2 = vi.fn();
+      btn1.addEventListener('click', click1);
+      btn2.addEventListener('click', click2);
+
+      await parser.loadAllMessages();
+
+      expect(click1).toHaveBeenCalled();
+      expect(click2).toHaveBeenCalled();
+    });
+
+    it('should not fail when message has no Mermaid diagrams', () => {
+      const node = createMockGrokAssistantMessage('<p>Simple text response</p>');
+
+      expect(() => parser.parseNode(node)).not.toThrow();
+
+      const parsed = parser.parseNode(node);
+      expect(parsed.role).toBe('assistant');
+      expect(parsed.contentHtml).toContain('Simple text response');
+    });
+
+    it('should preserve other content when converting Mermaid', () => {
+      const mermaidSource = 'flowchart TD\n    A --> B';
+      const node = createMockGrokMermaidRendered(mermaidSource);
+
+      const parsed = parser.parseNode(node);
+
+      // Should preserve the paragraph before the diagram
+      expect(parsed.contentHtml).toContain('Here is a diagram');
     });
   });
 });
