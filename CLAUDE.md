@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**LLM Chat Exporter** is a Chrome Extension (Manifest V3) that exports conversations from ChatGPT, Claude, and Gemini web UIs to JSONL format using DOM parsing. The project preserves the full context of web UI conversations locally without using APIs.
+**LLM Chat Exporter** is a Chrome Extension (Manifest V3) that exports conversations from ChatGPT, Claude, Gemini, and Grok web UIs to JSONL format using DOM parsing. The project preserves the full context of web UI conversations locally without using APIs.
 
 ### Core Value Proposition
 - **Context Preservation**: Captures conversations as they appear in the web UI, including service-optimized system prompts
@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Data Ownership**: Users own their conversation data permanently
 
 ### Project Status
-🚀 Phase 7 Complete - Configuration-Driven Architecture with 209 passing tests
+🚀 Phase 7 Complete - Configuration-Driven Architecture with 294 passing tests
 
 **Completed Phases**:
 - ✅ Phase 0: Architecture & Planning
@@ -134,7 +134,7 @@ llm-chat-exporter/
 └── node_modules/
 ```
 
-**Test Stats**: 209 tests passing (47 new tests for Phase 7, 6 new edge case tests)
+**Test Stats**: 294 tests passing (includes Mermaid compatibility tests)
 
 ## Parser Interface Contract
 
@@ -215,6 +215,23 @@ JSONL format with metadata line followed by message lines:
 **Problem**: Exporting incomplete responses during generation.
 **Solution**: Check for "Stop generating" button existence before export, throw error if generating.
 
+### 7. Mermaid Diagram Rendering (Solved)
+**Problem**: Browser extensions that render Mermaid diagrams replace `<pre><code class="language-mermaid">` with `<svg>`, losing the original source code.
+**Solution**: `converter.ts` removes rendered elements while preserving original source:
+```typescript
+// In cleanCodeBlockHtml():
+doc.querySelectorAll('.mpr-rendered').forEach((el) => el.remove());
+doc.querySelectorAll('.mpr-toggle').forEach((el) => el.remove());
+doc.querySelectorAll('svg').forEach((el) => el.remove());
+```
+
+**Companion Extension**: [Mermaid Preserving Renderer](https://github.com/YongseopKim/llm-chat-mermaid-renderer)
+- Renders Mermaid diagrams while keeping original source hidden in DOM
+- Structure: `.mpr-container` > `.mpr-source` (hidden original) + `.mpr-rendered` (SVG)
+- LLM Chat Exporter extracts from `.mpr-source`, ignores rendered SVG
+
+**Known Issue - Grok**: Grok renders Mermaid natively before Mermaid Preserving Renderer can intercept, resulting in loss of original source code.
+
 ## Development Phases
 
 ### Phase 1: DOM Selector Validation ✅ COMPLETE (2025-11-29)
@@ -267,22 +284,22 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - Test during response generation (should gracefully error)
 - Test on empty conversations
 
-**Current Test Coverage** (Phase 7):
-- 209 tests passing across 14 test files
-- Unit tests: Background utils (16), Content (6), Parsers (81), Utilities (48), ConfigLoader (16), BaseParser (31)
+**Current Test Coverage**:
+- 294 tests passing across 15 test files
+- Unit tests: Background utils (16), Content (6), Parsers (108 including Grok), Converter (33 including Mermaid), Utilities (48), ConfigLoader (16), BaseParser (31)
 - E2E tests: Extension flow (6), Integration (2)
-- Coverage: Core utilities 100%, Parsers 95%+, Config system 100%
-- Note: Title-related tests (9) removed in Phase 5 due to unreliable selectors
+- Coverage: Core utilities 100%, Parsers 95%+, Config system 100%, Mermaid handling 100%
 
 ## Important Constraints
 
 - **Browser**: Chrome desktop only (Manifest V3)
-- **Platforms**: Only `chatgpt.com`, `claude.ai`, `gemini.google.com`
+- **Platforms**: `chatgpt.com`, `claude.ai`, `gemini.google.com`, `grok.com`
 - **Scope**: Single conversation per export (no batch/history export)
 - **Privacy**: No external network requests, all processing local
 - **Images**: Store URLs/placeholders only, no binary download
 - **Timestamps**: May fall back to export time if not available in DOM
 - **Title**: Not extracted (removed in Phase 5 - unstable selectors across platforms)
+- **Mermaid on Grok**: Original source code lost due to Grok's native rendering
 
 ## Important Design Decisions
 

@@ -267,6 +267,220 @@ describe('htmlToMarkdown', () => {
   });
 
   // ============================================================
+  // Mermaid Diagram Handling
+  // ============================================================
+
+  describe('Mermaid Diagram Handling', () => {
+    it('should preserve mermaid code block when NOT rendered by extension', () => {
+      // 원본 mermaid 코드 블록 (확장 프로그램 없이)
+      const html = `<pre><code class="language-mermaid">graph TD
+    A[Start] --> B[Process]
+    B --> C[End]</code></pre>`;
+      const md = htmlToMarkdown(html);
+      expect(md).toContain('```mermaid');
+      expect(md).toContain('graph TD');
+      expect(md).toContain('A[Start] --> B[Process]');
+    });
+
+    it('should lose mermaid code when rendered to SVG by extension (problem case)', () => {
+      // Mermaid 확장 프로그램이 렌더링한 후의 DOM 구조
+      // 원본 코드가 사라지고 SVG만 남음
+      const html = `<div class="mermaid">
+        <svg id="mermaid-svg-0" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(0,0)">
+            <rect class="node" rx="5" ry="5" x="0" y="0" width="60" height="40"></rect>
+            <text x="30" y="25">Start</text>
+          </g>
+          <g transform="translate(100,0)">
+            <rect class="node" rx="5" ry="5" x="0" y="0" width="80" height="40"></rect>
+            <text x="40" y="25">Process</text>
+          </g>
+          <path class="flowchart-link" d="M60,20L100,20"></path>
+        </svg>
+      </div>`;
+      const md = htmlToMarkdown(html);
+
+      // SVG가 렌더링되면 원본 mermaid 코드를 복구할 수 없음
+      expect(md).not.toContain('```mermaid');
+      expect(md).not.toContain('graph TD');
+      expect(md).not.toContain('-->'); // 화살표 구문 없음
+
+      // SVG가 제거되어 노드 텍스트도 추출되지 않음 (의도된 동작)
+      // Mermaid Preserving Renderer 없이 렌더링된 SVG는 완전히 손실됨
+      expect(md).not.toContain('Start');
+      expect(md).not.toContain('Process');
+    });
+
+    it('should lose mermaid code when extension replaces pre with svg', () => {
+      // 일부 확장 프로그램은 pre 태그를 완전히 교체함
+      const html = `<svg class="mermaid" id="mermaid-1" style="max-width: 100%;">
+        <g class="root">
+          <rect rx="0" ry="0" class="edge-thickness-normal"></rect>
+          <text>A</text>
+          <text>B</text>
+        </g>
+      </svg>`;
+      const md = htmlToMarkdown(html);
+
+      // 원본 mermaid 문법 복구 불가
+      expect(md).not.toContain('```');
+      expect(md).not.toContain('graph');
+    });
+
+    it('should preserve mermaid when extension keeps original hidden', () => {
+      // 일부 확장 프로그램은 원본을 숨겨두고 SVG를 추가함
+      const html = `<div class="mermaid-container">
+        <pre style="display: none;"><code class="language-mermaid">graph LR
+    A --> B</code></pre>
+        <svg class="mermaid-rendered">
+          <text>A</text>
+          <text>B</text>
+        </svg>
+      </div>`;
+      const md = htmlToMarkdown(html);
+
+      // display:none인 요소도 textContent로 추출되므로 원본 보존됨
+      expect(md).toContain('```mermaid');
+      expect(md).toContain('graph LR');
+      expect(md).toContain('A --> B');
+    });
+
+    it('should extract only mermaid code from mpr-container (not SVG/button text)', () => {
+      // Mermaid Preserving Renderer가 생성하는 실제 구조
+      const html = `<div class="mpr-container" data-mpr-processed="true">
+        <pre class="mpr-source" style="display: none;">
+          <code class="language-mermaid">graph TD
+    A[Start] --> B[End]</code>
+        </pre>
+        <div class="mpr-rendered">
+          <svg id="mpr-diagram-1">
+            <text x="30" y="25">Start</text>
+            <text x="30" y="75">End</text>
+          </svg>
+        </div>
+        <button class="mpr-toggle">{ }</button>
+      </div>`;
+      const md = htmlToMarkdown(html);
+
+      // 원본 mermaid 코드 추출 확인
+      expect(md).toContain('```mermaid');
+      expect(md).toContain('graph TD');
+      expect(md).toContain('A[Start] --> B[End]');
+
+      // SVG 내부 텍스트가 별도로 추출되지 않아야 함
+      // (mermaid 코드 블록 외부에 "Start", "End"가 중복 출력되면 안됨)
+      const codeBlockMatch = md.match(/```mermaid[\s\S]*?```/);
+      const outsideCodeBlock = codeBlockMatch
+        ? md.replace(codeBlockMatch[0], '')
+        : md;
+
+      // 코드 블록 외부에 SVG 텍스트가 없어야 함
+      expect(outsideCodeBlock).not.toMatch(/\bStart\b/);
+      expect(outsideCodeBlock).not.toMatch(/\bEnd\b/);
+
+      // 버튼 텍스트도 추출되지 않아야 함
+      expect(md).not.toContain('{ }');
+    });
+
+    it('should not extract SVG style tags from mpr-rendered (Claude/Gemini issue)', () => {
+      // 실제 Claude/Gemini에서 발생하는 문제: SVG 내부 <style> 태그 내용이 추출됨
+      const html = `<div class="mpr-container" data-mpr-processed="true">
+        <pre class="mpr-source" style="display: none;">
+          <code class="language-mermaid">flowchart TD
+    A --> B</code>
+        </pre>
+        <div class="mpr-rendered">
+          <svg id="mpr-diagram-2" xmlns="http://www.w3.org/2000/svg">
+            <style>
+              #mpr-diagram-2{font-family:inherit;font-size:16px;fill:#333;}
+              #mpr-diagram-2 .node rect{fill:#ECECFF;stroke:#9370DB;}
+            </style>
+            <g class="root">
+              <text>Phase 1: Security Core</text>
+              <text>Bank / Institution</text>
+            </g>
+          </svg>
+        </div>
+        <button class="mpr-toggle">{ }</button>
+      </div>`;
+      const md = htmlToMarkdown(html);
+
+      // 원본 코드만 추출되어야 함
+      expect(md).toContain('```mermaid');
+      expect(md).toContain('flowchart TD');
+
+      // SVG style 내용이 추출되면 안됨
+      expect(md).not.toContain('font-family:inherit');
+      expect(md).not.toContain('#mpr-diagram');
+      expect(md).not.toContain('stroke:#9370DB');
+
+      // SVG 텍스트가 추출되면 안됨
+      expect(md).not.toContain('Phase 1: Security Core');
+      expect(md).not.toContain('Bank / Institution');
+
+      // 버튼 텍스트도 추출되면 안됨
+      expect(md).not.toContain('{ }');
+    });
+
+    it('should not extract SVG content from Grok native mermaid rendering (no mpr)', () => {
+      // Grok은 자체적으로 mermaid를 렌더링하여 mpr-container가 없음
+      // 원본 코드가 없고 SVG만 있는 상황
+      const html = `<div class="mermaid flex flex-col items-center">
+        <svg aria-roledescription="flowchart-v2" role="graphics-document document"
+             viewBox="0 0 588.251953125 828" class="flowchart"
+             xmlns="http://www.w3.org/2000/svg" width="100%" id="mermaid-diagram-123">
+          <style>
+            #mermaid-diagram-123 {
+              font-family: "trebuchet ms", verdana, arial, sans-serif;
+              font-size: 16px;
+              fill: #000000;
+            }
+            #mermaid-diagram-123 .node rect {
+              fill: #eee;
+              stroke: #999;
+            }
+          </style>
+          <g class="root">
+            <g class="clusters">
+              <g class="cluster" id="Phase1">
+                <rect height="256" width="291" y="8" x="15"></rect>
+                <foreignObject height="24" width="158">
+                  <div xmlns="http://www.w3.org/1999/xhtml">
+                    <span class="nodeLabel"><p>Phase 1: Security Core</p></span>
+                  </div>
+                </foreignObject>
+              </g>
+            </g>
+            <g class="nodes">
+              <g class="node" id="flowchart-Bank-0" transform="translate(161.35, 60)">
+                <foreignObject height="24" width="124">
+                  <div xmlns="http://www.w3.org/1999/xhtml">
+                    <span class="nodeLabel"><p>Bank / Institution</p></span>
+                  </div>
+                </foreignObject>
+              </g>
+            </g>
+          </g>
+        </svg>
+      </div>`;
+      const md = htmlToMarkdown(html);
+
+      // SVG style 내용이 추출되면 안됨
+      expect(md).not.toContain('font-family');
+      expect(md).not.toContain('trebuchet');
+      expect(md).not.toContain('#mermaid-diagram');
+      expect(md).not.toContain('stroke: #999');
+
+      // SVG foreignObject 내부 텍스트도 추출되면 안됨
+      expect(md).not.toContain('Phase 1: Security Core');
+      expect(md).not.toContain('Bank / Institution');
+
+      // SVG가 제거되었으므로 빈 결과 또는 컨테이너만 남아야 함
+      expect(md.trim()).toBe('');
+    });
+  });
+
+  // ============================================================
   // KaTeX Math Extraction
   // ============================================================
 

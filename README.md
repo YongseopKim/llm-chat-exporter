@@ -30,12 +30,14 @@ A Chrome Extension that exports conversations from ChatGPT, Claude, and Gemini w
 | ChatGPT | `https://chatgpt.com/*` |
 | Claude | `https://claude.ai/*` |
 | Gemini | `https://gemini.google.com/*` |
+| Grok | `https://grok.com/*` |
 
 ### Key Features
 
 - **Keyboard Shortcut**: `Ctrl+Shift+E` (Windows/Linux) or `Cmd+Shift+E` (Mac)
 - **DOM Virtualization Handling**: Scrolls to load all messages before export
 - **Markdown Conversion**: Code blocks, tables, lists preserved accurately
+- **Mermaid Diagram Support**: Compatible with [Mermaid Preserving Renderer](https://github.com/YongseopKim/llm-chat-mermaid-renderer) extension
 - **Timestamp Preservation**: Message timestamps when available in DOM
 - **Configuration-Driven**: DOM selectors externalized for easy updates
 
@@ -111,7 +113,7 @@ First line contains metadata, subsequent lines contain individual messages:
 npm install          # Install dependencies
 npm run build        # Build extension (TypeScript → JavaScript)
 npm run watch        # Build in watch mode
-npm test             # Run all tests (203 tests)
+npm test             # Run all tests (294 tests)
 npm run test:watch   # Run tests in watch mode
 npm run test:ui      # Run tests with UI
 npm run test:coverage # Run tests with coverage report
@@ -165,8 +167,8 @@ llm-chat-exporter/
 ### Testing
 
 - **Framework**: Vitest with jsdom environment
-- **Total Tests**: 203 tests passing
-- **Coverage**: Core utilities 100%, Parsers 95%+
+- **Total Tests**: 294 tests passing
+- **Coverage**: Core utilities 100%, Parsers 95%+, Mermaid handling 100%
 
 Test structure:
 - `unit/background-utils.test.ts` - Background script utilities
@@ -200,6 +202,13 @@ See `config/README.md` for detailed selector update guide.
 - Images are stored as URLs only (no binary download)
 - Claude Artifacts have limited support
 - Single conversation export only (no batch/history export)
+
+### Mermaid Diagrams
+
+When Mermaid diagrams are rendered by browser extensions, the original source code may be lost. For best results:
+
+- **Recommended**: Use [Mermaid Preserving Renderer](https://github.com/YongseopKim/llm-chat-mermaid-renderer) - preserves original code while rendering
+- **Known Issue**: Grok renders Mermaid diagrams natively before our extension can capture them - original code may be lost
 
 ## Contributing
 

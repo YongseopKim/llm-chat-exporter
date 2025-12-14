@@ -22,11 +22,27 @@ import TurndownService from 'turndown';
  * These platforms wrap code blocks in complex structures with UI elements
  * (language labels, copy buttons) that need to be removed before conversion.
  *
+ * Also handles Mermaid Preserving Renderer output:
+ * - Removes rendered SVG diagrams (.mpr-rendered)
+ * - Removes toggle buttons (.mpr-toggle)
+ * - Preserves original source code (.mpr-source)
+ *
  * @param html - Raw HTML string
  * @returns Cleaned HTML with simplified <pre><code> structure
  */
 function cleanCodeBlockHtml(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
+
+  // Mermaid Preserving Renderer: Remove rendered diagrams and toggle buttons
+  // Keep only the original source (.mpr-source)
+  doc.querySelectorAll('.mpr-rendered').forEach((el) => el.remove());
+  doc.querySelectorAll('.mpr-toggle').forEach((el) => el.remove());
+
+  // Also remove any standalone SVG elements (mermaid diagrams without mpr wrapper)
+  doc.querySelectorAll('svg').forEach((el) => el.remove());
+
+  // Remove standalone style tags (may contain mermaid CSS)
+  doc.querySelectorAll('style').forEach((el) => el.remove());
 
   // ChatGPT: <pre> contains divs with language label, copy button, and code
   // Structure: <pre><div>...<code class="language-X">content</code>...</div></pre>

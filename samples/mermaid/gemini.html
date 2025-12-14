@@ -1,0 +1,585 @@
+<response-element class="" ng-version="0.0.0-PLACEHOLDER"><!----><!----><!----><!----><code-block
+        _nghost-ng-c3920631045="" class="ng-tns-c3920631045-23 ng-star-inserted" style=""><!----><!---->
+        <div _ngcontent-ng-c3920631045=""
+            class="code-block ng-tns-c3920631045-23 ng-animate-disabled ng-trigger ng-trigger-codeBlockRevealAnimation"
+            jslog="223238;track:impression,attention;BardVeMetadataKey:[[&quot;r_88562a8f1c6d5d03&quot;,&quot;c_b89c59d624d746bd&quot;,null,&quot;rc_7b2c43d3def97f49&quot;,null,null,&quot;ko&quot;,null,1,null,null,1,1]]"
+            data-hveid="5" style="display: block;">
+            <div _ngcontent-ng-c3920631045=""
+                class="code-block-decoration header-formatted gds-title-s ng-tns-c3920631045-23 ng-star-inserted"
+                style=""><span _ngcontent-ng-c3920631045="" class="ng-tns-c3920631045-23">코드 스니펫</span>
+                <div _ngcontent-ng-c3920631045="" class="buttons ng-tns-c3920631045-23 ng-star-inserted"><button
+                        _ngcontent-ng-c3920631045="" aria-label="코드 복사" mat-icon-button="" mattooltip="코드 복사"
+                        class="mdc-icon-button mat-mdc-icon-button mat-mdc-button-base mat-mdc-tooltip-trigger copy-button ng-tns-c3920631045-23 mat-unthemed ng-star-inserted"
+                        mat-ripple-loader-uninitialized="" mat-ripple-loader-class-name="mat-mdc-button-ripple"
+                        mat-ripple-loader-centered=""
+                        jslog="179062;track:generic_click,impression;BardVeMetadataKey:[[&quot;r_88562a8f1c6d5d03&quot;,&quot;c_b89c59d624d746bd&quot;,null,&quot;rc_7b2c43d3def97f49&quot;,null,null,&quot;ko&quot;,null,1,null,null,1,1]];mutable:true"><span
+                            class="mat-mdc-button-persistent-ripple mdc-icon-button__ripple"></span><mat-icon
+                            _ngcontent-ng-c3920631045="" role="img" fonticon="content_copy"
+                            class="mat-icon notranslate gds-icon-s google-symbols mat-ligature-font mat-icon-no-color"
+                            aria-hidden="true" data-mat-icon-type="font"
+                            data-mat-icon-name="content_copy"></mat-icon><span class="mat-focus-indicator"></span><span
+                            class="mat-mdc-button-touch-target"></span></button><!----><!----></div><!---->
+            </div><!---->
+            <div _ngcontent-ng-c3920631045="" class="formatted-code-block-internal-container ng-tns-c3920631045-23">
+                <div _ngcontent-ng-c3920631045="" class="animated-opacity ng-tns-c3920631045-23">
+                    <div class="mpr-container" data-mpr-processed="true">
+                        <pre class="mpr-source" style="display: none;"><code class="language-mermaid">flowchart TD
+    subgraph "Phase 1: Security Core"
+        Bank["Bank / Institution"]
+        PrivateChain["Canton / Corda Ledger"]
+        Bank --&gt;|1. Issue &amp; Settle| PrivateChain
+    end
+
+    subgraph "Phase 2: The Bridge"
+        CCIP["Chainlink CCIP / Axelar"]
+        PrivateChain --&gt;|2. Lock Asset| CCIP
+    end
+
+    subgraph "Phase 3: Liquidity Market"
+        PublicL1["Public Chain (Eth/Sol)"]
+        PrivacyLayer["Privacy Tech (Arcium/Oasis)"]
+
+        CCIP --&gt;|3. Mint Wrapped Token| PublicL1
+        PublicL1 --&gt;|4. Deposit for Alpha| PrivacyLayer
+
+        Agent["AI Agent / Algo Trader"]
+        Agent --&gt;|5. Secret Strategy Execution| PrivacyLayer
+    end
+
+    style PrivacyLayer fill:#f96,stroke:#333,stroke-width:4px
+    style CCIP fill:#bbf,stroke:#333</code></pre>
+                        <div class="mpr-rendered"><svg id="mpr-diagram-1" width="100%"
+                                xmlns="http://www.w3.org/2000/svg" class="flowchart" style="max-width: 570.603515625px;"
+                                viewBox="0 0 570.603515625 732" role="graphics-document document"
+                                aria-roledescription="flowchart-v2">
+                                <style>
+                                    #mpr-diagram-1 {
+                                        font-family: inherit;
+                                        font-size: 16px;
+                                        fill: #333;
+                                    }
+
+                                    @keyframes edge-animation-frame {
+                                        from {
+                                            stroke-dashoffset: 0;
+                                        }
+                                    }
+
+                                    @keyframes dash {
+                                        to {
+                                            stroke-dashoffset: 0;
+                                        }
+                                    }
+
+                                    #mpr-diagram-1 .edge-animation-slow {
+                                        stroke-dasharray: 9, 5 !important;
+                                        stroke-dashoffset: 900;
+                                        animation: dash 50s linear infinite;
+                                        stroke-linecap: round;
+                                    }
+
+                                    #mpr-diagram-1 .edge-animation-fast {
+                                        stroke-dasharray: 9, 5 !important;
+                                        stroke-dashoffset: 900;
+                                        animation: dash 20s linear infinite;
+                                        stroke-linecap: round;
+                                    }
+
+                                    #mpr-diagram-1 .error-icon {
+                                        fill: #552222;
+                                    }
+
+                                    #mpr-diagram-1 .error-text {
+                                        fill: #552222;
+                                        stroke: #552222;
+                                    }
+
+                                    #mpr-diagram-1 .edge-thickness-normal {
+                                        stroke-width: 1px;
+                                    }
+
+                                    #mpr-diagram-1 .edge-thickness-thick {
+                                        stroke-width: 3.5px;
+                                    }
+
+                                    #mpr-diagram-1 .edge-pattern-solid {
+                                        stroke-dasharray: 0;
+                                    }
+
+                                    #mpr-diagram-1 .edge-thickness-invisible {
+                                        stroke-width: 0;
+                                        fill: none;
+                                    }
+
+                                    #mpr-diagram-1 .edge-pattern-dashed {
+                                        stroke-dasharray: 3;
+                                    }
+
+                                    #mpr-diagram-1 .edge-pattern-dotted {
+                                        stroke-dasharray: 2;
+                                    }
+
+                                    #mpr-diagram-1 .marker {
+                                        fill: #333333;
+                                        stroke: #333333;
+                                    }
+
+                                    #mpr-diagram-1 .marker.cross {
+                                        stroke: #333333;
+                                    }
+
+                                    #mpr-diagram-1 svg {
+                                        font-family: inherit;
+                                        font-size: 16px;
+                                    }
+
+                                    #mpr-diagram-1 p {
+                                        margin: 0;
+                                    }
+
+                                    #mpr-diagram-1 .label {
+                                        font-family: inherit;
+                                        color: #333;
+                                    }
+
+                                    #mpr-diagram-1 .cluster-label text {
+                                        fill: #333;
+                                    }
+
+                                    #mpr-diagram-1 .cluster-label span {
+                                        color: #333;
+                                    }
+
+                                    #mpr-diagram-1 .cluster-label span p {
+                                        background-color: transparent;
+                                    }
+
+                                    #mpr-diagram-1 .label text,
+                                    #mpr-diagram-1 span {
+                                        fill: #333;
+                                        color: #333;
+                                    }
+
+                                    #mpr-diagram-1 .node rect,
+                                    #mpr-diagram-1 .node circle,
+                                    #mpr-diagram-1 .node ellipse,
+                                    #mpr-diagram-1 .node polygon,
+                                    #mpr-diagram-1 .node path {
+                                        fill: #ECECFF;
+                                        stroke: #9370DB;
+                                        stroke-width: 1px;
+                                    }
+
+                                    #mpr-diagram-1 .rough-node .label text,
+                                    #mpr-diagram-1 .node .label text,
+                                    #mpr-diagram-1 .image-shape .label,
+                                    #mpr-diagram-1 .icon-shape .label {
+                                        text-anchor: middle;
+                                    }
+
+                                    #mpr-diagram-1 .node .katex path {
+                                        fill: #000;
+                                        stroke: #000;
+                                        stroke-width: 1px;
+                                    }
+
+                                    #mpr-diagram-1 .rough-node .label,
+                                    #mpr-diagram-1 .node .label,
+                                    #mpr-diagram-1 .image-shape .label,
+                                    #mpr-diagram-1 .icon-shape .label {
+                                        text-align: center;
+                                    }
+
+                                    #mpr-diagram-1 .node.clickable {
+                                        cursor: pointer;
+                                    }
+
+                                    #mpr-diagram-1 .root .anchor path {
+                                        fill: #333333 !important;
+                                        stroke-width: 0;
+                                        stroke: #333333;
+                                    }
+
+                                    #mpr-diagram-1 .arrowheadPath {
+                                        fill: #333333;
+                                    }
+
+                                    #mpr-diagram-1 .edgePath .path {
+                                        stroke: #333333;
+                                        stroke-width: 2.0px;
+                                    }
+
+                                    #mpr-diagram-1 .flowchart-link {
+                                        stroke: #333333;
+                                        fill: none;
+                                    }
+
+                                    #mpr-diagram-1 .edgeLabel {
+                                        background-color: rgba(232, 232, 232, 0.8);
+                                        text-align: center;
+                                    }
+
+                                    #mpr-diagram-1 .edgeLabel p {
+                                        background-color: rgba(232, 232, 232, 0.8);
+                                    }
+
+                                    #mpr-diagram-1 .edgeLabel rect {
+                                        opacity: 0.5;
+                                        background-color: rgba(232, 232, 232, 0.8);
+                                        fill: rgba(232, 232, 232, 0.8);
+                                    }
+
+                                    #mpr-diagram-1 .labelBkg {
+                                        background-color: rgba(232, 232, 232, 0.5);
+                                    }
+
+                                    #mpr-diagram-1 .cluster rect {
+                                        fill: #ffffde;
+                                        stroke: #aaaa33;
+                                        stroke-width: 1px;
+                                    }
+
+                                    #mpr-diagram-1 .cluster text {
+                                        fill: #333;
+                                    }
+
+                                    #mpr-diagram-1 .cluster span {
+                                        color: #333;
+                                    }
+
+                                    #mpr-diagram-1 div.mermaidTooltip {
+                                        position: absolute;
+                                        text-align: center;
+                                        max-width: 200px;
+                                        padding: 2px;
+                                        font-family: inherit;
+                                        font-size: 12px;
+                                        background: hsl(80, 100%, 96.2745098039%);
+                                        border: 1px solid #aaaa33;
+                                        border-radius: 2px;
+                                        pointer-events: none;
+                                        z-index: 100;
+                                    }
+
+                                    #mpr-diagram-1 .flowchartTitleText {
+                                        text-anchor: middle;
+                                        font-size: 18px;
+                                        fill: #333;
+                                    }
+
+                                    #mpr-diagram-1 rect.text {
+                                        fill: none;
+                                        stroke-width: 0;
+                                    }
+
+                                    #mpr-diagram-1 .icon-shape,
+                                    #mpr-diagram-1 .image-shape {
+                                        background-color: rgba(232, 232, 232, 0.8);
+                                        text-align: center;
+                                    }
+
+                                    #mpr-diagram-1 .icon-shape p,
+                                    #mpr-diagram-1 .image-shape p {
+                                        background-color: rgba(232, 232, 232, 0.8);
+                                        padding: 2px;
+                                    }
+
+                                    #mpr-diagram-1 .icon-shape rect,
+                                    #mpr-diagram-1 .image-shape rect {
+                                        opacity: 0.5;
+                                        background-color: rgba(232, 232, 232, 0.8);
+                                        fill: rgba(232, 232, 232, 0.8);
+                                    }
+
+                                    #mpr-diagram-1 .label-icon {
+                                        display: inline-block;
+                                        height: 1em;
+                                        overflow: visible;
+                                        vertical-align: -0.125em;
+                                    }
+
+                                    #mpr-diagram-1 .node .label-icon path {
+                                        fill: currentColor;
+                                        stroke: revert;
+                                        stroke-width: revert;
+                                    }
+
+                                    #mpr-diagram-1 :root {
+                                        --mermaid-font-family: inherit;
+                                    }
+                                </style>
+                                <g>
+                                    <marker id="mpr-diagram-1_flowchart-v2-pointEnd" class="marker flowchart-v2"
+                                        viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse"
+                                        markerWidth="8" markerHeight="8" orient="auto">
+                                        <path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath"
+                                            style="stroke-width: 1; stroke-dasharray: 1, 0;"></path>
+                                    </marker>
+                                    <marker id="mpr-diagram-1_flowchart-v2-pointStart" class="marker flowchart-v2"
+                                        viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse"
+                                        markerWidth="8" markerHeight="8" orient="auto">
+                                        <path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath"
+                                            style="stroke-width: 1; stroke-dasharray: 1, 0;"></path>
+                                    </marker>
+                                    <marker id="mpr-diagram-1_flowchart-v2-circleEnd" class="marker flowchart-v2"
+                                        viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse"
+                                        markerWidth="11" markerHeight="11" orient="auto">
+                                        <circle cx="5" cy="5" r="5" class="arrowMarkerPath"
+                                            style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle>
+                                    </marker>
+                                    <marker id="mpr-diagram-1_flowchart-v2-circleStart" class="marker flowchart-v2"
+                                        viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse"
+                                        markerWidth="11" markerHeight="11" orient="auto">
+                                        <circle cx="5" cy="5" r="5" class="arrowMarkerPath"
+                                            style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle>
+                                    </marker>
+                                    <marker id="mpr-diagram-1_flowchart-v2-crossEnd" class="marker cross flowchart-v2"
+                                        viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse"
+                                        markerWidth="11" markerHeight="11" orient="auto">
+                                        <path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath"
+                                            style="stroke-width: 2; stroke-dasharray: 1, 0;"></path>
+                                    </marker>
+                                    <marker id="mpr-diagram-1_flowchart-v2-crossStart" class="marker cross flowchart-v2"
+                                        viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse"
+                                        markerWidth="11" markerHeight="11" orient="auto">
+                                        <path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath"
+                                            style="stroke-width: 2; stroke-dasharray: 1, 0;"></path>
+                                    </marker>
+                                    <g class="root">
+                                        <g class="clusters">
+                                            <g class="cluster " id="subGraph2" data-look="classic">
+                                                <rect style="" x="8" y="492" width="554.603515625" height="232"></rect>
+                                                <g class="cluster-label " transform="translate(199.9619140625, 492)">
+                                                    <foreignObject width="170.6796875" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="nodeLabel ">
+                                                                <p>Phase 3: Liquidity Market</p>
+                                                            </span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="cluster " id="subGraph1" data-look="classic">
+                                                <rect style="" x="14.8984375" y="314" width="282.2421875" height="104">
+                                                </rect>
+                                                <g class="cluster-label " transform="translate(89.04296875, 314)">
+                                                    <foreignObject width="133.953125" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="nodeLabel ">
+                                                                <p>Phase 2: The Bridge</p>
+                                                            </span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="cluster " id="subGraph0" data-look="classic">
+                                                <rect style="" x="15.06640625" y="8" width="281.90625" height="232">
+                                                </rect>
+                                                <g class="cluster-label " transform="translate(82.05859375, 8)">
+                                                    <foreignObject width="147.921875" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="nodeLabel ">
+                                                                <p>Phase 1: Security Core</p>
+                                                            </span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                        </g>
+                                        <g class="edgePaths">
+                                            <path
+                                                d="M156.02,87L156.02,93.167C156.02,99.333,156.02,111.667,156.02,123.333C156.02,135,156.02,146,156.02,151.5L156.02,157"
+                                                id="L_Bank_PrivateChain_0"
+                                                class=" edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link"
+                                                style=";" data-edge="true" data-et="edge"
+                                                data-id="L_Bank_PrivateChain_0"
+                                                data-points="W3sieCI6MTU2LjAxOTUzMTI1LCJ5Ijo4N30seyJ4IjoxNTYuMDE5NTMxMjUsInkiOjEyNH0seyJ4IjoxNTYuMDE5NTMxMjUsInkiOjE2MX1d"
+                                                marker-end="url(#mpr-diagram-1_flowchart-v2-pointEnd)"></path>
+                                            <path
+                                                d="M156.02,215L156.02,219.167C156.02,223.333,156.02,231.667,156.02,242C156.02,252.333,156.02,264.667,156.02,277C156.02,289.333,156.02,301.667,156.02,311.333C156.02,321,156.02,328,156.02,331.5L156.02,335"
+                                                id="L_PrivateChain_CCIP_0"
+                                                class=" edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link"
+                                                style=";" data-edge="true" data-et="edge"
+                                                data-id="L_PrivateChain_CCIP_0"
+                                                data-points="W3sieCI6MTU2LjAxOTUzMTI1LCJ5IjoyMTV9LHsieCI6MTU2LjAxOTUzMTI1LCJ5IjoyNDB9LHsieCI6MTU2LjAxOTUzMTI1LCJ5IjoyNzd9LHsieCI6MTU2LjAxOTUzMTI1LCJ5IjozMTR9LHsieCI6MTU2LjAxOTUzMTI1LCJ5IjozMzl9XQ=="
+                                                marker-end="url(#mpr-diagram-1_flowchart-v2-pointEnd)"></path>
+                                            <path
+                                                d="M156.02,393L156.02,397.167C156.02,401.333,156.02,409.667,156.02,420C156.02,430.333,156.02,442.667,156.02,455C156.02,467.333,156.02,479.667,156.02,489.333C156.02,499,156.02,506,156.02,509.5L156.02,513"
+                                                id="L_CCIP_PublicL1_0"
+                                                class=" edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link"
+                                                style=";" data-edge="true" data-et="edge" data-id="L_CCIP_PublicL1_0"
+                                                data-points="W3sieCI6MTU2LjAxOTUzMTI1LCJ5IjozOTN9LHsieCI6MTU2LjAxOTUzMTI1LCJ5Ijo0MTh9LHsieCI6MTU2LjAxOTUzMTI1LCJ5Ijo0NTV9LHsieCI6MTU2LjAxOTUzMTI1LCJ5Ijo0OTJ9LHsieCI6MTU2LjAxOTUzMTI1LCJ5Ijo1MTd9XQ=="
+                                                marker-end="url(#mpr-diagram-1_flowchart-v2-pointEnd)"></path>
+                                            <path
+                                                d="M156.02,571L156.02,577.167C156.02,583.333,156.02,595.667,167.818,607.703C179.616,619.739,203.213,631.479,215.011,637.349L226.81,643.218"
+                                                id="L_PublicL1_PrivacyLayer_0"
+                                                class=" edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link"
+                                                style=";" data-edge="true" data-et="edge"
+                                                data-id="L_PublicL1_PrivacyLayer_0"
+                                                data-points="W3sieCI6MTU2LjAxOTUzMTI1LCJ5Ijo1NzF9LHsieCI6MTU2LjAxOTUzMTI1LCJ5Ijo2MDh9LHsieCI6MjMwLjM5MTAyMTcyODUxNTYyLCJ5Ijo2NDV9XQ=="
+                                                marker-end="url(#mpr-diagram-1_flowchart-v2-pointEnd)"></path>
+                                            <path
+                                                d="M413.305,571L413.305,577.167C413.305,583.333,413.305,595.667,401.506,607.703C389.708,619.739,366.111,631.479,354.313,637.349L342.514,643.218"
+                                                id="L_Agent_PrivacyLayer_0"
+                                                class=" edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link"
+                                                style=";" data-edge="true" data-et="edge"
+                                                data-id="L_Agent_PrivacyLayer_0"
+                                                data-points="W3sieCI6NDEzLjMwNDY4NzUsInkiOjU3MX0seyJ4Ijo0MTMuMzA0Njg3NSwieSI6NjA4fSx7IngiOjMzOC45MzMxOTcwMjE0ODQ0LCJ5Ijo2NDV9XQ=="
+                                                marker-end="url(#mpr-diagram-1_flowchart-v2-pointEnd)"></path>
+                                        </g>
+                                        <g class="edgeLabels">
+                                            <g class="edgeLabel" transform="translate(156.01953125, 124)">
+                                                <g class="label" data-id="L_Bank_PrivateChain_0"
+                                                    transform="translate(-52.33984375, -12)">
+                                                    <foreignObject width="104.6796875" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="edgeLabel ">1. Issue &amp; Settle</span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="edgeLabel" transform="translate(156.01953125, 277)">
+                                                <g class="label" data-id="L_PrivateChain_CCIP_0"
+                                                    transform="translate(-44.33984375, -12)">
+                                                    <foreignObject width="88.6796875" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="edgeLabel ">2. Lock Asset</span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="edgeLabel" transform="translate(156.01953125, 455)">
+                                                <g class="label" data-id="L_CCIP_PublicL1_0"
+                                                    transform="translate(-78.77734375, -12)">
+                                                    <foreignObject width="157.5546875" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="edgeLabel ">3. Mint Wrapped Token</span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="edgeLabel" transform="translate(156.01953125, 608)">
+                                                <g class="label" data-id="L_PublicL1_PrivacyLayer_0"
+                                                    transform="translate(-67.03515625, -12)">
+                                                    <foreignObject width="134.0703125" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="edgeLabel ">4. Deposit for Alpha</span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="edgeLabel" transform="translate(413.3046875, 608)">
+                                                <g class="label" data-id="L_Agent_PrivacyLayer_0"
+                                                    transform="translate(-94.49609375, -12)">
+                                                    <foreignObject width="188.9921875" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="edgeLabel ">5. Secret Strategy Execution</span>
+                                                        </div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                        </g>
+                                        <g class="nodes">
+                                            <g class="node default  " id="flowchart-Bank-0"
+                                                transform="translate(156.01953125, 60)">
+                                                <rect class="basic label-container" style="" x="-88" y="-27" width="176"
+                                                    height="54"></rect>
+                                                <g class="label" style="" transform="translate(-58, -12)">
+                                                    <rect></rect>
+                                                    <foreignObject width="116" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="nodeLabel ">
+                                                                <p>Bank / Institution</p>
+                                                            </span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="node default  " id="flowchart-PrivateChain-1"
+                                                transform="translate(156.01953125, 188)">
+                                                <rect class="basic label-container" style="" x="-105.953125" y="-27"
+                                                    width="211.90625" height="54"></rect>
+                                                <g class="label" style="" transform="translate(-75.953125, -12)">
+                                                    <rect></rect>
+                                                    <foreignObject width="151.90625" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="nodeLabel ">
+                                                                <p>Canton / Corda Ledger</p>
+                                                            </span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="node default  " id="flowchart-CCIP-4"
+                                                transform="translate(156.01953125, 366)">
+                                                <rect class="basic label-container"
+                                                    style="fill:#bbf !important;stroke:#333 !important"
+                                                    x="-106.12109375" y="-27" width="212.2421875" height="54"></rect>
+                                                <g class="label" style="" transform="translate(-76.12109375, -12)">
+                                                    <rect></rect>
+                                                    <foreignObject width="152.2421875" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="nodeLabel ">
+                                                                <p>Chainlink CCIP / Axelar</p>
+                                                            </span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="node default  " id="flowchart-PublicL1-7"
+                                                transform="translate(156.01953125, 544)">
+                                                <rect class="basic label-container" style="" x="-102.36328125" y="-27"
+                                                    width="204.7265625" height="54"></rect>
+                                                <g class="label" style="" transform="translate(-72.36328125, -12)">
+                                                    <rect></rect>
+                                                    <foreignObject width="144.7265625" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="nodeLabel ">
+                                                                <p>Public Chain (Eth/Sol)</p>
+                                                            </span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="node default  " id="flowchart-PrivacyLayer-8"
+                                                transform="translate(284.662109375, 672)">
+                                                <rect class="basic label-container"
+                                                    style="fill:#f96 !important;stroke:#333 !important;stroke-width:4px !important"
+                                                    x="-123.67578125" y="-27" width="247.3515625" height="54"></rect>
+                                                <g class="label" style="" transform="translate(-93.67578125, -12)">
+                                                    <rect></rect>
+                                                    <foreignObject width="187.3515625" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="nodeLabel ">
+                                                                <p>Privacy Tech (Arcium/Oasis)</p>
+                                                            </span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                            <g class="node default  " id="flowchart-Agent-13"
+                                                transform="translate(413.3046875, 544)">
+                                                <rect class="basic label-container" style="" x="-104.921875" y="-27"
+                                                    width="209.84375" height="54"></rect>
+                                                <g class="label" style="" transform="translate(-74.921875, -12)">
+                                                    <rect></rect>
+                                                    <foreignObject width="149.84375" height="24">
+                                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                                            style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;">
+                                                            <span class="nodeLabel ">
+                                                                <p>AI Agent / Algo Trader</p>
+                                                            </span></div>
+                                                    </foreignObject>
+                                                </g>
+                                            </g>
+                                        </g>
+                                    </g>
+                                </g>
+                            </svg></div><button class="mpr-toggle" title="Show source code"
+                            aria-label="Toggle between source code and diagram">{ }</button>
+                    </div><!---->
+                </div>
+            </div>
+        </div><!----><!---->
+    </code-block><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----></response-element>
