@@ -24,6 +24,7 @@
  */
 
 import { BaseParser } from './base-parser';
+import type { ArtifactData } from './interface';
 
 /**
  * Claude platform parser
@@ -37,6 +38,74 @@ import { BaseParser } from './base-parser';
 export class ClaudeParser extends BaseParser {
   constructor() {
     super('claude');
+  }
+
+  /**
+   * Load all messages and open the latest artifact panel
+   *
+   * Overrides base to click the last "Preview contents" button,
+   * which loads the artifact panel DOM for extraction.
+   */
+  override async loadAllMessages(): Promise<void> {
+    await super.loadAllMessages();
+    await this.openLatestArtifact();
+  }
+
+  /**
+   * Click the last artifact "Preview contents" button to load the panel
+   *
+   * Only the last button is clicked because the artifact panel always
+   * shows the latest version when opened.
+   */
+  private async openLatestArtifact(): Promise<void> {
+    const buttons = document.querySelectorAll('[aria-label="Preview contents"]');
+    if (buttons.length === 0) {
+      return;
+    }
+
+    const lastButton = buttons[buttons.length - 1] as HTMLElement;
+    lastButton.click();
+
+    // Wait for the artifact panel to render
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  /**
+   * Extract artifact data from the artifact panel
+   *
+   * Reads content from #markdown-artifact .standard-markdown,
+   * title from the last .artifact-block-cell button,
+   * and version from [data-testid="artifact-version-trigger"].
+   *
+   * @returns ArtifactData if panel exists with content, null otherwise
+   */
+  getArtifact(): ArtifactData | null {
+    const panel = document.querySelector('#markdown-artifact');
+    if (!panel) {
+      return null;
+    }
+
+    const contentEl = panel.querySelector('.standard-markdown');
+    if (!contentEl) {
+      return null;
+    }
+
+    const contentHtml = contentEl.innerHTML;
+
+    // Extract title from the last artifact-block-cell's button
+    const blockCells = document.querySelectorAll('.artifact-block-cell');
+    let title = 'Artifact';
+    if (blockCells.length > 0) {
+      const lastCell = blockCells[blockCells.length - 1];
+      const btn = lastCell.querySelector('[aria-label="Preview contents"]');
+      title = btn?.textContent?.trim() || 'Artifact';
+    }
+
+    // Extract version from version trigger button
+    const versionTrigger = document.querySelector('[data-testid="artifact-version-trigger"]');
+    const version = versionTrigger?.textContent?.trim() || 'v1';
+
+    return { title, version, contentHtml };
   }
 
   /**

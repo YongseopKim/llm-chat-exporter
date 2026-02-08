@@ -10,7 +10,7 @@
  */
 
 import { htmlToMarkdown } from './converter';
-import type { ParsedMessage, ExportMetadata, ExportedMessage } from './parsers/interface';
+import type { ParsedMessage, ExportMetadata, ExportedMessage, ArtifactData } from './parsers/interface';
 
 /**
  * Build JSONL string from parsed messages and metadata
@@ -32,7 +32,8 @@ import type { ParsedMessage, ExportMetadata, ExportedMessage } from './parsers/i
  */
 export function buildJsonl(
   parsedMessages: ParsedMessage[],
-  metadata: ExportMetadata
+  metadata: ExportMetadata,
+  artifact?: ArtifactData | null
 ): string {
   // Line 1: Metadata
   const metaLine = JSON.stringify({
@@ -50,6 +51,19 @@ export function buildJsonl(
     return JSON.stringify(message);
   });
 
-  // Combine metadata + messages with newline separator
-  return [metaLine, ...messageLines].join('\n');
+  const lines = [metaLine, ...messageLines];
+
+  // Optional artifact line (Claude only)
+  if (artifact) {
+    const artifactLine = JSON.stringify({
+      _artifact: true,
+      title: artifact.title,
+      version: artifact.version,
+      content: htmlToMarkdown(artifact.contentHtml)
+    });
+    lines.push(artifactLine);
+  }
+
+  // Combine all lines with newline separator
+  return lines.join('\n');
 }

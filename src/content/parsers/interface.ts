@@ -55,6 +55,24 @@ export interface ChatParser {
    * @returns Title string or undefined if not available
    */
   getTitle(): string | undefined;
+
+  /**
+   * Get artifact data from the current page (optional, Claude only)
+   * @returns ArtifactData if an artifact panel is open, null otherwise
+   */
+  getArtifact?(): ArtifactData | null;
+}
+
+/**
+ * Artifact data extracted from Claude's artifact panel
+ */
+export interface ArtifactData {
+  /** Artifact title (from the last artifact-block-cell button) */
+  title: string;
+  /** Version string (from artifact-version-trigger, e.g. "v3") */
+  version: string;
+  /** Raw HTML content from #markdown-artifact .standard-markdown */
+  contentHtml: string;
 }
 
 /**

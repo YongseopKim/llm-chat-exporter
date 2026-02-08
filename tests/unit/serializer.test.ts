@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildJsonl } from '../../src/content/serializer';
-import type { ParsedMessage, ExportMetadata } from '../../src/content/parsers/interface';
+import type { ParsedMessage, ExportMetadata, ArtifactData } from '../../src/content/parsers/interface';
 
 // Mock the converter module
 vi.mock('../../src/content/converter', () => ({
@@ -186,5 +186,84 @@ describe('buildJsonl', () => {
     expect(metaLine.platform).toBe('gemini');
     expect(metaLine.url).toBe('https://gemini.google.com/app/xyz');
     expect(metaLine.exported_at).toBe('2025-11-29T12:00:00Z');
+  });
+
+  // ============================================================
+  // Artifact support
+  // ============================================================
+
+  describe('artifact support', () => {
+    const defaultMetadata: ExportMetadata = {
+      platform: 'claude',
+      url: 'https://claude.ai/chat/abc',
+      exported_at: '2025-11-29T10:01:00Z'
+    };
+
+    it('should append _artifact line when artifact is provided', () => {
+      const messages: ParsedMessage[] = [
+        { role: 'user', contentHtml: '<p>Create a doc</p>', timestamp: '2025-11-29T10:00:00Z' },
+        { role: 'assistant', contentHtml: '<p>Here it is</p>', timestamp: '2025-11-29T10:00:05Z' }
+      ];
+      const artifact: ArtifactData = {
+        title: 'My Document',
+        version: 'v3',
+        contentHtml: '<h1>My Document</h1><p>Content here</p>'
+      };
+
+      const jsonl = buildJsonl(messages, defaultMetadata, artifact);
+      const lines = jsonl.split('\n');
+
+      expect(lines.length).toBe(4); // meta + 2 messages + 1 artifact
+
+      const artifactLine = JSON.parse(lines[3]);
+      expect(artifactLine._artifact).toBe(true);
+      expect(artifactLine.title).toBe('My Document');
+      expect(artifactLine.version).toBe('v3');
+      expect(artifactLine.content).toBe('[MD]<h1>My Document</h1><p>Content here</p>[/MD]');
+    });
+
+    it('should not add artifact line when artifact is undefined', () => {
+      const messages: ParsedMessage[] = [
+        { role: 'user', contentHtml: '<p>Hello</p>', timestamp: '2025-11-29T10:00:00Z' }
+      ];
+
+      const jsonl = buildJsonl(messages, defaultMetadata);
+      const lines = jsonl.split('\n');
+
+      expect(lines.length).toBe(2); // meta + 1 message
+      // No _artifact line
+      lines.forEach(line => {
+        const parsed = JSON.parse(line);
+        expect(parsed._artifact).toBeUndefined();
+      });
+    });
+
+    it('should not add artifact line when artifact is null', () => {
+      const messages: ParsedMessage[] = [
+        { role: 'user', contentHtml: '<p>Hello</p>', timestamp: '2025-11-29T10:00:00Z' }
+      ];
+
+      const jsonl = buildJsonl(messages, defaultMetadata, null as any);
+      const lines = jsonl.split('\n');
+
+      expect(lines.length).toBe(2); // meta + 1 message
+    });
+
+    it('should convert artifact contentHtml to markdown', async () => {
+      const converterModule = await import('../../src/content/converter');
+      const htmlToMarkdown = converterModule.htmlToMarkdown as ReturnType<typeof vi.fn>;
+      vi.clearAllMocks();
+
+      const messages: ParsedMessage[] = [];
+      const artifact: ArtifactData = {
+        title: 'Doc',
+        version: 'v1',
+        contentHtml: '<h1>Title</h1>'
+      };
+
+      buildJsonl(messages, defaultMetadata, artifact);
+
+      expect(htmlToMarkdown).toHaveBeenCalledWith('<h1>Title</h1>');
+    });
   });
 });
