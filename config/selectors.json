@@ -88,12 +88,35 @@
         "generation": "",
         "role": {
           "strategy": "sibling-button",
-          "userMarker": "button[aria-label='Edit']",
-          "assistantMarker": "button[aria-label='Regenerate']"
+          "userMarker": "button[aria-label='Edit'], button[aria-label='편집']",
+          "assistantMarker": "button[aria-label='Regenerate'], button[aria-label='다시 생성']"
         },
         "title": {
           "strategy": "document-title",
           "suffixPattern": "\\s*[-–—]\\s*Grok$",
+          "emojiPattern": "^[\\p{Emoji_Presentation}\\p{Extended_Pictographic}]\\s*"
+        }
+      }
+    },
+    "perplexity": {
+      "hostname": "perplexity.ai",
+      "selectors": {
+        "messages": {
+          "combined": "h1.group\\/query, div[id^='markdown-content-']"
+        },
+        "content": {
+          "user": "span.select-text",
+          "assistant": "div.prose"
+        },
+        "generation": "",
+        "role": {
+          "strategy": "combined-selector",
+          "userSelector": "h1.group\\/query",
+          "assistantSelector": "div[id^='markdown-content-']"
+        },
+        "title": {
+          "strategy": "document-title",
+          "suffixPattern": "\\s*[-–—]\\s*Perplexity$",
           "emojiPattern": "^[\\p{Emoji_Presentation}\\p{Extended_Pictographic}]\\s*"
         }
       }

@@ -39,11 +39,13 @@ describe('ConfigLoader', () => {
       expect(config.platforms).toBeDefined();
     });
 
-    it('should have all three platforms', () => {
+    it('should have all five platforms', () => {
       const config = ConfigLoader.getInstance().getConfig();
       expect(config.platforms.chatgpt).toBeDefined();
       expect(config.platforms.claude).toBeDefined();
       expect(config.platforms.gemini).toBeDefined();
+      expect(config.platforms.grok).toBeDefined();
+      expect(config.platforms.perplexity).toBeDefined();
     });
   });
 
@@ -63,6 +65,12 @@ describe('ConfigLoader', () => {
     it('should return Gemini platform config', () => {
       const config = ConfigLoader.getInstance().getPlatformConfig('gemini');
       expect(config.hostname).toBe('gemini.google.com');
+      expect(config.selectors).toBeDefined();
+    });
+
+    it('should return Perplexity platform config', () => {
+      const config = ConfigLoader.getInstance().getPlatformConfig('perplexity');
+      expect(config.hostname).toBe('perplexity.ai');
       expect(config.selectors).toBeDefined();
     });
 
@@ -113,10 +121,18 @@ describe('ConfigLoader', () => {
       expect(selectors.messages.combined).toBe('user-query, model-response');
     });
 
+    it('should return Perplexity selectors with combined-selector strategy', () => {
+      const selectors = ConfigLoader.getInstance().getSelectors('perplexity');
+      expect(selectors.role.strategy).toBe('combined-selector');
+      expect(selectors.role.userSelector).toContain('group\\/query');
+      expect(selectors.role.assistantSelector).toContain('markdown-content-');
+    });
+
     it('should return content selectors for all platforms', () => {
       const chatgpt = ConfigLoader.getInstance().getSelectors('chatgpt');
       const claude = ConfigLoader.getInstance().getSelectors('claude');
       const gemini = ConfigLoader.getInstance().getSelectors('gemini');
+      const perplexity = ConfigLoader.getInstance().getSelectors('perplexity');
 
       expect(chatgpt.content.user).toBe('.whitespace-pre-wrap');
       expect(chatgpt.content.assistant).toBe('.markdown');
@@ -126,6 +142,9 @@ describe('ConfigLoader', () => {
 
       expect(gemini.content.user).toBe('.query-text');
       expect(gemini.content.assistant).toBe('.response-container-content');
+
+      expect(perplexity.content.user).toBe('span.select-text');
+      expect(perplexity.content.assistant).toBe('div.prose');
     });
   });
 
@@ -135,6 +154,8 @@ describe('ConfigLoader', () => {
       expect(loader.getHostname('chatgpt')).toBe('chatgpt.com');
       expect(loader.getHostname('claude')).toBe('claude.ai');
       expect(loader.getHostname('gemini')).toBe('gemini.google.com');
+      expect(loader.getHostname('grok')).toBe('grok.com');
+      expect(loader.getHostname('perplexity')).toBe('perplexity.ai');
     });
   });
 });

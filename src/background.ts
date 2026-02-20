@@ -79,7 +79,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       type: 'basic',
       iconUrl: 'icons/icon48.png',
       title: 'LLM Chat Exporter',
-      message: 'This site is not supported. Please use on ChatGPT, Claude, Gemini, or Grok.',
+      message: 'This site is not supported. Please use on ChatGPT, Claude, Gemini, Grok, or Perplexity.',
       priority: 1
     });
     return;

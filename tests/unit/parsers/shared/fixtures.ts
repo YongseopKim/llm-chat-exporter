@@ -14,7 +14,7 @@ import { JSDOM } from 'jsdom';
  * @param platform - Platform name (chatgpt, claude, gemini, grok)
  * @returns HTML string content
  */
-export function loadSampleHTML(platform: 'chatgpt' | 'claude' | 'gemini' | 'grok'): string {
+export function loadSampleHTML(platform: 'chatgpt' | 'claude' | 'gemini' | 'grok' | 'perplexity'): string {
   const samplePath = path.join(__dirname, '../../../../samples', `${platform}.html`);
 
   if (!fs.existsSync(samplePath)) {
@@ -42,7 +42,7 @@ export function createDOMFromHTML(html: string): Document {
  * @param caseId - Edge case identifier (e.g., '000', '001')
  * @returns HTML string content
  */
-export function loadEdgeCaseHTML(platform: 'chatgpt' | 'claude' | 'gemini' | 'grok', caseId: string): string {
+export function loadEdgeCaseHTML(platform: 'chatgpt' | 'claude' | 'gemini' | 'grok' | 'perplexity', caseId: string): string {
   const samplePath = path.join(__dirname, '../../../../samples/edges', `${platform}_${caseId}.html`);
 
   if (!fs.existsSync(samplePath)) {
@@ -59,7 +59,7 @@ export function loadEdgeCaseHTML(platform: 'chatgpt' | 'claude' | 'gemini' | 'gr
  * @param selector - CSS selector to count messages
  * @returns Number of messages found
  */
-export function getMessageCount(platform: 'chatgpt' | 'claude' | 'gemini' | 'grok', selector: string): number {
+export function getMessageCount(platform: 'chatgpt' | 'claude' | 'gemini' | 'grok' | 'perplexity', selector: string): number {
   const html = loadSampleHTML(platform);
   const doc = createDOMFromHTML(html);
   return doc.querySelectorAll(selector).length;

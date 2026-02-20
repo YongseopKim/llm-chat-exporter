@@ -83,7 +83,7 @@ export class ConfigLoader {
    * Validate configuration on load
    */
   private validateConfig(): void {
-    const requiredPlatforms: PlatformKey[] = ['chatgpt', 'claude', 'gemini', 'grok'];
+    const requiredPlatforms: PlatformKey[] = ['chatgpt', 'claude', 'gemini', 'grok', 'perplexity'];
 
     for (const platform of requiredPlatforms) {
       const config = this.config.platforms[platform];
@@ -169,6 +169,14 @@ export class ConfigLoader {
         if (!role.userMarker || !role.assistantMarker) {
           throw new Error(
             `ConfigLoader: Missing userMarker or assistantMarker for 'sibling-button' strategy in '${platform}'`
+          );
+        }
+        break;
+
+      case 'combined-selector':
+        if (!role.userSelector || !role.assistantSelector) {
+          throw new Error(
+            `ConfigLoader: Missing userSelector or assistantSelector for 'combined-selector' strategy in '${platform}'`
           );
         }
         break;

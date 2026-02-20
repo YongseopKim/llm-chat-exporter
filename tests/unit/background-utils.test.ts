@@ -7,12 +7,13 @@ import { isSupportedUrl, getPlatformName, generateFilename, sanitizeFilename, SU
 
 describe('background-utils', () => {
   describe('SUPPORTED_HOSTS', () => {
-    it('should contain four platforms', () => {
-      expect(SUPPORTED_HOSTS).toHaveLength(4);
+    it('should contain five platforms', () => {
+      expect(SUPPORTED_HOSTS).toHaveLength(5);
       expect(SUPPORTED_HOSTS).toContain('chatgpt.com');
       expect(SUPPORTED_HOSTS).toContain('claude.ai');
       expect(SUPPORTED_HOSTS).toContain('gemini.google.com');
       expect(SUPPORTED_HOSTS).toContain('grok.com');
+      expect(SUPPORTED_HOSTS).toContain('perplexity.ai');
     });
   });
 
@@ -35,6 +36,11 @@ describe('background-utils', () => {
     it('should return true for Grok URL', () => {
       expect(isSupportedUrl('https://grok.com/chat/123')).toBe(true);
       expect(isSupportedUrl('https://grok.com/')).toBe(true);
+    });
+
+    it('should return true for Perplexity URL', () => {
+      expect(isSupportedUrl('https://www.perplexity.ai/search/abc')).toBe(true);
+      expect(isSupportedUrl('https://perplexity.ai/')).toBe(true);
     });
 
     it('should return false for unsupported site', () => {
@@ -73,6 +79,11 @@ describe('background-utils', () => {
       expect(getPlatformName('https://grok.com/')).toBe('grok');
     });
 
+    it('should extract perplexity platform name', () => {
+      expect(getPlatformName('https://www.perplexity.ai/search/abc')).toBe('perplexity');
+      expect(getPlatformName('https://perplexity.ai/')).toBe('perplexity');
+    });
+
     it('should return unknown for unsupported site', () => {
       expect(getPlatformName('https://example.com')).toBe('unknown');
     });
@@ -97,6 +108,11 @@ describe('background-utils', () => {
     it('should generate filename with grok prefix', () => {
       const filename = generateFilename('https://grok.com/chat/123');
       expect(filename).toMatch(/^grok_\d{8}T\d{6}\.jsonl$/);
+    });
+
+    it('should generate filename with perplexity prefix', () => {
+      const filename = generateFilename('https://www.perplexity.ai/search/abc');
+      expect(filename).toMatch(/^perplexity_\d{8}T\d{6}\.jsonl$/);
     });
 
     it('should generate filename with correct timestamp format', () => {

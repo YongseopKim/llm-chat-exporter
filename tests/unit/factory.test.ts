@@ -3,6 +3,7 @@ import { ParserFactory } from '../../src/content/parsers/factory';
 import { ChatGPTParser } from '../../src/content/parsers/chatgpt';
 import { ClaudeParser } from '../../src/content/parsers/claude';
 import { GeminiParser } from '../../src/content/parsers/gemini';
+import { PerplexityParser } from '../../src/content/parsers/perplexity';
 
 describe('ParserFactory', () => {
   // Platform detection tests
@@ -110,5 +111,23 @@ describe('ParserFactory', () => {
       const parser = ParserFactory.getParser(url);
       expect(parser).toBeInstanceOf(ChatGPTParser); // Phase 4, all should be recognized
     });
+  });
+
+  // Perplexity tests
+  it('should recognize Perplexity URL', () => {
+    const url = 'https://www.perplexity.ai/search/what-is-typescript';
+    const parser = ParserFactory.getParser(url);
+    expect(parser).toBeInstanceOf(PerplexityParser);
+  });
+
+  it('should recognize Perplexity URL without www', () => {
+    const url = 'https://perplexity.ai/search/query123';
+    const parser = ParserFactory.getParser(url);
+    expect(parser).toBeInstanceOf(PerplexityParser);
+  });
+
+  it('should support Perplexity in isSupported()', () => {
+    expect(ParserFactory.isSupported('https://www.perplexity.ai/search/abc')).toBe(true);
+    expect(ParserFactory.isSupported('https://perplexity.ai/')).toBe(true);
   });
 });

@@ -1,0 +1,64 @@
+<!--
+  Perplexity AI Sample HTML for Testing
+
+  Simplified fixture with 2 user queries and 2 assistant responses.
+  Based on perplexity.ai DOM structure analysis.
+
+  Key selectors:
+  - User messages: h1.group/query with span.select-text
+  - Assistant messages: div[id^="markdown-content-"] with div.prose
+  - Citations: span.citation (inline in assistant content)
+-->
+<html>
+<head>
+  <title>What is TypeScript - Perplexity</title>
+</head>
+<body>
+  <div id="app">
+    <main>
+      <!-- User Query 1 -->
+      <h1 class="group/query mb-lg text-3xl font-display font-regular text-textMain dark:text-textMainDark selection:bg-super/50 selection:text-textMain break-words [word-break:break-word] [&amp;_a]:break-all">
+        <span class="select-text whitespace-pre-line break-words">What is TypeScript?</span>
+      </h1>
+
+      <!-- Assistant Response 1 -->
+      <div id="markdown-content-0" class="relative default font-sans text-base text-textMain dark:text-textMainDark selection:bg-super/50 selection:text-textMain">
+        <div class="prose dark:prose-invert inline leading-normal break-words min-w-0 [word-break:break-word]">
+          <p>TypeScript is a <strong>strongly typed programming language</strong> that builds on JavaScript, giving you better tooling at any scale <span class="citation" data-index="0"><a href="https://www.typescriptlang.org/">1</a></span>.</p>
+          <h2>Key Features</h2>
+          <ul>
+            <li><strong>Static typing</strong>: Adds type annotations to JavaScript</li>
+            <li><strong>Compile-time checks</strong>: Catches errors before runtime</li>
+            <li><strong>IDE support</strong>: Better autocomplete and refactoring <span class="citation" data-index="1"><a href="https://github.com/microsoft/TypeScript">2</a></span></li>
+          </ul>
+          <p>TypeScript code compiles to plain JavaScript, which runs anywhere JavaScript runs.</p>
+        </div>
+      </div>
+
+      <!-- User Query 2 -->
+      <h1 class="group/query mb-lg text-3xl font-display font-regular text-textMain dark:text-textMainDark selection:bg-super/50 selection:text-textMain break-words [word-break:break-word] [&amp;_a]:break-all">
+        <span class="select-text whitespace-pre-line break-words">Show me a code example</span>
+      </h1>
+
+      <!-- Assistant Response 2 -->
+      <div id="markdown-content-1" class="relative default font-sans text-base text-textMain dark:text-textMainDark selection:bg-super/50 selection:text-textMain">
+        <div class="prose dark:prose-invert inline leading-normal break-words min-w-0 [word-break:break-word]">
+          <p>Here's a simple TypeScript example:</p>
+          <pre><code class="language-typescript">interface User {
+  name: string;
+  age: number;
+}
+
+function greet(user: User): string {
+  return `Hello, ${user.name}!`;
+}
+
+const user: User = { name: "Alice", age: 30 };
+console.log(greet(user));</code></pre>
+          <p>This demonstrates interfaces and type annotations <span class="citation" data-index="2"><a href="https://www.typescriptlang.org/docs/handbook/">3</a></span>.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

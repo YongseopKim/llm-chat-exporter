@@ -130,6 +130,29 @@ export function createMockGrokUserMessage(content: string): HTMLElement {
 }
 
 /**
+ * Create a mock user message element for Grok with Korean locale
+ *
+ * In Korean locale, "Edit" button becomes "편집"
+ *
+ * @param content - HTML content of the message
+ * @returns HTMLElement with Grok user message structure (Korean locale)
+ */
+export function createMockGrokUserMessageKorean(content: string): HTMLElement {
+  const dom = new JSDOM(`
+    <div class="relative group flex flex-col justify-center w-full">
+      <div class="message-bubble relative rounded-3xl text-primary prose">${content}</div>
+      <div class="order-first sticky hidden top-1"></div>
+      <div class="action-buttons h-8 mt-0.5 flex flex-row flex-wrap">
+        <button aria-label="편집">편집</button>
+        <button aria-label="복사">복사</button>
+      </div>
+      <div></div>
+    </div>
+  `);
+  return dom.window.document.querySelector('.message-bubble') as HTMLElement;
+}
+
+/**
  * Create a mock assistant message element for Grok
  *
  * @param content - HTML content of the message
@@ -223,4 +246,41 @@ export function createMockGrokCodeBlock(code: string, language: string = 'mermai
     </div>
   `);
   return dom.window.document.querySelector('.message-bubble') as HTMLElement;
+}
+
+/**
+ * Create a mock user message element for Perplexity
+ *
+ * @param content - Plain text content of the query
+ * @returns HTMLElement with Perplexity user query structure (h1.group/query)
+ */
+export function createMockPerplexityUserMessage(content: string): HTMLElement {
+  const dom = new JSDOM(`
+    <div>
+      <h1 class="group/query mb-lg text-3xl font-display">
+        <span class="select-text whitespace-pre-line break-words">${content}</span>
+      </h1>
+    </div>
+  `);
+  return dom.window.document.querySelector('h1') as HTMLElement;
+}
+
+/**
+ * Create a mock assistant message element for Perplexity
+ *
+ * @param content - HTML content of the response
+ * @param index - Message index (used for id attribute)
+ * @returns HTMLElement with Perplexity assistant response structure
+ */
+export function createMockPerplexityAssistantMessage(content: string, index: number = 0): HTMLElement {
+  const dom = new JSDOM(`
+    <div>
+      <div id="markdown-content-${index}" class="relative default font-sans text-base">
+        <div class="prose dark:prose-invert inline leading-normal break-words min-w-0">
+          ${content}
+        </div>
+      </div>
+    </div>
+  `);
+  return dom.window.document.querySelector('div[id^="markdown-content-"]') as HTMLElement;
 }

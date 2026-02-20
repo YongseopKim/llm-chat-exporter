@@ -3,7 +3,7 @@
  * URL 검증, 플랫폼 추출, 파일명 생성 등의 유틸리티 함수
  */
 
-export const SUPPORTED_HOSTS = ['chatgpt.com', 'claude.ai', 'gemini.google.com', 'grok.com'];
+export const SUPPORTED_HOSTS = ['chatgpt.com', 'claude.ai', 'gemini.google.com', 'grok.com', 'perplexity.ai'];
 
 /**
  * URL이 지원되는 사이트인지 확인
@@ -27,6 +27,7 @@ export function getPlatformName(url: string): string {
   if (hostname.includes('claude.ai')) return 'claude';
   if (hostname.includes('gemini.google.com')) return 'gemini';
   if (hostname.includes('grok.com')) return 'grok';
+  if (hostname.includes('perplexity.ai')) return 'perplexity';
   return 'unknown';
 }
 

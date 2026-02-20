@@ -5,8 +5,8 @@
  * Extends BaseParser with configuration-driven selectors.
  *
  * Role Strategy: sibling-button
- * - USER: parent has button[aria-label="Edit"]
- * - ASSISTANT: parent has button[aria-label="Regenerate"]
+ * - USER: parent has button[aria-label="Edit"] or button[aria-label="편집"]
+ * - ASSISTANT: parent has button[aria-label="Regenerate"] or button[aria-label="다시 생성"]
  *
  * Mermaid Handling:
  * - Grok renders Mermaid natively to SVG, losing original source
@@ -31,20 +31,27 @@ export class GrokParser extends BaseParser {
 
   /**
    * Grok role extraction: check parent for aria-label buttons
-   * - USER: button[aria-label="Edit"] exists
-   * - ASSISTANT: button[aria-label="Regenerate"] exists
+   * Supports both English and Korean (한국어) localized labels:
+   * - USER: button[aria-label="Edit"] or button[aria-label="편집"]
+   * - ASSISTANT: button[aria-label="Regenerate"] or button[aria-label="다시 생성"]
    */
   protected override extractRole(node: HTMLElement): 'user' | 'assistant' {
     const parent = node.parentElement;
     if (!parent) return 'user';
 
-    // Check for Regenerate button (assistant indicator)
-    if (parent.querySelector('button[aria-label="Regenerate"]')) {
+    // Check for Regenerate button (assistant indicator) — English or Korean
+    if (
+      parent.querySelector('button[aria-label="Regenerate"]') ||
+      parent.querySelector('button[aria-label="다시 생성"]')
+    ) {
       return 'assistant';
     }
 
-    // Check for Edit button (user indicator)
-    if (parent.querySelector('button[aria-label="Edit"]')) {
+    // Check for Edit button (user indicator) — English or Korean
+    if (
+      parent.querySelector('button[aria-label="Edit"]') ||
+      parent.querySelector('button[aria-label="편집"]')
+    ) {
       return 'user';
     }
 

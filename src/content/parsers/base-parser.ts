@@ -188,6 +188,8 @@ export abstract class BaseParser implements ChatParser {
         return this.extractRoleByHybrid(node);
       case 'tagname':
         return this.extractRoleByTagName(node);
+      case 'combined-selector':
+        return this.extractRoleByCombinedSelector(node);
       default:
         throw new Error(
           `${this.platformName}: Unknown role strategy '${role.strategy}'`
@@ -309,6 +311,35 @@ export abstract class BaseParser implements ChatParser {
         `Expected tag name '${userTag}' or '${assistantTag}'. ` +
         `Found: tagName='${tagName}', id='${nodeInfo.id}', classes='${nodeInfo.classes}'. ` +
         `Content preview: ${nodeInfo.innerHTML}`
+    );
+  }
+
+  /**
+   * Extract role using combined-selector strategy (Perplexity)
+   *
+   * Matches node against user/assistant CSS selectors using node.matches().
+   *
+   * @private
+   * @param node - Message HTMLElement
+   * @returns 'user' or 'assistant'
+   * @throws Error if node doesn't match either selector
+   */
+  private extractRoleByCombinedSelector(node: HTMLElement): 'user' | 'assistant' {
+    const { userSelector, assistantSelector } = this.selectors.role;
+
+    if (userSelector && node.matches(userSelector)) {
+      return 'user';
+    }
+
+    if (assistantSelector && node.matches(assistantSelector)) {
+      return 'assistant';
+    }
+
+    throw new Error(
+      `${this.platformName}: Cannot determine message role. ` +
+        `Expected node matching '${userSelector}' or '${assistantSelector}'. ` +
+        `Found: tagName='${node.tagName.toLowerCase()}', id='${node.id || 'none'}', ` +
+        `classes='${node.className || 'none'}'`
     );
   }
 

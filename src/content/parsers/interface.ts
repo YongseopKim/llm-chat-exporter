@@ -105,7 +105,7 @@ export interface ExportMetadata {
   /**
    * Platform identifier
    */
-  platform: 'chatgpt' | 'claude' | 'gemini' | 'grok';
+  platform: 'chatgpt' | 'claude' | 'gemini' | 'grok' | 'perplexity';
 
   /**
    * Full URL of the conversation

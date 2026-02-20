@@ -132,6 +132,14 @@ function validatePlatform(name, config) {
             errors.push(`Missing 'role.assistantMarker' for sibling-button strategy in ${name}`);
           }
           break;
+        case 'combined-selector':
+          if (!selectors.role.userSelector) {
+            errors.push(`Missing 'role.userSelector' for combined-selector strategy in ${name}`);
+          }
+          if (!selectors.role.assistantSelector) {
+            errors.push(`Missing 'role.assistantSelector' for combined-selector strategy in ${name}`);
+          }
+          break;
         default:
           errors.push(`Unknown role strategy '${selectors.role.strategy}' in ${name}`);
       }
@@ -197,7 +205,7 @@ function validate() {
     }
 
     // Validate required platforms
-    const requiredPlatforms = ['chatgpt', 'claude', 'gemini', 'grok'];
+    const requiredPlatforms = ['chatgpt', 'claude', 'gemini', 'grok', 'perplexity'];
 
     header('Platform Validation');
 

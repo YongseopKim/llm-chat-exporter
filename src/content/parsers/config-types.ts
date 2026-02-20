@@ -11,8 +11,9 @@
  * - hybrid: Check multiple attributes with priority (Claude)
  * - tagname: Determine role from element tag name (Gemini)
  * - sibling-button: Determine role from sibling button aria-label (Grok)
+ * - combined-selector: Match node against user/assistant CSS selectors (Perplexity)
  */
-export type RoleStrategy = 'attribute' | 'hybrid' | 'tagname' | 'sibling-button';
+export type RoleStrategy = 'attribute' | 'hybrid' | 'tagname' | 'sibling-button' | 'combined-selector';
 
 /**
  * Title extraction strategy types
@@ -93,6 +94,12 @@ export interface RoleConfig {
   userMarker?: string;
   /** Selector for button indicating assistant message */
   assistantMarker?: string;
+
+  // For 'combined-selector' strategy (Perplexity)
+  /** CSS selector that matches user message nodes */
+  userSelector?: string;
+  /** CSS selector that matches assistant message nodes */
+  assistantSelector?: string;
 }
 
 /**
@@ -135,10 +142,11 @@ export interface SelectorConfig {
     claude: PlatformConfig;
     gemini: PlatformConfig;
     grok: PlatformConfig;
+    perplexity: PlatformConfig;
   };
 }
 
 /**
  * Platform key type
  */
-export type PlatformKey = 'chatgpt' | 'claude' | 'gemini' | 'grok';
+export type PlatformKey = 'chatgpt' | 'claude' | 'gemini' | 'grok' | 'perplexity';

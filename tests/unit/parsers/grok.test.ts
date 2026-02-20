@@ -7,10 +7,12 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { JSDOM } from 'jsdom';
 import { GrokParser } from '../../../src/content/parsers/grok';
 import { loadSampleHTML, createDOMFromHTML } from './shared/fixtures';
 import {
   createMockGrokUserMessage,
+  createMockGrokUserMessageKorean,
   createMockGrokAssistantMessage,
   createMockGrokMermaidRendered,
   createMockGrokCodeBlock,
@@ -216,6 +218,31 @@ describe('GrokParser', () => {
       expect(parsed.role).toBe('assistant');
       expect(parsed.contentHtml).toContain('<pre>');
       expect(parsed.contentHtml).toContain('<code');
+    });
+
+    it('should detect user role from Korean "편집" button in parent', () => {
+      const node = createMockGrokUserMessageKorean('<p>한국어 질문</p>');
+
+      const parsed = parser.parseNode(node);
+
+      expect(parsed.role).toBe('user');
+      expect(parsed.contentHtml).toContain('한국어 질문');
+    });
+
+    it('should detect assistant role when Regenerate is localized to Korean "다시 생성"', () => {
+      const dom = new JSDOM(`
+        <div class="relative group flex flex-col justify-center w-full">
+          <div class="message-bubble relative rounded-3xl text-primary prose"><p>답변입니다</p></div>
+          <div class="action-buttons h-8 mt-0.5 flex flex-row flex-wrap">
+            <button aria-label="다시 생성">다시 생성</button>
+          </div>
+        </div>
+      `);
+      const node = dom.window.document.querySelector('.message-bubble') as HTMLElement;
+
+      const parsed = parser.parseNode(node);
+
+      expect(parsed.role).toBe('assistant');
     });
 
     it('should handle empty content gracefully', () => {
