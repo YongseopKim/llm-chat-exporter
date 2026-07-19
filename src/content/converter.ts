@@ -270,7 +270,20 @@ turndownService.addRule('mathInlineKatex', {
 });
 
 /**
- * Custom Rule 5: Native SVG Preservation
+ * Custom Rule 5: Export Placeholders
+ *
+ * Parsers emit `[Visualization: ...]` style markers for content that exists
+ * in the page but cannot be extracted (e.g. a cross-origin iframe). Turndown
+ * would escape the brackets into `\[...\]`, which breaks grepping for the
+ * marker, so the text is passed through verbatim.
+ */
+turndownService.addRule('exportPlaceholder', {
+  filter: (node) => (node as HTMLElement).hasAttribute?.('data-export-placeholder'),
+  replacement: (_content, node) => `\n\n${(node as HTMLElement).textContent || ''}\n\n`
+});
+
+/**
+ * Custom Rule 6: Native SVG Preservation
  *
  * Any <svg> that survives cleanCodeBlockHtml() (i.e. wasn't identified as a
  * rendered Mermaid diagram) is a platform's own native diagram — e.g.
