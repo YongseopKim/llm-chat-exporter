@@ -645,15 +645,30 @@ describe('htmlToMarkdown', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('should replace img src with a base64 data URI on successful fetch', async () => {
+    it('should replace img src with a base64 data URI on successful fetch (same-origin)', async () => {
       const blob = new Blob(['fake-image-bytes'], { type: 'image/png' });
       fetchMock.mockResolvedValue({ ok: true, blob: () => Promise.resolve(blob) });
 
-      const html = '<img src="https://chatgpt.com/backend-api/estuary/content?sig=abc">';
+      // window.location.origin in the test environment is http://localhost:3000
+      const html = '<img src="http://localhost:3000/backend-api/estuary/content?sig=abc">';
       const result = await inlineImages(html);
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'https://chatgpt.com/backend-api/estuary/content?sig=abc',
+        'http://localhost:3000/backend-api/estuary/content?sig=abc',
+        { credentials: 'include' }
+      );
+      expect(result).toMatch(/src="data:image\/png;base64,[A-Za-z0-9+/=]+"/);
+    });
+
+    it('should resolve a relative src against the page origin and fetch it', async () => {
+      const blob = new Blob(['fake-image-bytes'], { type: 'image/png' });
+      fetchMock.mockResolvedValue({ ok: true, blob: () => Promise.resolve(blob) });
+
+      const html = '<img src="/files/abc/preview">';
+      const result = await inlineImages(html);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:3000/files/abc/preview',
         { credentials: 'include' }
       );
       expect(result).toMatch(/src="data:image\/png;base64,[A-Za-z0-9+/=]+"/);
@@ -662,19 +677,19 @@ describe('htmlToMarkdown', () => {
     it('should keep the original src when fetch rejects', async () => {
       fetchMock.mockRejectedValue(new Error('network error'));
 
-      const html = '<img src="https://claude.ai/api/org/files/id/preview">';
+      const html = '<img src="http://localhost:3000/api/org/files/id/preview">';
       const result = await inlineImages(html);
 
-      expect(result).toContain('src="https://claude.ai/api/org/files/id/preview"');
+      expect(result).toContain('src="http://localhost:3000/api/org/files/id/preview"');
     });
 
     it('should keep the original src when the response is not ok', async () => {
       fetchMock.mockResolvedValue({ ok: false, blob: () => Promise.resolve(new Blob([])) });
 
-      const html = '<img src="https://example.com/expired.png">';
+      const html = '<img src="http://localhost:3000/expired.png">';
       const result = await inlineImages(html);
 
-      expect(result).toContain('src="https://example.com/expired.png"');
+      expect(result).toContain('src="http://localhost:3000/expired.png"');
     });
 
     it('should keep the original src and warn when the image exceeds the size cap', async () => {
@@ -682,10 +697,10 @@ describe('htmlToMarkdown', () => {
       const hugeBlob = { size: 6 * 1024 * 1024, type: 'image/png' } as Blob;
       fetchMock.mockResolvedValue({ ok: true, blob: () => Promise.resolve(hugeBlob) });
 
-      const html = '<img src="https://example.com/huge.png">';
+      const html = '<img src="http://localhost:3000/huge.png">';
       const result = await inlineImages(html);
 
-      expect(result).toContain('src="https://example.com/huge.png"');
+      expect(result).toContain('src="http://localhost:3000/huge.png"');
       expect(warnSpy).toHaveBeenCalled();
     });
 
@@ -703,11 +718,52 @@ describe('htmlToMarkdown', () => {
         .mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(goodBlob) })
         .mockRejectedValueOnce(new Error('boom'));
 
-      const html = '<img src="https://example.com/a.jpg"><img src="https://example.com/b.jpg">';
+      const html =
+        '<img src="http://localhost:3000/a.jpg"><img src="http://localhost:3000/b.jpg">';
       const result = await inlineImages(html);
 
       expect(result).toMatch(/src="data:image\/jpeg;base64,[A-Za-z0-9+/=]+"/);
-      expect(result).toContain('src="https://example.com/b.jpg"');
+      expect(result).toContain('src="http://localhost:3000/b.jpg"');
+    });
+
+    // ============================================================
+    // SSRF prevention: never send credentials to a foreign origin
+    // ============================================================
+
+    describe('cross-origin sources (SSRF prevention)', () => {
+      it('should not fetch an image whose src is on a different origin', async () => {
+        const html = '<img src="https://chatgpt.com/backend-api/estuary/content?sig=abc">';
+        const result = await inlineImages(html);
+
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(result).toContain(
+          'src="https://chatgpt.com/backend-api/estuary/content?sig=abc"'
+        );
+      });
+
+      it('should not fetch an image pointing at a private/link-local address', async () => {
+        const html = '<img src="http://169.254.169.254/latest/meta-data/">';
+        const result = await inlineImages(html);
+
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(result).toContain('src="http://169.254.169.254/latest/meta-data/"');
+      });
+
+      it('should not fetch an image with a different port on the same hostname', async () => {
+        const html = '<img src="http://localhost:9999/internal">';
+        const result = await inlineImages(html);
+
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(result).toContain('src="http://localhost:9999/internal"');
+      });
+
+      it('should not fetch when src is an unparseable URL', async () => {
+        const html = '<img src="http://">';
+        const result = await inlineImages(html);
+
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(result).toContain('src="http://"');
+      });
     });
   });
 });
