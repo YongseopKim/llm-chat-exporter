@@ -30,6 +30,13 @@ import type { ArtifactData, ProjectInfo } from './interface';
 const PROJECT_LINK_SELECTOR = 'a[href^="/cowork/project/"]';
 
 /**
+ * Selector for visualization iframes embedded in an assistant message.
+ * Scoped to the message node at query time, so page-level iframes
+ * (analytics and similar) are never matched.
+ */
+const VISUALIZATION_SELECTOR = 'iframe[title]';
+
+/**
  * Claude platform parser
  *
  * Configuration-driven parser using BaseParser infrastructure.
@@ -147,10 +154,12 @@ export class ClaudeParser extends BaseParser {
    * - Collapsed web search results
    * - Main response content
    *
+   * It may also contain a visualization rendered in an iframe.
+   *
    * This override:
-   * 1. Finds all content elements matching selector
+   * 1. Finds all content elements matching selector, plus visualization iframes
    * 2. Filters out elements inside collapsed containers
-   * 3. Concatenates visible content
+   * 3. Concatenates visible content in document order
    *
    * @override
    * @protected
@@ -161,18 +170,49 @@ export class ClaudeParser extends BaseParser {
       return super.extractContent(node, role);
     }
 
-    // For assistant messages, collect all visible markdown blocks
+    // Querying both in one call keeps them in document order, so a
+    // visualization stays between the paragraphs it was rendered between.
     const selector = this.selectors.content[role];
-    const elements = node.querySelectorAll(selector);
+    const elements = node.querySelectorAll(`${selector}, ${VISUALIZATION_SELECTOR}`);
 
     const visibleContent: string[] = [];
     for (const el of elements) {
-      if (!this.isInCollapsedBlock(el as HTMLElement)) {
-        visibleContent.push(el.innerHTML);
+      if (this.isInCollapsedBlock(el as HTMLElement)) {
+        continue;
       }
+      visibleContent.push(
+        el.tagName === 'IFRAME'
+          ? this.buildVisualizationPlaceholder(el as HTMLIFrameElement)
+          : el.innerHTML
+      );
     }
 
     return visibleContent.join('\n');
+  }
+
+  /**
+   * Build a placeholder standing in for a visualization iframe
+   *
+   * Claude renders visualizations inside a sandboxed cross-origin iframe
+   * (<hash>.claudemcpcontent.com), so `contentDocument` is null and the
+   * rendered content cannot be read by a content script — this is a hard
+   * browser security boundary, not something a better selector can solve.
+   * The iframe's title is readable from the parent page, so the export at
+   * least records that a visualization was present and what it depicted.
+   *
+   * @private
+   */
+  private buildVisualizationPlaceholder(iframe: HTMLIFrameElement): string {
+    const rawTitle = iframe.getAttribute('title')?.trim() || '';
+    // Titles arrive as "visualize: <description>"; the tool name is noise
+    const title = rawTitle.replace(/^visualize:\s*/i, '');
+
+    const p = document.createElement('p');
+    // Marks this as a literal placeholder so the converter emits it verbatim
+    // instead of escaping the brackets into \[Visualization: ...\]
+    p.setAttribute('data-export-placeholder', '');
+    p.textContent = title ? `[Visualization: ${title}]` : '[Visualization]';
+    return p.outerHTML;
   }
 
   /**

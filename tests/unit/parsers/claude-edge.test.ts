@@ -12,6 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ClaudeParser } from '../../../src/content/parsers/claude';
+import { htmlToMarkdown, inlineImages } from '../../../src/content/converter';
 import { loadEdgeCaseHTML, createDOMFromHTML } from './shared/fixtures';
 
 describe('ClaudeParser - Edge Cases', () => {
@@ -181,6 +182,88 @@ describe('ClaudeParser - Edge Cases', () => {
       expect(parsed.contentHtml).toContain('Visible first');
       expect(parsed.contentHtml).toContain('Visible second');
       expect(parsed.contentHtml).not.toContain('Hidden content');
+    });
+  });
+
+  describe('claude_002: Visualization rendered in a cross-origin iframe', () => {
+    // Claude's "visualize" feature renders the picture inside a sandboxed
+    // cross-origin iframe (<hash>.claudemcpcontent.com). contentDocument is
+    // null from the page, so the content is unreachable by any content
+    // script — the best we can do is record that it was there.
+    it('should emit a placeholder carrying the visualization title', () => {
+      const html = loadEdgeCaseHTML('claude', '002');
+      const doc = createDOMFromHTML(`<html><body>${html}</body></html>`);
+      global.document = doc as any;
+
+      const node = parser.getMessageNodes()[0];
+      const parsed = parser.parseNode(node);
+
+      expect(parsed.role).toBe('assistant');
+      expect(parsed.contentHtml).toContain('Inferred portrait night desk');
+    });
+
+    it('should keep the visualization in document order between the text blocks', () => {
+      const html = loadEdgeCaseHTML('claude', '002');
+      const doc = createDOMFromHTML(`<html><body>${html}</body></html>`);
+      global.document = doc as any;
+
+      const parsed = parser.parseNode(parser.getMessageNodes()[0]);
+
+      const beforeText = parsed.contentHtml.indexOf('얼굴은 일부러 비웠다');
+      const placeholder = parsed.contentHtml.indexOf('Inferred portrait night desk');
+      const afterText = parsed.contentHtml.indexOf('맞았는지 빗나갔는지는');
+
+      expect(beforeText).toBeGreaterThanOrEqual(0);
+      expect(placeholder).toBeGreaterThan(beforeText);
+      expect(afterText).toBeGreaterThan(placeholder);
+    });
+
+    it('should survive markdown conversion as readable text', async () => {
+      const html = loadEdgeCaseHTML('claude', '002');
+      const doc = createDOMFromHTML(`<html><body>${html}</body></html>`);
+      global.document = doc as any;
+
+      const parsed = parser.parseNode(parser.getMessageNodes()[0]);
+      const md = htmlToMarkdown(await inlineImages(parsed.contentHtml));
+
+      expect(md).toContain('Inferred portrait night desk');
+      // The MCP tool-name prefix is noise, not part of the title
+      expect(md).not.toContain('visualize: Inferred');
+      // Brackets must survive unescaped so the marker stays greppable
+      expect(md).toContain('[Visualization: Inferred portrait night desk]');
+      expect(md).not.toContain('\\[Visualization');
+    });
+
+    it('should emit one placeholder per visualization in a multi-visualization message', () => {
+      // claude_001 embeds three visualizations; before this change all three
+      // vanished from the export without a trace.
+      const html = loadEdgeCaseHTML('claude', '001');
+      const doc = createDOMFromHTML(html);
+      global.document = doc as any;
+
+      const assistant = parser
+        .getMessageNodes()
+        .map((n) => parser.parseNode(n))
+        .find((m) => m.role === 'assistant');
+
+      expect(assistant).toBeTruthy();
+      expect(assistant!.contentHtml).toContain('[Visualization: Power plant to gpu voltage ladder]');
+      expect(assistant!.contentHtml).toContain('[Visualization: Gpu cluster bandwidth hierarchy]');
+      expect(assistant!.contentHtml).toContain('[Visualization: Training vs inference requirements]');
+    });
+
+    it('should not emit a placeholder for messages without a visualization', () => {
+      const doc = createDOMFromHTML(`
+        <div data-is-streaming="false">
+          <div class="standard-markdown"><p>Plain answer</p></div>
+        </div>
+      `);
+      global.document = doc as any;
+
+      const parsed = parser.parseNode(parser.getMessageNodes()[0]);
+
+      expect(parsed.contentHtml).toContain('Plain answer');
+      expect(parsed.contentHtml).not.toContain('Visualization');
     });
   });
 
