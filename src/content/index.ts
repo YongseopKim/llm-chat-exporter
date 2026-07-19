@@ -74,7 +74,7 @@ async function exportConversation(): Promise<string> {
 
   // 7. Build JSONL with metadata
   const title = parser.getTitle();
-  const jsonl = buildJsonl(parsedMessages, {
+  const jsonl = await buildJsonl(parsedMessages, {
     platform: getPlatformName(window.location.href) as any,
     url: window.location.href,
     exported_at: new Date().toISOString(),
