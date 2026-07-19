@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { htmlToMarkdown } from '../../src/content/converter';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { htmlToMarkdown, inlineImages } from '../../src/content/converter';
 
 describe('htmlToMarkdown', () => {
   // Basic conversions
@@ -617,6 +617,97 @@ describe('htmlToMarkdown', () => {
       const md = htmlToMarkdown(html);
       // Should have exactly one block math, not nested
       expect(md.match(/\$\$/g)?.length).toBe(2); // Opening and closing $$
+    });
+  });
+
+  // ============================================================
+  // Image Binary Inlining
+  // ============================================================
+
+  describe('inlineImages', () => {
+    let fetchMock: ReturnType<typeof vi.fn>;
+    const originalFetch = global.fetch;
+
+    beforeEach(() => {
+      fetchMock = vi.fn();
+      global.fetch = fetchMock as any;
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+      vi.restoreAllMocks();
+    });
+
+    it('should return HTML unchanged when there are no images', async () => {
+      const html = '<p>No images here</p>';
+      const result = await inlineImages(html);
+      expect(result).toContain('No images here');
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('should replace img src with a base64 data URI on successful fetch', async () => {
+      const blob = new Blob(['fake-image-bytes'], { type: 'image/png' });
+      fetchMock.mockResolvedValue({ ok: true, blob: () => Promise.resolve(blob) });
+
+      const html = '<img src="https://chatgpt.com/backend-api/estuary/content?sig=abc">';
+      const result = await inlineImages(html);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://chatgpt.com/backend-api/estuary/content?sig=abc',
+        { credentials: 'include' }
+      );
+      expect(result).toMatch(/src="data:image\/png;base64,[A-Za-z0-9+/=]+"/);
+    });
+
+    it('should keep the original src when fetch rejects', async () => {
+      fetchMock.mockRejectedValue(new Error('network error'));
+
+      const html = '<img src="https://claude.ai/api/org/files/id/preview">';
+      const result = await inlineImages(html);
+
+      expect(result).toContain('src="https://claude.ai/api/org/files/id/preview"');
+    });
+
+    it('should keep the original src when the response is not ok', async () => {
+      fetchMock.mockResolvedValue({ ok: false, blob: () => Promise.resolve(new Blob([])) });
+
+      const html = '<img src="https://example.com/expired.png">';
+      const result = await inlineImages(html);
+
+      expect(result).toContain('src="https://example.com/expired.png"');
+    });
+
+    it('should keep the original src and warn when the image exceeds the size cap', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const hugeBlob = { size: 6 * 1024 * 1024, type: 'image/png' } as Blob;
+      fetchMock.mockResolvedValue({ ok: true, blob: () => Promise.resolve(hugeBlob) });
+
+      const html = '<img src="https://example.com/huge.png">';
+      const result = await inlineImages(html);
+
+      expect(result).toContain('src="https://example.com/huge.png"');
+      expect(warnSpy).toHaveBeenCalled();
+    });
+
+    it('should not re-fetch images that are already data URIs', async () => {
+      const html = '<img src="data:image/png;base64,QUJD">';
+      const result = await inlineImages(html);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(result).toContain('src="data:image/png;base64,QUJD"');
+    });
+
+    it('should process multiple images independently', async () => {
+      const goodBlob = new Blob(['ok'], { type: 'image/jpeg' });
+      fetchMock
+        .mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(goodBlob) })
+        .mockRejectedValueOnce(new Error('boom'));
+
+      const html = '<img src="https://example.com/a.jpg"><img src="https://example.com/b.jpg">';
+      const result = await inlineImages(html);
+
+      expect(result).toMatch(/src="data:image\/jpeg;base64,[A-Za-z0-9+/=]+"/);
+      expect(result).toContain('src="https://example.com/b.jpg"');
     });
   });
 });

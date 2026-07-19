@@ -248,6 +248,76 @@ turndownService.addRule('mathInlineKatex', {
  * const md = htmlToMarkdown('<p>Hello <strong>world</strong></p>');
  * // Returns: "Hello **world**"
  */
+/** Max size (bytes) of an image to inline as base64; larger images fall back to their original URL */
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Read a Blob as a base64 data URI (e.g. "data:image/png;base64,...")
+ */
+function blobToDataUri(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Inline every <img src> in the HTML as a base64 data URI
+ *
+ * ChatGPT/Claude serve generated and uploaded images from authenticated,
+ * often time-limited endpoints (signed URLs, session-cookie-gated APIs).
+ * The raw src would break once the browser session or signature expires,
+ * so images are fetched with page credentials and embedded directly.
+ *
+ * Falls back to leaving the original src untouched when the fetch fails,
+ * the response isn't ok, or the image exceeds MAX_IMAGE_BYTES.
+ *
+ * @param html - Raw HTML string (before markdown conversion)
+ * @returns HTML string with <img src> replaced by data URIs where possible
+ */
+export async function inlineImages(html: string): Promise<string> {
+  if (!html || html.trim() === '') {
+    return html;
+  }
+
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const images = Array.from(doc.querySelectorAll('img[src]'));
+
+  await Promise.all(
+    images.map(async (img) => {
+      const src = img.getAttribute('src') || '';
+      if (!src || src.startsWith('data:')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(src, { credentials: 'include' });
+        if (!response.ok) {
+          return;
+        }
+
+        const blob = await response.blob();
+        if (blob.size > MAX_IMAGE_BYTES) {
+          console.warn(
+            `LLM Chat Exporter: Skipping image over ${MAX_IMAGE_BYTES} byte limit ` +
+              `(${blob.size} bytes): ${src}`
+          );
+          return;
+        }
+
+        const dataUri = await blobToDataUri(blob);
+        img.setAttribute('src', dataUri);
+      } catch (error) {
+        console.warn('LLM Chat Exporter: Failed to inline image, keeping original URL', src, error);
+      }
+    })
+  );
+
+  return doc.body.innerHTML;
+}
+
 export function htmlToMarkdown(html: string): string {
   if (!html || html.trim() === '') {
     return '';
