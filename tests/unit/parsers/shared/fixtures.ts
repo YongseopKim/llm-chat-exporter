@@ -28,10 +28,11 @@ export function loadSampleHTML(platform: 'chatgpt' | 'claude' | 'gemini' | 'grok
  * Create a JSDOM Document from HTML string
  *
  * @param html - HTML string
+ * @param url - Optional URL to back document.location (defaults to JSDOM's about:blank)
  * @returns Document object for testing
  */
-export function createDOMFromHTML(html: string): Document {
-  const dom = new JSDOM(html);
+export function createDOMFromHTML(html: string, url?: string): Document {
+  const dom = new JSDOM(html, url ? { url } : undefined);
   return dom.window.document;
 }
 

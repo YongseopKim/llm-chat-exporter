@@ -17,6 +17,10 @@
  */
 
 import { BaseParser } from './base-parser';
+import type { ProjectInfo } from './interface';
+
+/** Matches ChatGPT project chat URLs: /g/g-p-<hash>-<slug>/c/<uuid> */
+const PROJECT_PATH_PATTERN = /^\/g\/(g-p-[0-9a-f]+)-([^/]+)\//;
 
 /**
  * ChatGPT platform parser
@@ -27,5 +31,30 @@ import { BaseParser } from './base-parser';
 export class ChatGPTParser extends BaseParser {
   constructor() {
     super('chatgpt');
+  }
+
+  /**
+   * Get project info for the current conversation
+   *
+   * ChatGPT project chats live under /g/g-p-<hash>-<slug>/c/<uuid>, unlike
+   * regular chats (/c/<uuid>). The project id comes from the URL. The exact
+   * display name isn't exposed anywhere in the DOM (sidebar project entries
+   * are buttons with no href), so it's read from document.title, which the
+   * app renders as "{ProjectName} - {ChatTitle}" once hydrated. If the title
+   * hasn't updated yet, falls back to the URL slug (lossy, ASCII-only).
+   *
+   * @returns ProjectInfo if this conversation belongs to a project, null otherwise
+   */
+  getProjectInfo(): ProjectInfo | null {
+    const match = document.location.pathname.match(PROJECT_PATH_PATTERN);
+    if (!match) {
+      return null;
+    }
+
+    const [, id, slug] = match;
+    const separatorIndex = document.title.indexOf(' - ');
+    const name = separatorIndex > 0 ? document.title.slice(0, separatorIndex).trim() : slug;
+
+    return { id, name };
   }
 }

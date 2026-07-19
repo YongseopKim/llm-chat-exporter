@@ -329,4 +329,56 @@ describe('ChatGPTParser', () => {
       expect(parser.getTitle()).toBeUndefined();
     });
   });
+
+  // ============================================================
+  // getProjectInfo() - 4 tests
+  // ============================================================
+
+  describe('getProjectInfo', () => {
+    it('should return project id and name for a project chat URL', () => {
+      const doc = createDOMFromHTML(
+        '<html><body></body></html>',
+        'https://chatgpt.com/g/g-p-6a5c34f7d1788191b4c605d4b66869dc-tuja-ai/c/6a5aefb1-85e8-83ee-a9bc-f6b9a9e81bee'
+      );
+      doc.title = '투자: AI - 빅테크 FCF 전망';
+      global.document = doc as any;
+
+      expect(parser.getProjectInfo?.()).toEqual({
+        id: 'g-p-6a5c34f7d1788191b4c605d4b66869dc',
+        name: '투자: AI',
+      });
+    });
+
+    it('should fall back to the URL slug when document.title has no separator yet', () => {
+      const doc = createDOMFromHTML(
+        '<html><body></body></html>',
+        'https://chatgpt.com/g/g-p-6a5c34f7d1788191b4c605d4b66869dc-tuja-ai/c/6a5aefb1-85e8-83ee-a9bc-f6b9a9e81bee'
+      );
+      doc.title = 'ChatGPT';
+      global.document = doc as any;
+
+      expect(parser.getProjectInfo?.()).toEqual({
+        id: 'g-p-6a5c34f7d1788191b4c605d4b66869dc',
+        name: 'tuja-ai',
+      });
+    });
+
+    it('should return null for a regular (non-project) chat URL', () => {
+      const doc = createDOMFromHTML(
+        '<html><body></body></html>',
+        'https://chatgpt.com/c/6a5b9351-338c-83ee-b964-d8be7e898606'
+      );
+      doc.title = 'VSCode GitHub Copilot 끄기';
+      global.document = doc as any;
+
+      expect(parser.getProjectInfo?.()).toBeNull();
+    });
+
+    it('should return null on the new chat homepage', () => {
+      const doc = createDOMFromHTML('<html><body></body></html>', 'https://chatgpt.com/');
+      global.document = doc as any;
+
+      expect(parser.getProjectInfo?.()).toBeNull();
+    });
+  });
 });
