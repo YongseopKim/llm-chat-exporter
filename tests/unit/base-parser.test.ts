@@ -104,7 +104,7 @@ describe('BaseParser', () => {
 
       const nodes = parser.getMessageNodes();
       expect(nodes).toHaveLength(2);
-      expect(mockDoc.querySelectorAll).toHaveBeenCalledWith('[data-message-author-role]');
+      expect(mockDoc.querySelectorAll).toHaveBeenCalledWith('[data-turn]');
     });
 
     it('should use combined selector for Claude', () => {
@@ -146,7 +146,7 @@ describe('BaseParser', () => {
       const nodes = parser.getMessageNodes();
       expect(nodes).toHaveLength(1);
       expect(mockDoc.querySelectorAll).toHaveBeenCalledTimes(2);
-      expect(mockDoc.querySelectorAll).toHaveBeenNthCalledWith(2, '[data-turn]');
+      expect(mockDoc.querySelectorAll).toHaveBeenNthCalledWith(2, '[data-message-author-role]');
     });
   });
 

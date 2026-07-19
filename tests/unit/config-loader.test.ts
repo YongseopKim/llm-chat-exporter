@@ -106,8 +106,8 @@ describe('ConfigLoader', () => {
 
     it('should return message selectors for ChatGPT (primary with fallbacks)', () => {
       const selectors = ConfigLoader.getInstance().getSelectors('chatgpt');
-      expect(selectors.messages.primary).toBe('[data-message-author-role]');
-      expect(selectors.messages.fallbacks).toContain('[data-turn]');
+      expect(selectors.messages.primary).toBe('[data-turn]');
+      expect(selectors.messages.fallbacks).toContain('[data-message-author-role]');
     });
 
     it('should return message selectors for Claude (combined)', () => {
