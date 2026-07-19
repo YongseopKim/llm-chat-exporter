@@ -6,9 +6,9 @@
       "hostname": "chatgpt.com",
       "selectors": {
         "messages": {
-          "primary": "[data-message-author-role]",
+          "primary": "[data-turn]",
           "fallbacks": [
-            "[data-turn]",
+            "[data-message-author-role]",
             "article[data-testid^=\"conversation\"]"
           ]
         },

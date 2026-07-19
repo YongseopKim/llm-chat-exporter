@@ -30,27 +30,16 @@ describe('ChatGPTParser - Edge Cases', () => {
       const doc = createDOMFromHTML(html);
       global.document = doc as any;
 
-      const nodes = parser.getMessageNodes();
-      expect(nodes.length).toBeGreaterThanOrEqual(2);
+      const parsed = parser.getMessageNodes().map((n) => parser.parseNode(n));
+      expect(parsed.length).toBeGreaterThanOrEqual(2);
 
-      const userNode = nodes.find((n) => n.getAttribute('data-message-author-role') === 'user');
-      const assistantNode = nodes.find(
-        (n) => n.getAttribute('data-message-author-role') === 'assistant'
-      );
-      expect(userNode).toBeTruthy();
-      expect(assistantNode).toBeTruthy();
+      const user = parsed.find((m) => m.role === 'user');
+      const assistant = parsed.find((m) => m.role === 'assistant');
+      expect(user).toBeTruthy();
+      expect(assistant).toBeTruthy();
 
-      if (userNode) {
-        const parsed = parser.parseNode(userNode);
-        expect(parsed.role).toBe('user');
-        expect(parsed.contentHtml).toContain('프록시식 AI 회사를 차려라');
-      }
-
-      if (assistantNode) {
-        const parsed = parser.parseNode(assistantNode);
-        expect(parsed.role).toBe('assistant');
-        expect(parsed.contentHtml).toContain('핵심 태도는 대체로 옳지만');
-      }
+      expect(user!.contentHtml).toContain('프록시식 AI 회사를 차려라');
+      expect(assistant!.contentHtml).toContain('핵심 태도는 대체로 옳지만');
     });
   });
 
@@ -60,19 +49,12 @@ describe('ChatGPTParser - Edge Cases', () => {
       const doc = createDOMFromHTML(html);
       global.document = doc as any;
 
-      const nodes = parser.getMessageNodes();
-      const userNodes = nodes.filter(
-        (n) => n.getAttribute('data-message-author-role') === 'user'
-      );
-      const assistantNodes = nodes.filter(
-        (n) => n.getAttribute('data-message-author-role') === 'assistant'
-      );
+      const parsed = parser.getMessageNodes().map((n) => parser.parseNode(n));
 
-      expect(userNodes.length).toBe(3);
-      expect(assistantNodes.length).toBe(4);
+      expect(parsed.filter((m) => m.role === 'user').length).toBe(3);
+      expect(parsed.filter((m) => m.role === 'assistant').length).toBe(4);
 
-      const parsed = parser.parseNode(userNodes[0]);
-      expect(parsed.contentHtml).toContain('반도체 수요에 비해 데이터센터가 부족하다고 들었음');
+      expect(parsed[0].contentHtml).toContain('반도체 수요에 비해 데이터센터가 부족하다고 들었음');
     });
 
     it('should never fetch the real cross-origin citation thumbnails when inlining images', async () => {
@@ -80,11 +62,10 @@ describe('ChatGPTParser - Edge Cases', () => {
       const doc = createDOMFromHTML(html);
       global.document = doc as any;
 
-      const nodes = parser.getMessageNodes();
-      const assistantWithImages = nodes
-        .filter((n) => n.getAttribute('data-message-author-role') === 'assistant')
+      const assistantWithImages = parser
+        .getMessageNodes()
         .map((n) => parser.parseNode(n))
-        .find((m) => m.contentHtml.includes('<img'));
+        .find((m) => m.role === 'assistant' && m.contentHtml.includes('<img'));
       expect(assistantWithImages).toBeTruthy();
 
       const fetchMock = vi.fn();
@@ -103,20 +84,72 @@ describe('ChatGPTParser - Edge Cases', () => {
     });
   });
 
+  describe('chatgpt_003: Image-generation turn', () => {
+    // Image-generation responses render in a <section data-turn="assistant">
+    // that contains NO [data-message-author-role] descendant, so the old
+    // primary-only selector chain dropped the entire turn from the export.
+    it('should collect the image-generation assistant turn', () => {
+      const html = loadEdgeCaseHTML('chatgpt', '003');
+      const doc = createDOMFromHTML(`<html><body>${html}</body></html>`);
+      global.document = doc as any;
+
+      const nodes = parser.getMessageNodes();
+      const roles = nodes.map((n) => parser.parseNode(n).role);
+
+      expect(roles).toEqual(['user', 'assistant']);
+    });
+
+    it('should extract the generated image, deduplicated to one <img> per src', () => {
+      const html = loadEdgeCaseHTML('chatgpt', '003');
+      const doc = createDOMFromHTML(`<html><body>${html}</body></html>`);
+      global.document = doc as any;
+
+      const nodes = parser.getMessageNodes();
+      const assistant = parser.parseNode(nodes[1]);
+
+      expect(assistant.role).toBe('assistant');
+      // The DOM layers 3 <img> elements over each other, all with the same src
+      expect(assistant.contentHtml.match(/<img/g)?.length).toBe(1);
+      expect(assistant.contentHtml).toContain('backend-api/estuary/content');
+      expect(assistant.contentHtml).toContain('생성된 이미지');
+    });
+
+    it('should skip assistant turns that have neither content nor images', () => {
+      const html = loadEdgeCaseHTML('chatgpt', '003');
+      const doc = createDOMFromHTML(`<html><body>${html}</body></html>`);
+      global.document = doc as any;
+
+      // The fixture ends with a scaffold turn whose only text is the
+      // sr-only "ChatGPT의 말:" heading — that is not a message.
+      expect(parser.getMessageNodes().length).toBe(2);
+    });
+
+    it('should not double-count turns that do contain a role node', () => {
+      const html = loadEdgeCaseHTML('chatgpt', '001');
+      const doc = createDOMFromHTML(html);
+      global.document = doc as any;
+
+      const nodes = parser.getMessageNodes();
+      const roles = nodes.map((n) => parser.parseNode(n).role);
+
+      // 3 user + 4 assistant real messages; the 8th turn is an empty scaffold
+      expect(roles.filter((r) => r === 'user').length).toBe(3);
+      expect(roles.filter((r) => r === 'assistant').length).toBe(4);
+    });
+  });
+
   describe('chatgpt_002: Text-only conversation (no images)', () => {
     it('should extract messages with no <img> in the content', () => {
       const html = loadEdgeCaseHTML('chatgpt', '002');
       const doc = createDOMFromHTML(html);
       global.document = doc as any;
 
-      const nodes = parser.getMessageNodes();
-      const userNode = nodes.find((n) => n.getAttribute('data-message-author-role') === 'user');
-      expect(userNode).toBeTruthy();
-
-      if (userNode) {
-        const parsed = parser.parseNode(userNode);
-        expect(parsed.contentHtml).toContain('이미지 만으로 된 PDF 파일');
-      }
+      const user = parser
+        .getMessageNodes()
+        .map((n) => parser.parseNode(n))
+        .find((m) => m.role === 'user');
+      expect(user).toBeTruthy();
+      expect(user!.contentHtml).toContain('이미지 만으로 된 PDF 파일');
     });
   });
 });
