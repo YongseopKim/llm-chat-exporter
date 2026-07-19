@@ -69,13 +69,17 @@ async function exportConversation(): Promise<string> {
   // 5. Extract artifact if available (Claude only)
   const artifact = parser.getArtifact?.() ?? null;
 
-  // 6. Build JSONL with metadata
+  // 6. Extract project info if this conversation belongs to a project
+  const project = parser.getProjectInfo?.() ?? null;
+
+  // 7. Build JSONL with metadata
   const title = parser.getTitle();
   const jsonl = buildJsonl(parsedMessages, {
     platform: getPlatformName(window.location.href) as any,
     url: window.location.href,
     exported_at: new Date().toISOString(),
-    ...(title && { title })
+    ...(title && { title }),
+    ...(project && { project })
   }, artifact);
 
   console.log('LLM Chat Exporter: Export complete');
