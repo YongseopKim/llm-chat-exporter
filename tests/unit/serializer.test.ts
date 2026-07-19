@@ -4,7 +4,8 @@ import type { ParsedMessage, ExportMetadata, ArtifactData } from '../../src/cont
 
 // Mock the converter module
 vi.mock('../../src/content/converter', () => ({
-  htmlToMarkdown: vi.fn((html: string) => `[MD]${html}[/MD]`)
+  htmlToMarkdown: vi.fn((html: string) => `[MD]${html}[/MD]`),
+  inlineImages: vi.fn((html: string) => Promise.resolve(html))
 }));
 
 describe('buildJsonl', () => {
@@ -12,7 +13,7 @@ describe('buildJsonl', () => {
     vi.clearAllMocks();
   });
 
-  it('should serialize single message to JSONL', () => {
+  it('should serialize single message to JSONL', async () => {
     const messages: ParsedMessage[] = [
       { role: 'user', contentHtml: '<p>Hello</p>', timestamp: '2025-11-29T10:00:00Z' }
     ];
@@ -22,7 +23,7 @@ describe('buildJsonl', () => {
       exported_at: '2025-11-29T10:01:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
 
     expect(lines.length).toBe(2); // metadata + 1 message
@@ -38,7 +39,7 @@ describe('buildJsonl', () => {
     expect(messageLine.timestamp).toBe('2025-11-29T10:00:00Z');
   });
 
-  it('should handle multiple messages', () => {
+  it('should handle multiple messages', async () => {
     const messages: ParsedMessage[] = [
       { role: 'user', contentHtml: '<p>Q1</p>', timestamp: '2025-11-29T10:00:00Z' },
       { role: 'assistant', contentHtml: '<p>A1</p>', timestamp: '2025-11-29T10:00:05Z' },
@@ -50,7 +51,7 @@ describe('buildJsonl', () => {
       exported_at: '2025-11-29T10:01:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
 
     expect(lines.length).toBe(4); // metadata + 3 messages
@@ -64,7 +65,7 @@ describe('buildJsonl', () => {
     expect(msg3.role).toBe('user');
   });
 
-  it('should handle content with newlines', () => {
+  it('should handle content with newlines', async () => {
     const messages: ParsedMessage[] = [
       {
         role: 'user',
@@ -78,7 +79,7 @@ describe('buildJsonl', () => {
       exported_at: '2025-11-29T10:01:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
 
     // Each line should be valid JSON
@@ -92,7 +93,7 @@ describe('buildJsonl', () => {
     expect(messageLine.content).toContain('[MD]');
   });
 
-  it('should add timestamp if missing', () => {
+  it('should add timestamp if missing', async () => {
     const messages: ParsedMessage[] = [
       { role: 'user', contentHtml: '<p>Hello</p>' } // No timestamp
     ];
@@ -102,7 +103,7 @@ describe('buildJsonl', () => {
       exported_at: '2025-11-29T10:01:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
     const messageLine = JSON.parse(lines[1]);
 
@@ -110,10 +111,10 @@ describe('buildJsonl', () => {
     expect(messageLine.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/); // ISO 8601 format
   });
 
-  it('should call htmlToMarkdown for each message', async () => {
-    // Get the mocked function
+  it('should call inlineImages then htmlToMarkdown for each message', async () => {
     const converterModule = await import('../../src/content/converter');
     const htmlToMarkdown = converterModule.htmlToMarkdown as ReturnType<typeof vi.fn>;
+    const inlineImages = converterModule.inlineImages as ReturnType<typeof vi.fn>;
 
     const messages: ParsedMessage[] = [
       { role: 'user', contentHtml: '<p>Message 1</p>', timestamp: '2025-11-29T10:00:00Z' },
@@ -125,14 +126,37 @@ describe('buildJsonl', () => {
       exported_at: '2025-11-29T10:01:00Z'
     };
 
-    buildJsonl(messages, metadata);
+    await buildJsonl(messages, metadata);
 
+    expect(inlineImages).toHaveBeenCalledTimes(2);
+    expect(inlineImages).toHaveBeenCalledWith('<p>Message 1</p>');
+    expect(inlineImages).toHaveBeenCalledWith('<p>Message 2</p>');
     expect(htmlToMarkdown).toHaveBeenCalledTimes(2);
     expect(htmlToMarkdown).toHaveBeenCalledWith('<p>Message 1</p>');
     expect(htmlToMarkdown).toHaveBeenCalledWith('<p>Message 2</p>');
   });
 
-  it('should handle empty message array', () => {
+  it('should pass the inlined HTML from inlineImages into htmlToMarkdown', async () => {
+    const converterModule = await import('../../src/content/converter');
+    const htmlToMarkdown = converterModule.htmlToMarkdown as ReturnType<typeof vi.fn>;
+    const inlineImages = converterModule.inlineImages as ReturnType<typeof vi.fn>;
+    inlineImages.mockResolvedValueOnce('<p>inlined</p>');
+
+    const messages: ParsedMessage[] = [
+      { role: 'user', contentHtml: '<img src="https://example.com/x.png">', timestamp: '2025-11-29T10:00:00Z' }
+    ];
+    const metadata: ExportMetadata = {
+      platform: 'chatgpt',
+      url: 'https://chatgpt.com/c/123',
+      exported_at: '2025-11-29T10:01:00Z'
+    };
+
+    await buildJsonl(messages, metadata);
+
+    expect(htmlToMarkdown).toHaveBeenCalledWith('<p>inlined</p>');
+  });
+
+  it('should handle empty message array', async () => {
     const messages: ParsedMessage[] = [];
     const metadata: ExportMetadata = {
       platform: 'chatgpt',
@@ -140,7 +164,7 @@ describe('buildJsonl', () => {
       exported_at: '2025-11-29T10:01:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
 
     expect(lines.length).toBe(1); // Only metadata
@@ -148,7 +172,7 @@ describe('buildJsonl', () => {
     expect(metaLine._meta).toBe(true);
   });
 
-  it('should produce valid JSON for each line', () => {
+  it('should produce valid JSON for each line', async () => {
     const messages: ParsedMessage[] = [
       { role: 'user', contentHtml: '<p>Q1</p>', timestamp: '2025-11-29T10:00:00Z' },
       { role: 'assistant', contentHtml: '<p>A1</p>', timestamp: '2025-11-29T10:00:05Z' }
@@ -159,7 +183,7 @@ describe('buildJsonl', () => {
       exported_at: '2025-11-29T10:01:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
 
     // Every line must be valid JSON
@@ -170,7 +194,7 @@ describe('buildJsonl', () => {
     });
   });
 
-  it('should include all metadata fields in meta line', () => {
+  it('should include all metadata fields in meta line', async () => {
     const messages: ParsedMessage[] = [];
     const metadata: ExportMetadata = {
       platform: 'gemini',
@@ -178,7 +202,7 @@ describe('buildJsonl', () => {
       exported_at: '2025-11-29T12:00:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
     const metaLine = JSON.parse(lines[0]);
 
@@ -186,6 +210,24 @@ describe('buildJsonl', () => {
     expect(metaLine.platform).toBe('gemini');
     expect(metaLine.url).toBe('https://gemini.google.com/app/xyz');
     expect(metaLine.exported_at).toBe('2025-11-29T12:00:00Z');
+  });
+
+  it('should include project field in meta line when provided', async () => {
+    const messages: ParsedMessage[] = [];
+    const metadata: ExportMetadata = {
+      platform: 'claude',
+      url: 'https://claude.ai/chat/abc',
+      exported_at: '2025-11-29T12:00:00Z',
+      project: { id: '019f782f-e345-76c2-b0ee-a9b085792526', name: '투자: AI' }
+    };
+
+    const jsonl = await buildJsonl(messages, metadata);
+    const metaLine = JSON.parse(jsonl.split('\n')[0]);
+
+    expect(metaLine.project).toEqual({
+      id: '019f782f-e345-76c2-b0ee-a9b085792526',
+      name: '투자: AI'
+    });
   });
 
   // ============================================================
@@ -199,7 +241,7 @@ describe('buildJsonl', () => {
       exported_at: '2025-11-29T10:01:00Z'
     };
 
-    it('should append _artifact line when artifact is provided', () => {
+    it('should append _artifact line when artifact is provided', async () => {
       const messages: ParsedMessage[] = [
         { role: 'user', contentHtml: '<p>Create a doc</p>', timestamp: '2025-11-29T10:00:00Z' },
         { role: 'assistant', contentHtml: '<p>Here it is</p>', timestamp: '2025-11-29T10:00:05Z' }
@@ -210,7 +252,7 @@ describe('buildJsonl', () => {
         contentHtml: '<h1>My Document</h1><p>Content here</p>'
       };
 
-      const jsonl = buildJsonl(messages, defaultMetadata, artifact);
+      const jsonl = await buildJsonl(messages, defaultMetadata, artifact);
       const lines = jsonl.split('\n');
 
       expect(lines.length).toBe(4); // meta + 2 messages + 1 artifact
@@ -222,12 +264,12 @@ describe('buildJsonl', () => {
       expect(artifactLine.content).toBe('[MD]<h1>My Document</h1><p>Content here</p>[/MD]');
     });
 
-    it('should not add artifact line when artifact is undefined', () => {
+    it('should not add artifact line when artifact is undefined', async () => {
       const messages: ParsedMessage[] = [
         { role: 'user', contentHtml: '<p>Hello</p>', timestamp: '2025-11-29T10:00:00Z' }
       ];
 
-      const jsonl = buildJsonl(messages, defaultMetadata);
+      const jsonl = await buildJsonl(messages, defaultMetadata);
       const lines = jsonl.split('\n');
 
       expect(lines.length).toBe(2); // meta + 1 message
@@ -238,12 +280,12 @@ describe('buildJsonl', () => {
       });
     });
 
-    it('should not add artifact line when artifact is null', () => {
+    it('should not add artifact line when artifact is null', async () => {
       const messages: ParsedMessage[] = [
         { role: 'user', contentHtml: '<p>Hello</p>', timestamp: '2025-11-29T10:00:00Z' }
       ];
 
-      const jsonl = buildJsonl(messages, defaultMetadata, null as any);
+      const jsonl = await buildJsonl(messages, defaultMetadata, null as any);
       const lines = jsonl.split('\n');
 
       expect(lines.length).toBe(2); // meta + 1 message
@@ -261,7 +303,7 @@ describe('buildJsonl', () => {
         contentHtml: '<h1>Title</h1>'
       };
 
-      buildJsonl(messages, defaultMetadata, artifact);
+      await buildJsonl(messages, defaultMetadata, artifact);
 
       expect(htmlToMarkdown).toHaveBeenCalledWith('<h1>Title</h1>');
     });

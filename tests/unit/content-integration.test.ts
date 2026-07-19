@@ -15,7 +15,7 @@ import { htmlToMarkdown } from '../../src/content/converter';
 import type { ParsedMessage, ExportMetadata } from '../../src/content/parsers/interface';
 
 describe('Phase 3 Integration', () => {
-  it('should convert HTML messages to JSONL end-to-end', () => {
+  it('should convert HTML messages to JSONL end-to-end', async () => {
     const messages: ParsedMessage[] = [
       {
         role: 'user',
@@ -40,7 +40,7 @@ describe('Phase 3 Integration', () => {
       exported_at: '2025-11-29T10:02:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n').filter(l => l.trim());
 
     // Should have metadata + 3 messages
@@ -71,7 +71,7 @@ describe('Phase 3 Integration', () => {
     expect(msg3.content).toContain('print("Hello")');
   });
 
-  it('should handle converter + serializer composition', () => {
+  it('should handle converter + serializer composition', async () => {
     // Test that serializer properly calls converter
     const html = '<p>Test <code>inline code</code> and <em>italic</em></p>';
     const md = htmlToMarkdown(html);
@@ -89,14 +89,14 @@ describe('Phase 3 Integration', () => {
       exported_at: '2025-11-29T10:00:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
     const messageLine = JSON.parse(lines[1]);
 
     expect(messageLine.content).toContain('`inline code`');
   });
 
-  it('should add timestamps when missing', () => {
+  it('should add timestamps when missing', async () => {
     const messages: ParsedMessage[] = [
       { role: 'user', contentHtml: '<p>Message without timestamp</p>' }
     ];
@@ -106,7 +106,7 @@ describe('Phase 3 Integration', () => {
       exported_at: '2025-11-29T12:00:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
     const messageLine = JSON.parse(lines[1]);
 
@@ -114,7 +114,7 @@ describe('Phase 3 Integration', () => {
     expect(messageLine.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   });
 
-  it('should produce valid JSON for each line', () => {
+  it('should produce valid JSON for each line', async () => {
     const messages: ParsedMessage[] = [
       { role: 'user', contentHtml: '<p>Q1</p>', timestamp: '2025-11-29T10:00:00Z' },
       { role: 'assistant', contentHtml: '<p>A1</p>', timestamp: '2025-11-29T10:00:05Z' },
@@ -126,7 +126,7 @@ describe('Phase 3 Integration', () => {
       exported_at: '2025-11-29T10:01:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n').filter(l => l.trim());
 
     // Every line must be valid JSON
@@ -135,7 +135,7 @@ describe('Phase 3 Integration', () => {
     });
   });
 
-  it('should handle complex LLM response with code and formatting', () => {
+  it('should handle complex LLM response with code and formatting', async () => {
     const complexHtml = `
       <div>
         <p>Here's how to use it:</p>
@@ -159,7 +159,7 @@ const comp = new Component();</code></pre>
       exported_at: '2025-11-29T10:01:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
     const messageLine = JSON.parse(lines[1]);
 
@@ -171,7 +171,7 @@ const comp = new Component();</code></pre>
     expect(messageLine.content).toContain('**documentation**'); // Bold text
   });
 
-  it('should handle table conversion in integration', () => {
+  it('should handle table conversion in integration', async () => {
     const tableHtml = `
       <table>
         <thead><tr><th>Feature</th><th>Status</th></tr></thead>
@@ -191,7 +191,7 @@ const comp = new Component();</code></pre>
       exported_at: '2025-11-29T10:00:00Z'
     };
 
-    const jsonl = buildJsonl(messages, metadata);
+    const jsonl = await buildJsonl(messages, metadata);
     const lines = jsonl.split('\n');
     const messageLine = JSON.parse(lines[1]);
 

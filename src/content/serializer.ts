@@ -9,7 +9,7 @@
  * Line 2-N: Message objects with role, content, timestamp
  */
 
-import { htmlToMarkdown } from './converter';
+import { htmlToMarkdown, inlineImages } from './converter';
 import type { ParsedMessage, ExportMetadata, ExportedMessage, ArtifactData } from './parsers/interface';
 
 /**
@@ -17,10 +17,10 @@ import type { ParsedMessage, ExportMetadata, ExportedMessage, ArtifactData } fro
  *
  * @param parsedMessages - Array of messages with HTML content
  * @param metadata - Export metadata (platform, URL, title, etc.)
- * @returns JSONL string with metadata line + message lines
+ * @returns Promise resolving to the JSONL string with metadata line + message lines
  *
  * @example
- * const jsonl = buildJsonl(messages, {
+ * const jsonl = await buildJsonl(messages, {
  *   platform: 'chatgpt',
  *   url: 'https://chatgpt.com/c/123',
  *   exported_at: '2025-11-29T10:00:00Z'
@@ -30,11 +30,11 @@ import type { ParsedMessage, ExportMetadata, ExportedMessage, ArtifactData } fro
  * // {"role":"user","content":"...","timestamp":"..."}
  * // {"role":"assistant","content":"...","timestamp":"..."}
  */
-export function buildJsonl(
+export async function buildJsonl(
   parsedMessages: ParsedMessage[],
   metadata: ExportMetadata,
   artifact?: ArtifactData | null
-): string {
+): Promise<string> {
   // Line 1: Metadata
   const metaLine = JSON.stringify({
     _meta: true,
@@ -42,24 +42,28 @@ export function buildJsonl(
   });
 
   // Lines 2-N: Messages
-  const messageLines = parsedMessages.map((pm) => {
-    const message: ExportedMessage = {
-      role: pm.role,
-      content: htmlToMarkdown(pm.contentHtml),
-      timestamp: pm.timestamp || new Date().toISOString()
-    };
-    return JSON.stringify(message);
-  });
+  const messageLines = await Promise.all(
+    parsedMessages.map(async (pm) => {
+      const inlinedHtml = await inlineImages(pm.contentHtml);
+      const message: ExportedMessage = {
+        role: pm.role,
+        content: htmlToMarkdown(inlinedHtml),
+        timestamp: pm.timestamp || new Date().toISOString()
+      };
+      return JSON.stringify(message);
+    })
+  );
 
   const lines = [metaLine, ...messageLines];
 
   // Optional artifact line (Claude only)
   if (artifact) {
+    const inlinedArtifactHtml = await inlineImages(artifact.contentHtml);
     const artifactLine = JSON.stringify({
       _artifact: true,
       title: artifact.title,
       version: artifact.version,
-      content: htmlToMarkdown(artifact.contentHtml)
+      content: htmlToMarkdown(inlinedArtifactHtml)
     });
     lines.push(artifactLine);
   }
