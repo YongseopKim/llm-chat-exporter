@@ -183,4 +183,31 @@ describe('ClaudeParser - Edge Cases', () => {
       expect(parsed.contentHtml).not.toContain('Hidden content');
     });
   });
+
+  describe('claude_001: Real captured project chat page', () => {
+    it('should extract the user message and the long assistant response', () => {
+      const html = loadEdgeCaseHTML('claude', '001');
+      const doc = createDOMFromHTML(html);
+      global.document = doc as any;
+
+      const nodes = parser.getMessageNodes();
+      expect(nodes.length).toBeGreaterThan(0);
+
+      const userNode = nodes.find((n) => n.matches('[data-testid="user-message"]'));
+      expect(userNode).toBeTruthy();
+      if (userNode) {
+        const parsed = parser.parseNode(userNode);
+        expect(parsed.role).toBe('user');
+        expect(parsed.contentHtml).toContain('전기의 생산부터');
+      }
+
+      const assistantNode = nodes.find((n) => n.hasAttribute('data-is-streaming'));
+      expect(assistantNode).toBeTruthy();
+      if (assistantNode) {
+        const parsed = parser.parseNode(assistantNode);
+        expect(parsed.role).toBe('assistant');
+        expect(parsed.contentHtml).toContain('좋은 범위의 질문이라 말하고 싶지만');
+      }
+    });
+  });
 });

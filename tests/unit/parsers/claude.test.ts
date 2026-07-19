@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ClaudeParser } from '../../../src/content/parsers/claude';
-import { loadSampleHTML, createDOMFromHTML } from './shared/fixtures';
+import { loadSampleHTML, createDOMFromHTML, loadEdgeCaseHTML } from './shared/fixtures';
 
 describe('ClaudeParser', () => {
   let parser: ClaudeParser;
@@ -392,6 +392,17 @@ describe('ClaudeParser', () => {
       global.document = doc as any;
 
       expect(parser.getProjectInfo?.()).toBeNull();
+    });
+
+    it('should extract id and name from a real captured project chat page (claude_001)', () => {
+      const html = loadEdgeCaseHTML('claude', '001');
+      const doc = createDOMFromHTML(html);
+      global.document = doc as any;
+
+      expect(parser.getProjectInfo?.()).toEqual({
+        id: '019f782f-e345-76c2-b0ee-a9b085792526',
+        name: '투자: AI'
+      });
     });
   });
 });
