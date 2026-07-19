@@ -61,6 +61,22 @@ export interface ChatParser {
    * @returns ArtifactData if an artifact panel is open, null otherwise
    */
   getArtifact?(): ArtifactData | null;
+
+  /**
+   * Get project info for the current conversation (optional, ChatGPT/Claude)
+   * @returns ProjectInfo if this conversation belongs to a project, null otherwise
+   */
+  getProjectInfo?(): ProjectInfo | null;
+}
+
+/**
+ * Project (ChatGPT "Projects" / Claude "Projects") info for a conversation
+ */
+export interface ProjectInfo {
+  /** Project identifier extracted from the URL or DOM link */
+  id: string;
+  /** Human-readable project name */
+  name: string;
 }
 
 /**
@@ -121,6 +137,11 @@ export interface ExportMetadata {
    * Conversation title (optional)
    */
   title?: string;
+
+  /**
+   * Project info if this conversation belongs to a project (optional)
+   */
+  project?: ProjectInfo | null;
 }
 
 /**
