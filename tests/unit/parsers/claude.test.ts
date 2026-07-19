@@ -352,4 +352,46 @@ describe('ClaudeParser', () => {
       expect(parser.getTitle()).toBeUndefined();
     });
   });
+
+  // ============================================================
+  // getProjectInfo() - 3 tests
+  // ============================================================
+
+  describe('getProjectInfo', () => {
+    it('should return project id and name when a project breadcrumb link exists', () => {
+      const doc = createDOMFromHTML(`
+        <html>
+          <body>
+            <a href="/cowork/project/019f782f-e345-76c2-b0ee-a9b085792526">투자: AI</a>
+          </body>
+        </html>
+      `);
+      global.document = doc as any;
+
+      expect(parser.getProjectInfo?.()).toEqual({
+        id: '019f782f-e345-76c2-b0ee-a9b085792526',
+        name: '투자: AI',
+      });
+    });
+
+    it('should return null when there is no project breadcrumb link', () => {
+      const doc = createDOMFromHTML('<html><body><h1>일반 채팅</h1></body></html>');
+      global.document = doc as any;
+
+      expect(parser.getProjectInfo?.()).toBeNull();
+    });
+
+    it('should return null when the project link has no text content', () => {
+      const doc = createDOMFromHTML(`
+        <html>
+          <body>
+            <a href="/cowork/project/019f782f-e345-76c2-b0ee-a9b085792526"></a>
+          </body>
+        </html>
+      `);
+      global.document = doc as any;
+
+      expect(parser.getProjectInfo?.()).toBeNull();
+    });
+  });
 });

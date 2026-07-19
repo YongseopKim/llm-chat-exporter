@@ -24,7 +24,10 @@
  */
 
 import { BaseParser } from './base-parser';
-import type { ArtifactData } from './interface';
+import type { ArtifactData, ProjectInfo } from './interface';
+
+/** Selector for the project breadcrumb link shown above chats that belong to a project */
+const PROJECT_LINK_SELECTOR = 'a[href^="/cowork/project/"]';
 
 /**
  * Claude platform parser
@@ -106,6 +109,33 @@ export class ClaudeParser extends BaseParser {
     const version = versionTrigger?.textContent?.trim() || 'v1';
 
     return { title, version, contentHtml };
+  }
+
+  /**
+   * Get project info for the current conversation
+   *
+   * Unlike ChatGPT, Claude project chats share the same /chat/<uuid> URL as
+   * regular chats, so the only signal is a breadcrumb link
+   * (`<a href="/cowork/project/<uuid>">Project Name</a>`) rendered above the
+   * chat when it belongs to a project. Absent for regular chats.
+   *
+   * @returns ProjectInfo if this conversation belongs to a project, null otherwise
+   */
+  getProjectInfo(): ProjectInfo | null {
+    const link = document.querySelector(PROJECT_LINK_SELECTOR);
+    if (!link) {
+      return null;
+    }
+
+    const href = link.getAttribute('href') || '';
+    const id = href.replace('/cowork/project/', '').trim();
+    const name = link.textContent?.trim();
+
+    if (!id || !name) {
+      return null;
+    }
+
+    return { id, name };
   }
 
   /**
