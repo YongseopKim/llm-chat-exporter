@@ -320,6 +320,15 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - Unsupported site: Clear warning about supported platforms
 - Empty conversation: Validation prevents empty exports
 
+### Empty Assistant Messages Are Kept (2026-07-19)
+**Decision**: Export empty assistant messages as `{"role":"assistant","content":""}` rather than skipping them
+**Rationale**:
+- An empty assistant turn is a real thing that happened in the conversation (interrupted or failed generation), not a parser failure
+- Verified against a real export: Claude's UI itself showed only a status line with no body for that turn, so the empty content is faithful
+- The export is a record of the conversation as it exists, so filtering would hide information the user may care about
+
+**Do not "fix" this**: seeing `content: ""` in a JSONL is expected and does not by itself indicate a parsing bug.
+
 ### Configuration-Driven Architecture (Phase 7)
 **Decision**: Externalize all DOM selectors to JSON configuration
 **Benefits**:
