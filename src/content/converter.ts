@@ -264,12 +264,36 @@ function blobToDataUri(blob: Blob): Promise<string> {
 }
 
 /**
+ * Resolve a possibly-relative image src to an absolute URL, but only when it
+ * lands on the exact same origin as the page the content script runs on.
+ *
+ * Message content is untrusted (it can contain a crafted <img> from a
+ * poisoned tool/web-search result or a malicious shared conversation), so
+ * this is what keeps inlineImages() from becoming an SSRF primitive: without
+ * this check it would send the page's session credentials to whatever host
+ * appears in a chat message, including internal services or cloud metadata
+ * endpoints (e.g. 169.254.169.254).
+ *
+ * @returns The resolved absolute URL string if same-origin, null otherwise
+ */
+function resolveSameOriginImageUrl(src: string): string | null {
+  try {
+    const resolved = new URL(src, document.baseURI);
+    return resolved.origin === window.location.origin ? resolved.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Inline every <img src> in the HTML as a base64 data URI
  *
  * ChatGPT/Claude serve generated and uploaded images from authenticated,
  * often time-limited endpoints (signed URLs, session-cookie-gated APIs).
  * The raw src would break once the browser session or signature expires,
- * so images are fetched with page credentials and embedded directly.
+ * so same-origin images are fetched with page credentials and embedded
+ * directly. Cross-origin sources are left untouched rather than fetched,
+ * since message content is untrusted (see resolveSameOriginImageUrl).
  *
  * Falls back to leaving the original src untouched when the fetch fails,
  * the response isn't ok, or the image exceeds MAX_IMAGE_BYTES.
@@ -292,8 +316,13 @@ export async function inlineImages(html: string): Promise<string> {
         return;
       }
 
+      const sameOriginUrl = resolveSameOriginImageUrl(src);
+      if (!sameOriginUrl) {
+        return;
+      }
+
       try {
-        const response = await fetch(src, { credentials: 'include' });
+        const response = await fetch(sameOriginUrl, { credentials: 'include' });
         if (!response.ok) {
           return;
         }
