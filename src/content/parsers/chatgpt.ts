@@ -19,8 +19,12 @@
 import { BaseParser } from './base-parser';
 import type { ProjectInfo } from './interface';
 
-/** Matches ChatGPT project chat URLs: /g/g-p-<hash>-<slug>/c/<uuid> */
-const PROJECT_PATH_PATTERN = /^\/g\/(g-p-[0-9a-f]+)-([^/]+)\//;
+/**
+ * Matches ChatGPT project chat URLs. The trailing name slug is optional —
+ * both /g/g-p-<hash>-<slug>/c/<uuid> and /g/g-p-<hash>/c/<uuid> occur in
+ * practice (the latter is what the app serves when navigating in-app).
+ */
+const PROJECT_PATH_PATTERN = /^\/g\/(g-p-[0-9a-f]+)(?:-([^/]+))?\//;
 
 /**
  * ChatGPT platform parser
@@ -36,12 +40,13 @@ export class ChatGPTParser extends BaseParser {
   /**
    * Get project info for the current conversation
    *
-   * ChatGPT project chats live under /g/g-p-<hash>-<slug>/c/<uuid>, unlike
-   * regular chats (/c/<uuid>). The project id comes from the URL. The exact
-   * display name isn't exposed anywhere in the DOM (sidebar project entries
-   * are buttons with no href), so it's read from document.title, which the
-   * app renders as "{ProjectName} - {ChatTitle}" once hydrated. If the title
-   * hasn't updated yet, falls back to the URL slug (lossy, ASCII-only).
+   * ChatGPT project chats live under /g/g-p-<hash>/c/<uuid> (optionally with
+   * a -<slug> after the hash), unlike regular chats (/c/<uuid>). The project
+   * id comes from the URL. The exact display name isn't exposed anywhere in
+   * the DOM (sidebar project entries are buttons with no href), so it's read
+   * from document.title, which the app renders as "{ProjectName} -
+   * {ChatTitle}" once hydrated. If the title hasn't updated yet, falls back
+   * to the URL slug (lossy, ASCII-only) or finally the id itself.
    *
    * @returns ProjectInfo if this conversation belongs to a project, null otherwise
    */
@@ -53,7 +58,8 @@ export class ChatGPTParser extends BaseParser {
 
     const [, id, slug] = match;
     const separatorIndex = document.title.indexOf(' - ');
-    const name = separatorIndex > 0 ? document.title.slice(0, separatorIndex).trim() : slug;
+    const name =
+      separatorIndex > 0 ? document.title.slice(0, separatorIndex).trim() : slug || id;
 
     return { id, name };
   }

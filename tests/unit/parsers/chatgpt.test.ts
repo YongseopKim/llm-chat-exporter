@@ -380,5 +380,36 @@ describe('ChatGPTParser', () => {
 
       expect(parser.getProjectInfo?.()).toBeNull();
     });
+
+    // Real exports showed ChatGPT also serves project chats WITHOUT the
+    // trailing name slug: /g/g-p-<hash>/c/<uuid>. The first version of this
+    // parser required the slug and silently dropped the project field.
+    it('should handle a project chat URL with no name slug', () => {
+      const doc = createDOMFromHTML(
+        '<html><body></body></html>',
+        'https://chatgpt.com/g/g-p-6a5c34f7d1788191b4c605d4b66869dc/c/6a5b574c-1f78-83ee-b113-20bb568036ef'
+      );
+      doc.title = '투자: AI - 전기 생산과 데이터센터 이해';
+      global.document = doc as any;
+
+      expect(parser.getProjectInfo?.()).toEqual({
+        id: 'g-p-6a5c34f7d1788191b4c605d4b66869dc',
+        name: '투자: AI',
+      });
+    });
+
+    it('should fall back to the project id when there is neither a slug nor a title separator', () => {
+      const doc = createDOMFromHTML(
+        '<html><body></body></html>',
+        'https://chatgpt.com/g/g-p-6a5c34f7d1788191b4c605d4b66869dc/c/6a5b574c-1f78-83ee-b113-20bb568036ef'
+      );
+      doc.title = 'ChatGPT';
+      global.document = doc as any;
+
+      expect(parser.getProjectInfo?.()).toEqual({
+        id: 'g-p-6a5c34f7d1788191b4c605d4b66869dc',
+        name: 'g-p-6a5c34f7d1788191b4c605d4b66869dc',
+      });
+    });
   });
 });
