@@ -542,6 +542,40 @@ describe('htmlToMarkdown', () => {
       // SVG가 제거되었으므로 빈 결과 또는 컨테이너만 남아야 함
       expect(md.trim()).toBe('');
     });
+
+    it('should preserve a native (non-mermaid) SVG diagram as a fenced svg code block', () => {
+      // Claude's inline "visualization" feature renders an interactive SVG
+      // diagram directly in the response (clickable nodes via onclick).
+      // Unlike a rendered mermaid diagram, this SVG is the actual content —
+      // there is no separate source to fall back to, so it must survive.
+      const html = `<div id="vis-container"><svg width="100%" viewBox="0 0 680 620" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>발전소에서 GPU 칩까지의 전압 사다리</title>
+<desc>발전소에서 만든 전기가 승압 송전, 변전, 구내 배전, 랙 버스바를 거쳐 GPU 칩까지 단계적으로 강압되는 흐름</desc>
+<g class="node c-teal" onclick="sendPrompt('발전소에서 전기가 만들어지는 원리를 더 자세히 설명해줘')">
+  <rect x="210" y="40" width="260" height="56" rx="8"></rect>
+  <text class="th" x="340" y="58">발전소</text>
+  <text class="ts" x="340" y="78">약 11–25kV로 생산</text>
+</g>
+</svg></div>`;
+      const md = htmlToMarkdown(html);
+
+      expect(md).toContain('```svg');
+      expect(md).toContain('발전소에서 GPU 칩까지의 전압 사다리');
+      expect(md).toContain('발전소');
+      expect(md).toContain('약 11–25kV로 생산');
+    });
+
+    it('should still drop a mermaid-rendered SVG even without the mpr wrapper (no regression)', () => {
+      const html = `<div class="mermaid">
+        <svg id="mermaid-svg-99" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <g><rect class="node"></rect><text x="30" y="25">Start</text></g>
+        </svg>
+      </div>`;
+      const md = htmlToMarkdown(html);
+
+      expect(md).not.toContain('```svg');
+      expect(md.trim()).toBe('');
+    });
   });
 
   // ============================================================

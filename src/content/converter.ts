@@ -30,6 +30,30 @@ import TurndownService from 'turndown';
  * @param html - Raw HTML string
  * @returns Cleaned HTML with simplified <pre><code> structure
  */
+/**
+ * Check whether an SVG element looks like a rendered Mermaid diagram whose
+ * original source is unrecoverable (as opposed to a native diagram a
+ * platform generates directly, e.g. Claude's inline "visualization" feature).
+ *
+ * Matches the fingerprints already covered by this project's Mermaid tests:
+ * a "mermaid"/"mpr-diagram" id, a "mermaid" class on the svg itself or an
+ * ancestor, or a flowchart/sequence aria-roledescription (Grok's native
+ * rendering, which has no mpr wrapper).
+ */
+function isMermaidRenderedSvg(svg: Element): boolean {
+  const id = svg.getAttribute('id') || '';
+  const className = svg.getAttribute('class') || '';
+  const role = svg.getAttribute('aria-roledescription') || '';
+
+  return (
+    id.startsWith('mermaid') ||
+    id.startsWith('mpr-diagram') ||
+    className.includes('mermaid') ||
+    /flowchart|sequence|mermaid/.test(role) ||
+    svg.closest('.mermaid, .mpr-container, .mpr-rendered') !== null
+  );
+}
+
 function cleanCodeBlockHtml(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
 
@@ -38,8 +62,15 @@ function cleanCodeBlockHtml(html: string): string {
   doc.querySelectorAll('.mpr-rendered').forEach((el) => el.remove());
   doc.querySelectorAll('.mpr-toggle').forEach((el) => el.remove());
 
-  // Also remove any standalone SVG elements (mermaid diagrams without mpr wrapper)
-  doc.querySelectorAll('svg').forEach((el) => el.remove());
+  // Remove SVGs that are rendered Mermaid diagrams with no recoverable
+  // source. Anything else (e.g. a platform's own native SVG diagram) is
+  // left in place and preserved as a fenced code block by the
+  // 'preserveNativeSvg' Turndown rule below.
+  doc.querySelectorAll('svg').forEach((el) => {
+    if (isMermaidRenderedSvg(el)) {
+      el.remove();
+    }
+  });
 
   // Remove standalone style tags (may contain mermaid CSS)
   doc.querySelectorAll('style').forEach((el) => el.remove());
@@ -235,6 +266,23 @@ turndownService.addRule('mathInlineKatex', {
     );
     const latex = annotation?.textContent || '';
     return latex ? `$${latex}$` : '';
+  }
+});
+
+/**
+ * Custom Rule 5: Native SVG Preservation
+ *
+ * Any <svg> that survives cleanCodeBlockHtml() (i.e. wasn't identified as a
+ * rendered Mermaid diagram) is a platform's own native diagram — e.g.
+ * Claude's inline "visualization" feature. There's no separate source to
+ * fall back to, so the raw markup is kept as a fenced code block rather
+ * than being silently dropped.
+ */
+turndownService.addRule('preserveNativeSvg', {
+  filter: 'svg',
+  replacement: (_content, node) => {
+    const outerHtml = (node as Element).outerHTML;
+    return outerHtml ? `\n\`\`\`svg\n${outerHtml}\n\`\`\`\n` : '';
   }
 });
 
