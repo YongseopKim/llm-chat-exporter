@@ -14,7 +14,7 @@
 import type { ChatParser, ParsedMessage } from './interface';
 import type { PlatformSelectors, PlatformKey, TitleConfig } from './config-types';
 import { ConfigLoader } from './config-loader';
-import { scrollToLoadAll } from '../scroller';
+import { scrollToLoadAll, type ScrollOptions } from '../scroller';
 
 /**
  * Abstract base class for all platform parsers
@@ -77,8 +77,10 @@ export abstract class BaseParser implements ChatParser {
    *
    * Scrolls to ensure all messages are loaded (handles virtualization).
    * Throws error if response is currently being generated.
+   *
+   * @param options - Scroll tuning, forwarded to the scroller
    */
-  async loadAllMessages(): Promise<void> {
+  async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     if (this.isGenerating()) {
       throw new Error(
         `${this.platformName}: Cannot export while response is generating. ` +
@@ -86,7 +88,23 @@ export abstract class BaseParser implements ChatParser {
       );
     }
 
-    await scrollToLoadAll();
+    await scrollToLoadAll({
+      // Lets the scroller tell the conversation apart from other scrollers
+      // on the page (sidebars, dropdowns) by what it contains
+      contentSelector: this.getMessageSelector(),
+      ...options,
+    });
+  }
+
+  /**
+   * Get a selector matching this platform's message nodes
+   *
+   * @protected
+   * @returns Combined or primary message selector, or undefined if neither is configured
+   */
+  protected getMessageSelector(): string | undefined {
+    const { messages } = this.selectors;
+    return messages.combined || messages.primary;
   }
 
   /**

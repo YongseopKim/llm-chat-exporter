@@ -17,6 +17,7 @@
  */
 
 import { BaseParser } from './base-parser';
+import type { ScrollOptions } from '../scroller';
 
 /**
  * Grok platform parser
@@ -73,9 +74,9 @@ export class GrokParser extends BaseParser {
    * Overrides base to handle Mermaid conversion before parsing.
    * This ensures DOM changes from button clicks have time to complete.
    */
-  override async loadAllMessages(): Promise<void> {
+  override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     // First, do the normal scroll loading
-    await super.loadAllMessages();
+    await super.loadAllMessages(options);
 
     // Then convert all Mermaid SVGs to code blocks
     await this.convertAllMermaidToCodeBlocks();
