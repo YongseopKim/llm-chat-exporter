@@ -271,5 +271,28 @@ describe('scrollToLoadAll', () => {
 
       expect(onStep.mock.calls.length).toBeLessThanOrEqual(5 + 2);
     });
+
+    it('warns when the step cap is hit before the top ever settles', async () => {
+      // Same infinite-growth simulation as above: the container never
+      // reports two stable steps at the top, so maxSteps is what stops it.
+      let height = 8000;
+      Object.defineProperty(chat, 'scrollHeight', {
+        get: () => (height += 800),
+        configurable: true,
+      });
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await scrollToLoadAll({ stepDelay: 0, maxSteps: 5 });
+
+      expect(warn).toHaveBeenCalled();
+    });
+
+    it('does not warn when the top settles normally', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await scrollToLoadAll({ stepDelay: 0, maxSteps: 100 });
+
+      expect(warn).not.toHaveBeenCalled();
+    });
   });
 });
