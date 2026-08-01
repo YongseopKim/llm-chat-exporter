@@ -53,7 +53,12 @@ export interface ScrollOptions {
 
   /**
    * How long the container must go without a mutation before a step is
-   * considered settled, in ms. Default: 100
+   * considered settled, in ms. Default: 50
+   *
+   * Safe to keep low now that only message-boundary changes count as
+   * meaningful (see `waitForStable`): this only needs to bridge the handful
+   * of mutations a single genuine message mount produces, not survive
+   * unrelated content still rendering elsewhere.
    */
   quietPeriod?: number;
 
@@ -248,7 +253,7 @@ export function findScrollContainer(contentSelector?: string): HTMLElement | nul
 export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void> {
   const {
     stepDelay = 400,
-    quietPeriod = 100,
+    quietPeriod = 50,
     maxSteps = 150,
     stableSteps = 2,
     onStep,
@@ -273,6 +278,7 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
   onStep?.();
 
   let stable = 0;
+  let reachedTop = false;
   for (let step = 0; step < maxSteps; step++) {
     const previousTop = container.scrollTop;
     const previousHeight = container.scrollHeight;
@@ -289,11 +295,23 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
     if (atTop && !grew) {
       stable += 1;
       if (stable >= stableSteps) {
+        reachedTop = true;
         break;
       }
     } else {
       stable = 0;
     }
+  }
+
+  // maxSteps exists to bound a page that lazily loads forever, but hitting it
+  // is itself a bad sign: a conversation that never settles at the top may
+  // not have finished loading, and platforms with no equivalent of Claude's
+  // aria-setsize have no other way to detect that they came up short.
+  if (!reachedTop) {
+    console.warn(
+      'scrollToLoadAll: hit the step limit before the conversation settled at the top. ' +
+        'Some earlier messages may not have loaded - scroll to the top manually and export again.'
+    );
   }
 
   container.scrollTop = originalTop;
