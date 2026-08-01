@@ -10,6 +10,8 @@
  * - Context: ParserFactory selects appropriate strategy
  */
 
+import type { ScrollOptions } from '../scroller';
+
 /**
  * Platform-specific parser for extracting conversation data from DOM
  */
@@ -26,9 +28,10 @@ export interface ChatParser {
    * Some platforms (e.g., Claude) aggressively unmount messages outside viewport.
    * This method should scroll/trigger to ensure all messages are in DOM.
    *
+   * @param options - Scroll tuning, mainly for tests
    * @throws Error if response is still generating
    */
-  loadAllMessages(): Promise<void>;
+  loadAllMessages(options?: ScrollOptions): Promise<void>;
 
   /**
    * Get all message DOM nodes from the current page

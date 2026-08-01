@@ -345,6 +345,8 @@ describe('BaseParser', () => {
       const parser = new TestParser('chatgpt');
       const mockDoc = {
         querySelector: vi.fn().mockReturnValue(null),
+        // The scroller looks for a scroll container; this page has none
+        querySelectorAll: vi.fn().mockReturnValue([]),
       };
       global.document = mockDoc as any;
 

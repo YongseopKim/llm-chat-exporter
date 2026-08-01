@@ -24,6 +24,7 @@
  */
 
 import { BaseParser } from './base-parser';
+import type { ScrollOptions } from '../scroller';
 import type { ArtifactData, ProjectInfo } from './interface';
 
 /** Selector for the project breadcrumb link shown above chats that belong to a project */
@@ -36,6 +37,15 @@ const PROJECT_LINK_SELECTOR = 'a[href^="/cowork/project/"]';
  */
 const VISUALIZATION_SELECTOR = 'iframe[title]';
 
+/** Parse a list-position attribute into a number, or null when it is not one */
+function toIndex(raw: string | null): number | null {
+  if (raw === null || raw.trim() === '') {
+    return null;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /**
  * Claude platform parser
  *
@@ -46,19 +56,145 @@ const VISUALIZATION_SELECTOR = 'iframe[title]';
  * - extractContent: Handles multiple .standard-markdown blocks and filters collapsed content
  */
 export class ClaudeParser extends BaseParser {
+  /**
+   * Messages captured while scrolling, keyed by their position in the list
+   *
+   * Cloned on capture: the live node is unmounted as soon as it leaves the
+   * viewport, so only a detached copy survives to the end of the export.
+   */
+  private readonly collected = new Map<number, HTMLElement>();
+
   constructor() {
     super('claude');
   }
 
   /**
-   * Load all messages and open the latest artifact panel
+   * Load all messages, collecting them as the conversation scrolls past
    *
-   * Overrides base to click the last "Preview contents" button,
-   * which loads the artifact panel DOM for extraction.
+   * Overrides base to:
+   * 1. Snapshot the mounted messages at every scroll stop (virtualization)
+   * 2. Click the last "Preview contents" button, which loads the artifact panel
    */
-  override async loadAllMessages(): Promise<void> {
-    await super.loadAllMessages();
+  override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
+    this.collected.clear();
+
+    await super.loadAllMessages({
+      ...options,
+      onStep: () => {
+        this.snapshotMountedMessages();
+        options.onStep?.();
+      },
+    });
+
+    this.warnIfIncomplete();
     await this.openLatestArtifact();
+  }
+
+  /**
+   * Copy every currently mounted message into the collection
+   *
+   * Called at each scroll stop. Messages already collected are left alone, so
+   * the first (most complete) capture of a message wins and re-visiting a
+   * scroll position costs nothing.
+   *
+   * @private
+   */
+  private snapshotMountedMessages(): void {
+    for (const node of super.getMessageNodes()) {
+      const index = this.getListIndex(node);
+      if (index === null || this.collected.has(index)) {
+        continue;
+      }
+      this.collected.set(index, node.cloneNode(true) as HTMLElement);
+    }
+  }
+
+  /**
+   * Read a message's position in the virtualized list
+   *
+   * Claude wraps each message in the list machinery's own element:
+   *   <div data-rs-index="1" data-index="1">
+   *     <div role="article" aria-setsize="2" aria-posinset="2"> ... </div>
+   *
+   * `data-index` is preferred over `aria-posinset` so a document never mixes
+   * 0-based and 1-based keys, which would interleave the merged order.
+   *
+   * @private
+   * @returns The list index, or null when the DOM carries no position
+   */
+  private getListIndex(node: HTMLElement): number | null {
+    const indexed = node.closest('[data-index], [data-rs-index]');
+    if (indexed) {
+      return toIndex(
+        indexed.getAttribute('data-index') ?? indexed.getAttribute('data-rs-index')
+      );
+    }
+
+    const article = node.closest('[aria-posinset]');
+    return article ? toIndex(article.getAttribute('aria-posinset')) : null;
+  }
+
+  /**
+   * Warn when the list says it holds more messages than were collected
+   *
+   * Claude publishes the conversation's true length on every message
+   * (`aria-setsize`), which is the only way to tell a short conversation apart
+   * from a long one that failed to load.
+   *
+   * @private
+   */
+  private warnIfIncomplete(): void {
+    const sizes = Array.from(document.querySelectorAll('[aria-setsize]'), (el) =>
+      Number(el.getAttribute('aria-setsize'))
+    ).filter((n) => Number.isFinite(n) && n > 0);
+
+    if (sizes.length === 0) {
+      return;
+    }
+
+    const expected = Math.max(...sizes);
+    const collected = this.getMessageNodes().length;
+
+    if (collected < expected) {
+      console.warn(
+        `Claude: collected ${collected} of ${expected} messages. ` +
+          'The rest never mounted while scrolling - scroll through the ' +
+          'conversation manually and export again.'
+      );
+    }
+  }
+
+  /**
+   * Get all message nodes, merging what was collected while scrolling
+   *
+   * Live nodes take precedence over their snapshots (same content, but still
+   * attached), and everything is ordered by list index rather than by the
+   * order it happened to be collected in.
+   *
+   * Falls back to the live nodes whenever the DOM carries no list indices, so
+   * DOM shapes this parser does not recognise behave exactly as before.
+   *
+   * @override
+   */
+  override getMessageNodes(): HTMLElement[] {
+    const live = super.getMessageNodes();
+    if (this.collected.size === 0) {
+      return live;
+    }
+
+    const merged = new Map(this.collected);
+    for (const node of live) {
+      const index = this.getListIndex(node);
+      if (index === null) {
+        // Unknown shape: reordering would be a guess, so return the DOM as-is
+        return live;
+      }
+      merged.set(index, node);
+    }
+
+    return Array.from(merged.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([, node]) => node);
   }
 
   /**
