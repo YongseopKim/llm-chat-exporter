@@ -21,6 +21,14 @@
  * viewport at a time, and lets the caller snapshot the DOM at every stop via
  * `onStep` - which is what makes virtualized lists recoverable, since a
  * message unmounts again as soon as it leaves the viewport.
+ *
+ * WHY EACH STEP WAITS ON MUTATIONOBSERVER, NOT A FIXED DELAY:
+ * A fixed per-step delay has to assume the worst case content could ever take
+ * to mount, and every step pays that cost even when the DOM settles almost
+ * immediately - the wait time scales with the number of steps a long
+ * conversation needs, which made exporting a long conversation slow. Each
+ * step now waits only until the container goes quiet (see `waitForStable`),
+ * so `stepDelay` is a safety cap rather than a delay every step pays in full.
  */
 
 /** Minimum overflow (px) before an element counts as a real scroll container */
@@ -33,8 +41,21 @@ const STEP_RATIO = 0.9;
 const FALLBACK_STEP_PX = 800;
 
 export interface ScrollOptions {
-  /** Wait after each scroll step, in ms. Default: 400 */
+  /**
+   * Upper bound on how long a single scroll step may wait, in ms. Default: 400
+   *
+   * This is a cap, not a fixed delay: each step actually waits only until the
+   * DOM stops mutating (see `quietPeriod`), so most steps finish well under
+   * this. It only gets fully spent when content keeps mutating the whole time
+   * (or in an environment with no MutationObserver signal at all).
+   */
   stepDelay?: number;
+
+  /**
+   * How long the container must go without a mutation before a step is
+   * considered settled, in ms. Default: 100
+   */
+  quietPeriod?: number;
 
   /**
    * Hard cap on scroll steps, so a page that lazily loads forever cannot spin
@@ -67,6 +88,54 @@ export interface ScrollOptions {
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Wait for a scroll step to settle: resolves once `target` has gone
+ * `quietPeriod` ms without a mutation, or once `maxWait` ms have passed in
+ * total, whichever comes first.
+ *
+ * A fixed delay has to assume the worst case (the slowest a long
+ * conversation's history could ever take to mount) and pay that cost on
+ * every single step. Watching the DOM instead means a step that settles
+ * quickly returns quickly, and `maxWait` only gets fully spent by content
+ * that is genuinely still mutating.
+ *
+ * @param target - Node to observe for mutations (the scroll container)
+ * @param quietPeriod - Ms of silence required before considering it settled
+ * @param maxWait - Hard cap on total wait time, in case mutations never stop
+ */
+export function waitForStable(target: Node, quietPeriod: number, maxWait: number): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    let quietTimer: ReturnType<typeof setTimeout>;
+
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(quietTimer);
+      clearTimeout(maxTimer);
+      observer.disconnect();
+      resolve();
+    };
+
+    const maxTimer = setTimeout(finish, maxWait);
+    const observer = new MutationObserver(() => {
+      clearTimeout(quietTimer);
+      quietTimer = setTimeout(finish, quietPeriod);
+    });
+
+    observer.observe(target, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true,
+    });
+
+    quietTimer = setTimeout(finish, quietPeriod);
+  });
 }
 
 /**
@@ -144,6 +213,7 @@ export function findScrollContainer(contentSelector?: string): HTMLElement | nul
 export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void> {
   const {
     stepDelay = 400,
+    quietPeriod = 100,
     maxSteps = 150,
     stableSteps = 2,
     onStep,
@@ -174,7 +244,7 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
     const pageSize = container.clientHeight || FALLBACK_STEP_PX;
 
     container.scrollTop = Math.max(0, previousTop - pageSize * STEP_RATIO);
-    await wait(stepDelay);
+    await waitForStable(container, quietPeriod, stepDelay);
     onStep?.();
 
     const atTop = container.scrollTop <= 0;
@@ -192,6 +262,6 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
   }
 
   container.scrollTop = originalTop;
-  await wait(stepDelay);
+  await waitForStable(container, quietPeriod, stepDelay);
   onStep?.();
 }

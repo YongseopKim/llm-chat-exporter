@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { scrollToLoadAll, findScrollContainer } from '../../src/content/scroller';
+import { scrollToLoadAll, findScrollContainer, waitForStable } from '../../src/content/scroller';
 
 /**
  * Make an element behave like a real scroll container inside jsdom.
@@ -89,6 +89,46 @@ describe('findScrollContainer', () => {
     makeScrollable(chat, { scrollHeight: 9000, clientHeight: 800 });
 
     expect(findScrollContainer('[data-testid="user-message"]')).toBe(chat);
+  });
+});
+
+describe('waitForStable', () => {
+  it('resolves after roughly quietPeriod when nothing mutates', async () => {
+    const el = document.createElement('div');
+    const start = Date.now();
+
+    await waitForStable(el, 40, 1000);
+
+    // Should settle on the quiet period, nowhere near the 1000ms cap
+    expect(Date.now() - start).toBeLessThan(300);
+  });
+
+  it('keeps waiting while mutations keep happening, then resolves quietPeriod after the last one', async () => {
+    const el = document.createElement('div');
+    setTimeout(() => el.appendChild(document.createElement('span')), 20);
+    setTimeout(() => el.appendChild(document.createElement('span')), 60);
+
+    const start = Date.now();
+    await waitForStable(el, 40, 1000);
+    const elapsed = Date.now() - start;
+
+    // Last mutation at ~60ms + 40ms quiet period = ~100ms
+    expect(elapsed).toBeGreaterThanOrEqual(90);
+    // Far under the 1000ms cap - proves it didn't just wait for maxWait
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it('never waits past maxWait even if mutations never stop', async () => {
+    const el = document.createElement('div');
+    const interval = setInterval(() => el.appendChild(document.createElement('span')), 15);
+
+    const start = Date.now();
+    await waitForStable(el, 40, 150);
+    const elapsed = Date.now() - start;
+    clearInterval(interval);
+
+    expect(elapsed).toBeGreaterThanOrEqual(145);
+    expect(elapsed).toBeLessThan(400);
   });
 });
 
