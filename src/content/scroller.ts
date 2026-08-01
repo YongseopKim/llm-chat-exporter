@@ -92,8 +92,8 @@ function wait(ms: number): Promise<void> {
 
 /**
  * Wait for a scroll step to settle: resolves once `target` has gone
- * `quietPeriod` ms without a mutation, or once `maxWait` ms have passed in
- * total, whichever comes first.
+ * `quietPeriod` ms without a *meaningful* mutation, or once `maxWait` ms
+ * have passed in total, whichever comes first.
  *
  * A fixed delay has to assume the worst case (the slowest a long
  * conversation's history could ever take to mount) and pay that cost on
@@ -101,14 +101,35 @@ function wait(ms: number): Promise<void> {
  * quickly returns quickly, and `maxWait` only gets fully spent by content
  * that is genuinely still mutating.
  *
+ * WHY MEANINGFUL, NOT JUST ANY MUTATION:
+ * Once a message is mounted, plenty of content inside it keeps mutating for
+ * reasons that have nothing to do with more history loading - a syntax
+ * highlighter wrapping code text in `<span>`s, an image's attributes
+ * changing as it decodes, a diagram swapping a placeholder for its render.
+ * Resetting the quiet timer for every one of those cosmetic changes means a
+ * conversation with a few content-heavy messages pays close to `maxWait` on
+ * nearly every step even though no new message ever needed to be captured.
+ * When `selector` is given, only a change to the actual set of matching
+ * elements (one joining or leaving) counts; content churn inside an
+ * already-matched element is ignored, since the export only needs the
+ * element to exist to capture it, not to have finished its own rendering.
+ *
  * @param target - Node to observe for mutations (the scroll container)
  * @param quietPeriod - Ms of silence required before considering it settled
  * @param maxWait - Hard cap on total wait time, in case mutations never stop
+ * @param selector - When given, scopes "meaningful" to changes in the set of
+ *   elements matching this selector rather than any mutation at all
  */
-export function waitForStable(target: Node, quietPeriod: number, maxWait: number): Promise<void> {
+export function waitForStable(
+  target: Element,
+  quietPeriod: number,
+  maxWait: number,
+  selector?: string
+): Promise<void> {
   return new Promise((resolve) => {
     let settled = false;
     let quietTimer: ReturnType<typeof setTimeout>;
+    let lastMatched: Element[] = selector ? Array.from(target.querySelectorAll(selector)) : [];
 
     const finish = () => {
       if (settled) {
@@ -121,8 +142,22 @@ export function waitForStable(target: Node, quietPeriod: number, maxWait: number
       resolve();
     };
 
+    const isMeaningful = (): boolean => {
+      if (!selector) {
+        return true;
+      }
+      const current = Array.from(target.querySelectorAll(selector));
+      const changed =
+        current.length !== lastMatched.length || current.some((el, i) => el !== lastMatched[i]);
+      lastMatched = current;
+      return changed;
+    };
+
     const maxTimer = setTimeout(finish, maxWait);
     const observer = new MutationObserver(() => {
+      if (!isMeaningful()) {
+        return;
+      }
       clearTimeout(quietTimer);
       quietTimer = setTimeout(finish, quietPeriod);
     });
@@ -244,7 +279,7 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
     const pageSize = container.clientHeight || FALLBACK_STEP_PX;
 
     container.scrollTop = Math.max(0, previousTop - pageSize * STEP_RATIO);
-    await waitForStable(container, quietPeriod, stepDelay);
+    await waitForStable(container, quietPeriod, stepDelay, contentSelector);
     onStep?.();
 
     const atTop = container.scrollTop <= 0;
@@ -262,6 +297,6 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
   }
 
   container.scrollTop = originalTop;
-  await waitForStable(container, quietPeriod, stepDelay);
+  await waitForStable(container, quietPeriod, stepDelay, contentSelector);
   onStep?.();
 }

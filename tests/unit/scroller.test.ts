@@ -130,6 +130,54 @@ describe('waitForStable', () => {
     expect(elapsed).toBeGreaterThanOrEqual(145);
     expect(elapsed).toBeLessThan(400);
   });
+
+  describe('with a selector (scoped to message boundaries)', () => {
+    it('ignores mutations inside an already-mounted message (e.g. syntax highlighting, image decode)', async () => {
+      const container = document.createElement('div');
+      const message = document.createElement('div');
+      message.className = 'message';
+      container.appendChild(message);
+
+      // Content churning *inside* the one message that's already mounted -
+      // no message joins or leaves the matched set.
+      setTimeout(() => message.appendChild(document.createElement('span')), 20);
+      setTimeout(() => message.appendChild(document.createElement('span')), 60);
+      setTimeout(() => message.appendChild(document.createElement('span')), 100);
+
+      const start = Date.now();
+      await waitForStable(container, 40, 1000, '.message');
+      const elapsed = Date.now() - start;
+
+      // Should settle on the initial quiet period (~40ms) and ignore the
+      // later noise entirely - if it were still resetting on every mutation
+      // this would run past the last one at 100ms + 40ms quiet = ~140ms
+      expect(elapsed).toBeLessThan(80);
+    });
+
+    it('resets the wait when a new message actually joins the matched set', async () => {
+      const container = document.createElement('div');
+      const message1 = document.createElement('div');
+      message1.className = 'message';
+      container.appendChild(message1);
+
+      // Mounts before the initial 40ms quiet window elapses, so it must be
+      // caught while still waiting - not after the fact.
+      setTimeout(() => {
+        const message2 = document.createElement('div');
+        message2.className = 'message';
+        container.appendChild(message2);
+      }, 20);
+
+      const start = Date.now();
+      await waitForStable(container, 40, 1000, '.message');
+      const elapsed = Date.now() - start;
+
+      // Extends past the initial quiet window (40ms) because a real message
+      // joined the set at ~20ms, pushing settlement to ~20+40=60ms
+      expect(elapsed).toBeGreaterThanOrEqual(55);
+      expect(elapsed).toBeLessThan(200);
+    });
+  });
 });
 
 describe('scrollToLoadAll', () => {
