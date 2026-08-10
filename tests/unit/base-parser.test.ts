@@ -609,7 +609,9 @@ describe('BaseParser', () => {
       } as any;
 
       parser.parseNode(mockNode);
-      expect(mockNode.querySelector).toHaveBeenCalledWith('.whitespace-pre-wrap');
+      expect(mockNode.querySelector).toHaveBeenCalledWith(
+        '.whitespace-pre-wrap, .markdown'
+      );
     });
 
     it('should use correct content selector for assistant (ChatGPT)', () => {

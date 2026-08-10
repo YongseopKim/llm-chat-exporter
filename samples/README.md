@@ -69,15 +69,15 @@ grep -n 'user-query-container\|model-response' file.html  # Gemini
 2. **data-message-author-role** (`user` | `assistant`) - Stable, message-level
 3. **data-message-id** - Unique message identifier
 4. **data-testid** (`conversation-turn-N`) - Testing identifier
-5. **.markdown.prose** - Assistant message content wrapper
-6. **.whitespace-pre-wrap** - User message content (inside bubble)
+5. **.markdown.prose** - Assistant content and rich pasted user content
+6. **.whitespace-pre-wrap** - Plain user message content (inside bubble)
 
 #### Role Differentiation
 - User: `data-turn="user"` + `.user-message-bubble-color`
 - Assistant: `data-turn="assistant"` + `.markdown.prose`
 
 #### Content Extraction
-- User: `.whitespace-pre-wrap` (plain text)
+- User: `.whitespace-pre-wrap` (plain text), falling back to `.markdown` for rich pasted content
 - Assistant: `.markdown` (rendered HTML to convert)
 
 #### Key Observations

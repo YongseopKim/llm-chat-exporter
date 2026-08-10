@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2025-11-29",
+  "lastUpdated": "2026-08-10",
   "platforms": {
     "chatgpt": {
       "hostname": "chatgpt.com",
@@ -13,7 +13,7 @@
           ]
         },
         "content": {
-          "user": ".whitespace-pre-wrap",
+          "user": ".whitespace-pre-wrap, .markdown",
           "assistant": ".markdown"
         },
         "generation": "button[aria-label*=\"Stop\"]",

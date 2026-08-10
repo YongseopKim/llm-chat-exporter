@@ -6,7 +6,7 @@
  *
  * DOM Structure (from samples/README.md):
  * - Messages: [data-message-author-role] or [data-turn]
- * - User content: .whitespace-pre-wrap
+ * - User content: .whitespace-pre-wrap, or .markdown for rich pasted content
  * - Assistant content: .markdown
  * - Generating: button[aria-label*="Stop"]
  *
@@ -17,6 +17,7 @@
  */
 
 import { BaseParser } from './base-parser';
+import type { ScrollOptions } from '../scroller';
 import type { ProjectInfo } from './interface';
 
 /**
@@ -26,6 +27,9 @@ import type { ProjectInfo } from './interface';
  */
 const PROJECT_PATH_PATTERN = /^\/g\/(g-p-[0-9a-f]+)(?:-([^/]+))?\//;
 
+/** ChatGPT's stable, one-based position marker for a visible conversation turn */
+const TURN_TEST_ID_PATTERN = /^conversation-turn-(\d+)$/;
+
 /**
  * ChatGPT platform parser
  *
@@ -33,8 +37,33 @@ const PROJECT_PATH_PATTERN = /^\/g\/(g-p-[0-9a-f]+)(?:-([^/]+))?\//;
  * All parsing logic is inherited from BaseParser with chatgpt configuration.
  */
 export class ChatGPTParser extends BaseParser {
+  /**
+   * Turns captured while walking a virtualized conversation, keyed by their
+   * `conversation-turn-N` position.
+   *
+   * ChatGPT keeps the first and newest turns mounted but unmounts long middle
+   * stretches. Detached clones are therefore required: a final DOM read after
+   * scrolling cannot recover the turns that disappeared again.
+   */
+  private readonly collected = new Map<number, HTMLElement>();
+
   constructor() {
     super('chatgpt');
+  }
+
+  /**
+   * Load and snapshot every mounted window of a virtualized conversation.
+   */
+  override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
+    this.collected.clear();
+
+    await super.loadAllMessages({
+      ...options,
+      onStep: () => {
+        this.snapshotMountedMessages();
+        options.onStep?.();
+      },
+    });
   }
 
   /**
@@ -77,7 +106,55 @@ export class ChatGPTParser extends BaseParser {
    * the project's "keep empty assistant messages" decision.
    */
   override getMessageNodes(): HTMLElement[] {
+    const live = this.getLiveMessageNodes();
+    if (this.collected.size === 0) {
+      return live;
+    }
+
+    const merged = new Map(this.collected);
+    for (const node of live) {
+      const index = this.getTurnIndex(node);
+      if (index === null) {
+        // Unknown DOM shape: returning the live DOM is safer than guessing an
+        // order that could silently interleave unrelated messages.
+        return live;
+      }
+      merged.set(index, node);
+    }
+
+    return Array.from(merged.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([, node]) => node);
+  }
+
+  /** Return currently mounted, non-scaffold ChatGPT turns. */
+  private getLiveMessageNodes(): HTMLElement[] {
     return super.getMessageNodes().filter((node) => this.hasExportableContent(node));
+  }
+
+  /** Clone newly mounted indexed turns before ChatGPT unmounts them again. */
+  private snapshotMountedMessages(): void {
+    for (const node of this.getLiveMessageNodes()) {
+      const index = this.getTurnIndex(node);
+      if (index === null || this.collected.has(index)) {
+        continue;
+      }
+      this.collected.set(index, node.cloneNode(true) as HTMLElement);
+    }
+  }
+
+  /** Read the numeric suffix from `data-testid="conversation-turn-N"`. */
+  private getTurnIndex(node: HTMLElement): number | null {
+    const turn = node.matches('[data-testid^="conversation-turn-"]')
+      ? node
+      : node.closest('[data-testid^="conversation-turn-"]');
+    const match = turn?.getAttribute('data-testid')?.match(TURN_TEST_ID_PATTERN);
+    if (!match) {
+      return null;
+    }
+
+    const index = Number(match[1]);
+    return Number.isSafeInteger(index) ? index : null;
   }
 
   /**

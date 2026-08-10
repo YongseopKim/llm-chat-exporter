@@ -134,7 +134,7 @@ describe('ConfigLoader', () => {
       const gemini = ConfigLoader.getInstance().getSelectors('gemini');
       const perplexity = ConfigLoader.getInstance().getSelectors('perplexity');
 
-      expect(chatgpt.content.user).toBe('.whitespace-pre-wrap');
+      expect(chatgpt.content.user).toBe('.whitespace-pre-wrap, .markdown');
       expect(chatgpt.content.assistant).toBe('.markdown');
 
       expect(claude.content.user).toBe('.whitespace-pre-wrap');
