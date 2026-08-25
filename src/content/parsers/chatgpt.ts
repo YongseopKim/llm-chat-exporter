@@ -59,9 +59,9 @@ export class ChatGPTParser extends BaseParser {
 
     await super.loadAllMessages({
       ...options,
-      onStep: () => {
+      onStep: async () => {
         this.snapshotMountedMessages();
-        options.onStep?.();
+        await options.onStep?.();
       },
     });
   }

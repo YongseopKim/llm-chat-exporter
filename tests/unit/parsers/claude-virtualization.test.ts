@@ -209,6 +209,56 @@ describe('ClaudeParser - virtualized conversation', () => {
     });
   });
 
+  it('keeps every URL from a grouped citation rendered in Claude portal markup', async () => {
+    const doc = createDOMFromHTML(
+      `<html><body>
+        <div id="portal-root"></div>
+        <div data-rs-index="0" data-index="0">
+          <div role="article" aria-setsize="1" aria-posinset="1">
+            <div data-is-streaming="false">
+              <div class="standard-markdown">
+                <p>
+                  Grouped sources
+                  <span class="inline-flex">
+                    <a href="https://primary.example/report">Primary + 2</a>
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </body></html>`,
+      'https://claude.ai/chat/abc'
+    );
+    install(doc);
+    global.window.scrollTo = vi.fn();
+
+    const trigger = doc.querySelector('a[href="https://primary.example/report"]') as HTMLElement;
+    trigger.addEventListener('pointerover', () => {
+      const portal = doc.getElementById('portal-root') as HTMLElement;
+      portal.innerHTML = `
+        <div data-open role="presentation">
+          <a href="https://primary.example/report"><h3>Primary report</h3></a>
+          <a href="https://second.example/article"><h3>Second article</h3></a>
+          <a href="https://third.example/paper"><h3>Third paper</h3></a>
+        </div>`;
+    });
+
+    await parser.loadAllMessages({ stepDelay: 0, timeout: 0 });
+
+    // The live node can disappear after its scroll window is captured. The
+    // detached snapshot still has to retain the popup sources.
+    doc.querySelector('[data-index="0"]')?.remove();
+
+    const [assistant] = parser.getMessageNodes();
+    const markdown = htmlToMarkdown(parser.parseNode(assistant).contentHtml);
+
+    expect(markdown).toContain('[Primary + 2](https://primary.example/report)');
+    expect(markdown).toContain('[Second article](https://second.example/article)');
+    expect(markdown).toContain('[Third paper](https://third.example/paper)');
+    expect(markdown.match(/\]\(https?:\/\//g) || []).toHaveLength(3);
+  });
+
   it('still refuses to export while a response is generating', async () => {
     const doc = createDOMFromHTML(
       '<html><body><div data-is-streaming="true"></div></body></html>',

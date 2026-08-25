@@ -77,9 +77,10 @@ export interface ScrollOptions {
    *
    * Virtualized lists unmount messages as they leave the viewport, so a caller
    * that only reads the DOM at the end sees a single window of the
-   * conversation. Collect here instead.
+   * conversation. Collect here instead. A returned promise is awaited before
+   * scrolling can unmount the current window.
    */
-  onStep?: () => void;
+  onStep?: () => void | Promise<void>;
 
   /** Wait when no scroll container is found, in ms. Default: 1000 */
   timeout?: number;
@@ -265,9 +266,9 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
 
   if (!container) {
     window.scrollTo(0, 0);
-    onStep?.();
+    await onStep?.();
     await wait(timeout);
-    onStep?.();
+    await onStep?.();
     return;
   }
 
@@ -275,7 +276,7 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
 
   // Snapshot before moving: the newest messages are mounted right now, and
   // scrolling away can unmount them.
-  onStep?.();
+  await onStep?.();
 
   let stable = 0;
   let reachedTop = false;
@@ -286,7 +287,7 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
 
     container.scrollTop = Math.max(0, previousTop - pageSize * STEP_RATIO);
     await waitForStable(container, quietPeriod, stepDelay, contentSelector);
-    onStep?.();
+    await onStep?.();
 
     const atTop = container.scrollTop <= 0;
     const grew = container.scrollHeight > previousHeight;
@@ -316,5 +317,5 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
 
   container.scrollTop = originalTop;
   await waitForStable(container, quietPeriod, stepDelay, contentSelector);
-  onStep?.();
+  await onStep?.();
 }

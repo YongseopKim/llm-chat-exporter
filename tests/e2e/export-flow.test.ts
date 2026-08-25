@@ -15,6 +15,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const VIRTUALIZED_CHATGPT_URL = 'https://chatgpt.com/c/e2e-virtualized-regression';
+const GROUPED_CITATION_CLAUDE_URL = 'https://claude.ai/chat/e2e-grouped-citation-regression';
+
+type ExportResponse = { success: boolean; data?: string; error?: string };
 
 /**
  * Real-browser fixture that mounts only two of fourteen turns at a time.
@@ -76,6 +79,90 @@ function getVirtualizedChatGptHtml(): string {
         </script>
       </body>
     </html>`;
+}
+
+/**
+ * Claude keeps only the first URL in a grouped citation inside the message.
+ * Hovering the trigger mounts all sources under #portal-root.
+ */
+function getGroupedCitationClaudeHtml(): string {
+  return `<!doctype html>
+    <html>
+      <head><meta charset="utf-8"><title>Grouped Citation - Claude</title></head>
+      <body>
+        <div id="portal-root"></div>
+        <div data-rs-index="0" data-index="0">
+          <div role="article" aria-setsize="2" aria-posinset="1">
+            <div data-testid="user-message">
+              <p class="whitespace-pre-wrap">Find grouped sources</p>
+            </div>
+          </div>
+        </div>
+        <div data-rs-index="1" data-index="1">
+          <div role="article" aria-setsize="2" aria-posinset="2">
+            <div data-is-streaming="false">
+              <div class="standard-markdown">
+                <p>
+                  Grouped sources
+                  <span class="inline-flex">
+                    <a id="grouped-citation" href="https://primary.example/report">Primary + 2</a>
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script>
+          document.getElementById('grouped-citation').addEventListener('pointerover', () => {
+            document.getElementById('portal-root').innerHTML =
+              '<div data-open role="presentation">' +
+                '<a href="https://primary.example/report"><h3>Primary report</h3></a>' +
+                '<a href="https://second.example/article"><h3>Second article</h3></a>' +
+                '<a href="https://third.example/paper"><h3>Third paper</h3></a>' +
+              '</div>';
+          });
+          window.__groupedCitationReady = true;
+        </script>
+      </body>
+    </html>`;
+}
+
+async function exportCurrentPage(
+  browser: Browser,
+  expectedUrl: string
+): Promise<ExportResponse> {
+  const serviceWorkerTarget =
+    browser.targets().find(
+      (target) =>
+        target.type() === 'service_worker' &&
+        target.url().startsWith('chrome-extension://')
+    ) ??
+    (await browser.waitForTarget(
+      (target) =>
+        target.type() === 'service_worker' &&
+        target.url().startsWith('chrome-extension://'),
+      { timeout: 10000 }
+    ));
+  const serviceWorker = await serviceWorkerTarget.worker();
+  if (!serviceWorker) {
+    throw new Error('Extension service worker was not available');
+  }
+
+  return await serviceWorker.evaluate(async (url) => {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs.find((candidate) => candidate.url === url);
+    if (!tab?.id) {
+      throw new Error(`Could not find active fixture tab for ${url}`);
+    }
+
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['dist/content.js'],
+    });
+    return await chrome.tabs.sendMessage(tab.id, {
+      type: 'EXPORT_CONVERSATION',
+    });
+  }, expectedUrl) as ExportResponse;
 }
 
 describe('E2E: Export Flow', () => {
@@ -146,36 +233,7 @@ describe('E2E: Export Flow', () => {
       await page.goto(VIRTUALIZED_CHATGPT_URL, { waitUntil: 'domcontentloaded' });
       await page.waitForFunction('window.__virtualizedChatReady === true');
 
-      const serviceWorkerTarget =
-        browser.targets().find(
-          (target) =>
-            target.type() === 'service_worker' &&
-            target.url().startsWith('chrome-extension://')
-        ) ??
-        (await browser.waitForTarget(
-          (target) =>
-            target.type() === 'service_worker' &&
-            target.url().startsWith('chrome-extension://'),
-          { timeout: 10000 }
-        ));
-      const serviceWorker = await serviceWorkerTarget.worker();
-      expect(serviceWorker).not.toBeNull();
-
-      const response = await serviceWorker!.evaluate(async (expectedUrl) => {
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        const tab = tabs.find((candidate) => candidate.url === expectedUrl);
-        if (!tab?.id) {
-          throw new Error(`Could not find active fixture tab for ${expectedUrl}`);
-        }
-
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ['dist/content.js'],
-        });
-        return await chrome.tabs.sendMessage(tab.id, {
-          type: 'EXPORT_CONVERSATION',
-        });
-      }, VIRTUALIZED_CHATGPT_URL) as { success: boolean; data?: string; error?: string };
+      const response = await exportCurrentPage(browser, VIRTUALIZED_CHATGPT_URL);
 
       expect(response.success, response.error).toBe(true);
       const records = response.data!
@@ -192,6 +250,44 @@ describe('E2E: Export Flow', () => {
       );
       expect(messages[10].content).toContain('Rich pasted user turn 11');
       expect(messages.every((message) => message.content.length > 0)).toBe(true);
+    } finally {
+      page.off('request', intercept);
+      await page.setRequestInterception(false);
+    }
+  }, 30000);
+
+  it('should export every URL hidden in a grouped Claude citation', async () => {
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.isNavigationRequest() && request.url() === GROUPED_CITATION_CLAUDE_URL) {
+        void request.respond({
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+          body: getGroupedCitationClaudeHtml(),
+        });
+        return;
+      }
+      void request.continue();
+    };
+    page.on('request', intercept);
+
+    try {
+      await page.goto(GROUPED_CITATION_CLAUDE_URL, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction('window.__groupedCitationReady === true');
+
+      const response = await exportCurrentPage(browser, GROUPED_CITATION_CLAUDE_URL);
+
+      expect(response.success, response.error).toBe(true);
+      const records = response.data!
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => JSON.parse(line));
+      const assistant = records.find((record) => record.role === 'assistant');
+
+      expect(assistant.content).toContain('[Primary + 2](https://primary.example/report)');
+      expect(assistant.content).toContain('[Second article](https://second.example/article)');
+      expect(assistant.content).toContain('[Third paper](https://third.example/paper)');
+      expect(assistant.content.match(/\]\(https?:\/\//g) || []).toHaveLength(3);
     } finally {
       page.off('request', intercept);
       await page.setRequestInterception(false);

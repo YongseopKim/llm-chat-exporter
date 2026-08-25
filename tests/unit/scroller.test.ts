@@ -202,6 +202,28 @@ describe('scrollToLoadAll', () => {
       expect(onStep).toHaveBeenCalled();
     });
 
+    it('waits for an asynchronous onStep before continuing', async () => {
+      let release: () => void = () => {};
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let finished = false;
+
+      const scrolling = scrollToLoadAll({
+        timeout: 0,
+        onStep: () => gate,
+      }).then(() => {
+        finished = true;
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(finished).toBe(false);
+
+      release();
+      await scrolling;
+      expect(finished).toBe(true);
+    });
+
     it('resolves without throwing', async () => {
       await expect(scrollToLoadAll({ stepDelay: 0 })).resolves.toBeUndefined();
     });

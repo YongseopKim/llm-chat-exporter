@@ -37,6 +37,26 @@ const PROJECT_LINK_SELECTOR = 'a[href^="/cowork/project/"]';
  */
 const VISUALIZATION_SELECTOR = 'iframe[title]';
 
+/** Claude renders the extra URLs for labels such as "Source + 2" in a portal popup */
+const GROUPED_CITATION_PATTERN = /\+\s*\d+\b/;
+
+/** Portal element created while a grouped citation has keyboard focus or pointer hover */
+const CITATION_POPUP_SELECTOR = '[role="presentation"][data-open]';
+
+/** A grouped citation popup normally mounts immediately; this only bounds UI drift */
+const CITATION_POPUP_TIMEOUT_MS = 500;
+
+interface CitationSource {
+  href: string;
+  title: string;
+}
+
+interface CitationGroup {
+  triggerHref: string;
+  triggerText: string;
+  sources: CitationSource[];
+}
+
 /** Parse a list-position attribute into a number, or null when it is not one */
 function toIndex(raw: string | null): number | null {
   if (raw === null || raw.trim() === '') {
@@ -64,6 +84,15 @@ export class ClaudeParser extends BaseParser {
    */
   private readonly collected = new Map<number, HTMLElement>();
 
+  /** Grouped citation data captured while its message was mounted */
+  private readonly citationGroupsByIndex = new Map<number, CitationGroup[]>();
+
+  /** Citation data for non-virtualized DOM shapes that carry no list index */
+  private citationGroupsByNode = new WeakMap<HTMLElement, CitationGroup[]>();
+
+  /** Preserve a collected clone's original list index without changing its HTML */
+  private collectedIndices = new WeakMap<HTMLElement, number>();
+
   constructor() {
     super('claude');
   }
@@ -77,12 +106,16 @@ export class ClaudeParser extends BaseParser {
    */
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     this.collected.clear();
+    this.citationGroupsByIndex.clear();
+    this.citationGroupsByNode = new WeakMap();
+    this.collectedIndices = new WeakMap();
 
     await super.loadAllMessages({
       ...options,
-      onStep: () => {
+      onStep: async () => {
+        await this.captureMountedGroupedCitations();
         this.snapshotMountedMessages();
-        options.onStep?.();
+        await options.onStep?.();
       },
     });
 
@@ -105,7 +138,197 @@ export class ClaudeParser extends BaseParser {
       if (index === null || this.collected.has(index)) {
         continue;
       }
-      this.collected.set(index, node.cloneNode(true) as HTMLElement);
+      const clone = node.cloneNode(true) as HTMLElement;
+      this.collectedIndices.set(clone, index);
+      this.collected.set(index, clone);
+    }
+  }
+
+  /**
+   * Open each mounted "Source + N" citation and retain every URL from its
+   * portal popup before virtualization unmounts the message.
+   *
+   * Claude keeps only the first URL inside the message. The remaining links
+   * live under #portal-root and exist only while the trigger is active, so
+   * cloning the message alone can never preserve them.
+   */
+  private async captureMountedGroupedCitations(): Promise<void> {
+    for (const node of super.getMessageNodes()) {
+      if (node.getAttribute('data-testid') === 'user-message') {
+        continue;
+      }
+
+      const groupedLinks = Array.from(node.querySelectorAll<HTMLAnchorElement>('a[href]')).filter(
+        (anchor) => GROUPED_CITATION_PATTERN.test(anchor.textContent || '')
+      );
+
+      if (groupedLinks.length === 0) {
+        continue;
+      }
+
+      const index = this.getListIndex(node);
+      const groups = this.getStoredCitationGroups(node, index);
+      const captured = new Set(groups.map((group) => this.citationGroupKey(group)));
+
+      for (const anchor of groupedLinks) {
+        const triggerHref = this.normalizeCitationUrl(anchor.getAttribute('href'));
+        const triggerText = (anchor.textContent || '').trim().replace(/\s+/g, ' ');
+        if (!triggerHref || !triggerText) {
+          continue;
+        }
+
+        const key = `${triggerHref}\n${triggerText}`;
+        if (captured.has(key)) {
+          continue;
+        }
+
+        const sources = await this.readGroupedCitationPopup(anchor, triggerHref);
+        if (sources.length === 0) {
+          continue;
+        }
+
+        groups.push({ triggerHref, triggerText, sources });
+        captured.add(key);
+      }
+
+      this.storeCitationGroups(node, index, groups);
+    }
+  }
+
+  /** Read one grouped citation popup without following any of its links. */
+  private async readGroupedCitationPopup(
+    anchor: HTMLAnchorElement,
+    triggerHref: string
+  ): Promise<CitationSource[]> {
+    this.dispatchCitationHover(anchor, true);
+    anchor.focus({ preventScroll: true });
+    const popup = await this.waitForCitationPopup(triggerHref);
+
+    const sources = popup
+      ? Array.from(popup.querySelectorAll<HTMLAnchorElement>('a[href]'))
+          .map((source) => {
+            const href = this.normalizeCitationUrl(source.getAttribute('href'));
+            const title = (
+              source.querySelector('h3')?.textContent ||
+              source.textContent ||
+              href ||
+              ''
+            )
+              .trim()
+              .replace(/\s+/g, ' ');
+            return href && title ? { href, title } : null;
+          })
+          .filter((source): source is CitationSource => source !== null)
+      : [];
+
+    anchor.blur();
+    this.dispatchCitationHover(anchor, false);
+    return Array.from(new Map(sources.map((source) => [source.href, source])).values());
+  }
+
+  /**
+   * Reproduce the pointer boundary events Claude uses to mount preview cards.
+   * These do not click the anchor or follow its URL.
+   */
+  private dispatchCitationHover(anchor: HTMLAnchorElement, entering: boolean): void {
+    const eventTypes = entering
+      ? ['pointerover', 'pointerenter', 'mouseover', 'mouseenter']
+      : ['pointerout', 'pointerleave', 'mouseout', 'mouseleave'];
+
+    for (const type of eventTypes) {
+      anchor.dispatchEvent(
+        new MouseEvent(type, {
+          bubbles: type.endsWith('over') || type.endsWith('out'),
+          cancelable: true,
+          composed: true,
+        })
+      );
+    }
+  }
+
+  /** Wait until the portal popup containing the trigger's primary URL is mounted. */
+  private waitForCitationPopup(triggerHref: string): Promise<HTMLElement | null> {
+    const findPopup = (): HTMLElement | null => {
+      for (const candidate of document.querySelectorAll<HTMLElement>(CITATION_POPUP_SELECTOR)) {
+        const containsTrigger = Array.from(
+          candidate.querySelectorAll<HTMLAnchorElement>('a[href]')
+        ).some((link) => this.normalizeCitationUrl(link.getAttribute('href')) === triggerHref);
+        if (containsTrigger) {
+          return candidate;
+        }
+      }
+      return null;
+    };
+
+    const immediate = findPopup();
+    if (immediate) {
+      return Promise.resolve(immediate);
+    }
+
+    return new Promise((resolve) => {
+      let finished = false;
+      const finish = (popup: HTMLElement | null) => {
+        if (finished) {
+          return;
+        }
+        finished = true;
+        clearTimeout(timer);
+        observer.disconnect();
+        resolve(popup);
+      };
+      const observer = new MutationObserver(() => {
+        const popup = findPopup();
+        if (popup) {
+          finish(popup);
+        }
+      });
+      const timer = setTimeout(() => finish(null), CITATION_POPUP_TIMEOUT_MS);
+
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+      const popup = findPopup();
+      if (popup) {
+        finish(popup);
+      }
+    });
+  }
+
+  /** Convert a citation href to a comparable absolute HTTP(S) URL. */
+  private normalizeCitationUrl(raw: string | null): string | null {
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const url = new URL(raw, document.baseURI);
+      return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private citationGroupKey(group: CitationGroup): string {
+    return `${group.triggerHref}\n${group.triggerText}`;
+  }
+
+  private getStoredCitationGroups(
+    node: HTMLElement,
+    index: number | null
+  ): CitationGroup[] {
+    return index === null
+      ? [...(this.citationGroupsByNode.get(node) || [])]
+      : [...(this.citationGroupsByIndex.get(index) || [])];
+  }
+
+  private storeCitationGroups(
+    node: HTMLElement,
+    index: number | null,
+    groups: CitationGroup[]
+  ): void {
+    if (index === null) {
+      this.citationGroupsByNode.set(node, groups);
+    } else {
+      this.citationGroupsByIndex.set(index, groups);
     }
   }
 
@@ -323,7 +546,66 @@ export class ClaudeParser extends BaseParser {
       );
     }
 
+    const additionalCitations = this.getAdditionalCitationSources(node);
+    if (additionalCitations.length > 0) {
+      visibleContent.push(this.buildAdditionalCitationSources(additionalCitations));
+    }
+
     return visibleContent.join('\n');
+  }
+
+  /** Return popup URLs that do not already exist anywhere in the message. */
+  private getAdditionalCitationSources(node: HTMLElement): CitationSource[] {
+    const index = this.getListIndex(node) ?? this.collectedIndices.get(node) ?? null;
+    const groups =
+      index === null
+        ? this.citationGroupsByNode.get(node) || []
+        : this.citationGroupsByIndex.get(index) || [];
+    if (groups.length === 0) {
+      return [];
+    }
+
+    const knownUrls = new Set(
+      Array.from(node.querySelectorAll<HTMLAnchorElement>('a[href]'))
+        .map((anchor) => this.normalizeCitationUrl(anchor.getAttribute('href')))
+        .filter((href): href is string => href !== null)
+    );
+    const additional: CitationSource[] = [];
+
+    for (const group of groups) {
+      for (const source of group.sources) {
+        if (knownUrls.has(source.href)) {
+          continue;
+        }
+        knownUrls.add(source.href);
+        additional.push(source);
+      }
+    }
+
+    return additional;
+  }
+
+  /** Build clearly labelled HTML for links recovered from Claude's portal. */
+  private buildAdditionalCitationSources(sources: CitationSource[]): string {
+    const section = document.createElement('div');
+    section.setAttribute('data-export-additional-citations', '');
+
+    const label = document.createElement('p');
+    label.textContent = 'LLM Chat Exporter: additional citation sources hidden by Claude';
+    section.appendChild(label);
+
+    const list = document.createElement('ul');
+    for (const source of sources) {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = source.href;
+      link.textContent = source.title;
+      item.appendChild(link);
+      list.appendChild(item);
+    }
+    section.appendChild(list);
+
+    return section.outerHTML;
   }
 
   /**
