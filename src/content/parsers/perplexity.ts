@@ -5,13 +5,13 @@
  * Extends BaseParser with configuration-driven selectors.
  *
  * DOM Structure:
- * - User messages: h1.group/query with span.select-text (plain text)
- * - Assistant messages: div[id^="markdown-content-"] with div.prose (HTML)
- * - Citations: span.citation (inline in assistant content)
+ * - User messages: main span.select-text (plain text)
+ * - Assistant messages: main div.prose[data-renderer="lm"] (HTML)
+ * - Citations: elements with data-pplx-citation (inline in assistant content)
  *
  * Role Strategy: combined-selector
- * - USER: node.matches("h1.group\\/query")
- * - ASSISTANT: node.matches("div[id^='markdown-content-']")
+ * - USER: node.matches("main span.select-text")
+ * - ASSISTANT: node.matches("main div.prose[data-renderer='lm']")
  *
  * @see config/selectors.json for current selectors
  */
@@ -22,7 +22,8 @@ import { BaseParser } from './base-parser';
  * Perplexity platform parser
  *
  * Configuration-driven parser using BaseParser infrastructure.
- * Overrides content extraction for user messages (plain text → HTML wrapping).
+ * Current Perplexity message selectors point directly at the content elements,
+ * so extraction must include the node itself rather than descendants only.
  */
 export class PerplexityParser extends BaseParser {
   constructor() {
@@ -40,22 +41,22 @@ export class PerplexityParser extends BaseParser {
   /**
    * Content extraction with user message wrapping
    *
-   * User messages in Perplexity are plain text inside span.select-text.
+   * User messages in Perplexity are plain text in span.select-text.
    * We wrap the text in <p> tags for consistent HTML→Markdown conversion.
-   * Assistant messages use the standard div.prose extraction from BaseParser.
+   * Assistant messages use the HTML inside div.prose[data-renderer="lm"].
    */
   protected override extractContent(
     node: HTMLElement,
     role: 'user' | 'assistant'
   ): string {
+    const selector = this.selectors.content[role];
+    const contentElement = node.matches(selector) ? node : node.querySelector(selector);
+
     if (role === 'user') {
-      const selector = this.selectors.content.user;
-      const contentElement = node.querySelector(selector);
       const text = contentElement?.textContent?.trim() || '';
       return text ? `<p>${text}</p>` : '';
     }
 
-    // Assistant: use standard BaseParser extraction (div.prose innerHTML)
-    return super.extractContent(node, role);
+    return contentElement?.innerHTML || '';
   }
 }

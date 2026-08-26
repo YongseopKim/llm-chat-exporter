@@ -5,9 +5,9 @@
   Based on perplexity.ai DOM structure analysis.
 
   Key selectors:
-  - User messages: h1.group/query with span.select-text
-  - Assistant messages: div[id^="markdown-content-"] with div.prose
-  - Citations: span.citation (inline in assistant content)
+  - User messages: main span.select-text
+  - Assistant messages: main div.prose[data-renderer="lm"]
+  - Citations: elements with data-pplx-citation (inline in assistant content)
 -->
 <html>
 <head>
@@ -17,32 +17,36 @@
   <div id="app">
     <main>
       <!-- User Query 1 -->
-      <h1 class="group/query mb-lg text-3xl font-display font-regular text-textMain dark:text-textMainDark selection:bg-super/50 selection:text-textMain break-words [word-break:break-word] [&amp;_a]:break-all">
-        <span class="select-text whitespace-pre-line break-words">What is TypeScript?</span>
-      </h1>
+      <div class="group flex items-start justify-end gap-2">
+        <span class="min-w-0 font-sans text-base text-primary font-normal select-text break-words">
+          <span class="block max-w-full whitespace-pre-line break-words">What is TypeScript?</span>
+        </span>
+      </div>
 
       <!-- Assistant Response 1 -->
-      <div id="markdown-content-0" class="relative default font-sans text-base text-textMain dark:text-textMainDark selection:bg-super/50 selection:text-textMain">
-        <div class="prose dark:prose-invert inline leading-normal break-words min-w-0 [word-break:break-word]">
-          <p>TypeScript is a <strong>strongly typed programming language</strong> that builds on JavaScript, giving you better tooling at any scale <span class="citation" data-index="0"><a href="https://www.typescriptlang.org/">1</a></span>.</p>
+      <div class="break-words min-w-0 flex-1">
+        <div class="prose dark:prose-invert inline leading-relaxed break-words min-w-0" data-renderer="lm">
+          <p>TypeScript is a <strong>strongly typed programming language</strong> that builds on JavaScript, giving you better tooling at any scale <span data-pplx-citation data-pplx-citation-url="https://www.typescriptlang.org/"><a href="https://www.typescriptlang.org/">1</a></span>.</p>
           <h2>Key Features</h2>
           <ul>
             <li><strong>Static typing</strong>: Adds type annotations to JavaScript</li>
             <li><strong>Compile-time checks</strong>: Catches errors before runtime</li>
-            <li><strong>IDE support</strong>: Better autocomplete and refactoring <span class="citation" data-index="1"><a href="https://github.com/microsoft/TypeScript">2</a></span></li>
+            <li><strong>IDE support</strong>: Better autocomplete and refactoring <span data-pplx-citation data-pplx-citation-url="https://github.com/microsoft/TypeScript"><a href="https://github.com/microsoft/TypeScript">2</a></span></li>
           </ul>
           <p>TypeScript code compiles to plain JavaScript, which runs anywhere JavaScript runs.</p>
         </div>
       </div>
 
       <!-- User Query 2 -->
-      <h1 class="group/query mb-lg text-3xl font-display font-regular text-textMain dark:text-textMainDark selection:bg-super/50 selection:text-textMain break-words [word-break:break-word] [&amp;_a]:break-all">
-        <span class="select-text whitespace-pre-line break-words">Show me a code example</span>
-      </h1>
+      <div class="group flex items-start justify-end gap-2">
+        <span class="min-w-0 font-sans text-base text-primary font-normal select-text break-words">
+          <span class="block max-w-full whitespace-pre-line break-words">Show me a code example</span>
+        </span>
+      </div>
 
       <!-- Assistant Response 2 -->
-      <div id="markdown-content-1" class="relative default font-sans text-base text-textMain dark:text-textMainDark selection:bg-super/50 selection:text-textMain">
-        <div class="prose dark:prose-invert inline leading-normal break-words min-w-0 [word-break:break-word]">
+      <div class="break-words min-w-0 flex-1">
+        <div class="prose dark:prose-invert inline leading-relaxed break-words min-w-0" data-renderer="lm">
           <p>Here's a simple TypeScript example:</p>
           <pre><code class="language-typescript">interface User {
   name: string;
@@ -55,7 +59,7 @@ function greet(user: User): string {
 
 const user: User = { name: "Alice", age: 30 };
 console.log(greet(user));</code></pre>
-          <p>This demonstrates interfaces and type annotations <span class="citation" data-index="2"><a href="https://www.typescriptlang.org/docs/handbook/">3</a></span>.</p>
+          <p>This demonstrates interfaces and type annotations <span data-pplx-citation data-pplx-citation-url="https://www.typescriptlang.org/docs/handbook/"><a href="https://www.typescriptlang.org/docs/handbook/">3</a></span>.</p>
         </div>
       </div>
     </main>

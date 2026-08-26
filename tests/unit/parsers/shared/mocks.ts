@@ -252,35 +252,35 @@ export function createMockGrokCodeBlock(code: string, language: string = 'mermai
  * Create a mock user message element for Perplexity
  *
  * @param content - Plain text content of the query
- * @returns HTMLElement with Perplexity user query structure (h1.group/query)
+ * @returns HTMLElement with the current Perplexity user query structure
  */
 export function createMockPerplexityUserMessage(content: string): HTMLElement {
   const dom = new JSDOM(`
-    <div>
-      <h1 class="group/query mb-lg text-3xl font-display">
-        <span class="select-text whitespace-pre-line break-words">${content}</span>
-      </h1>
-    </div>
+    <main>
+      <div class="group flex items-start justify-end gap-2">
+        <span class="min-w-0 select-text break-words">
+          <span class="block whitespace-pre-line break-words">${content}</span>
+        </span>
+      </div>
+    </main>
   `);
-  return dom.window.document.querySelector('h1') as HTMLElement;
+  return dom.window.document.querySelector('span.select-text') as HTMLElement;
 }
 
 /**
  * Create a mock assistant message element for Perplexity
  *
  * @param content - HTML content of the response
- * @param index - Message index (used for id attribute)
- * @returns HTMLElement with Perplexity assistant response structure
+ * @param _index - Retained for compatibility with existing test callers
+ * @returns HTMLElement with the current Perplexity assistant response structure
  */
-export function createMockPerplexityAssistantMessage(content: string, index: number = 0): HTMLElement {
+export function createMockPerplexityAssistantMessage(content: string, _index: number = 0): HTMLElement {
   const dom = new JSDOM(`
-    <div>
-      <div id="markdown-content-${index}" class="relative default font-sans text-base">
-        <div class="prose dark:prose-invert inline leading-normal break-words min-w-0">
-          ${content}
-        </div>
+    <main>
+      <div class="break-words min-w-0 flex-1">
+        <div class="prose dark:prose-invert inline" data-renderer="lm">${content}</div>
       </div>
-    </div>
+    </main>
   `);
-  return dom.window.document.querySelector('div[id^="markdown-content-"]') as HTMLElement;
+  return dom.window.document.querySelector('div.prose[data-renderer="lm"]') as HTMLElement;
 }

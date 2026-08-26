@@ -124,8 +124,8 @@ describe('ConfigLoader', () => {
     it('should return Perplexity selectors with combined-selector strategy', () => {
       const selectors = ConfigLoader.getInstance().getSelectors('perplexity');
       expect(selectors.role.strategy).toBe('combined-selector');
-      expect(selectors.role.userSelector).toContain('group\\/query');
-      expect(selectors.role.assistantSelector).toContain('markdown-content-');
+      expect(selectors.role.userSelector).toBe('main span.select-text');
+      expect(selectors.role.assistantSelector).toBe("main div.prose[data-renderer='lm']");
     });
 
     it('should return content selectors for all platforms', () => {
@@ -144,7 +144,7 @@ describe('ConfigLoader', () => {
       expect(gemini.content.assistant).toBe('.response-container-content');
 
       expect(perplexity.content.user).toBe('span.select-text');
-      expect(perplexity.content.assistant).toBe('div.prose');
+      expect(perplexity.content.assistant).toBe("div.prose[data-renderer='lm']");
     });
   });
 

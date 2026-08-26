@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-08-10",
+  "lastUpdated": "2026-08-26",
   "platforms": {
     "chatgpt": {
       "hostname": "chatgpt.com",
@@ -102,17 +102,17 @@
       "hostname": "perplexity.ai",
       "selectors": {
         "messages": {
-          "combined": "h1.group\\/query, div[id^='markdown-content-']"
+          "combined": "main span.select-text, main div.prose[data-renderer='lm']"
         },
         "content": {
           "user": "span.select-text",
-          "assistant": "div.prose"
+          "assistant": "div.prose[data-renderer='lm']"
         },
         "generation": "",
         "role": {
           "strategy": "combined-selector",
-          "userSelector": "h1.group\\/query",
-          "assistantSelector": "div[id^='markdown-content-']"
+          "userSelector": "main span.select-text",
+          "assistantSelector": "main div.prose[data-renderer='lm']"
         },
         "title": {
           "strategy": "document-title",

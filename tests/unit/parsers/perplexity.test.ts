@@ -2,8 +2,8 @@
  * PerplexityParser Unit Tests
  *
  * Perplexity uses:
- * - User messages: h1.group/query with span.select-text (plain text)
- * - Assistant messages: div[id^="markdown-content-"] with div.prose (HTML)
+ * - User messages: main span.select-text (plain text)
+ * - Assistant messages: main div.prose[data-renderer="lm"] (HTML)
  * - Role detection: combined-selector strategy (node.matches())
  * - No generation detection (always false)
  */
@@ -60,6 +60,50 @@ describe('PerplexityParser', () => {
   // ============================================================
 
   describe('getMessageNodes', () => {
+    it('should extract messages from the current Perplexity DOM', () => {
+      const doc = createDOMFromHTML(`
+        <main>
+          <div class="group flex items-start justify-end gap-2">
+            <span class="min-w-0 select-text break-words">
+              <span class="block whitespace-pre-line break-words">First question</span>
+            </span>
+          </div>
+          <div class="break-words min-w-0 flex-1">
+            <div class="prose dark:prose-invert inline" data-renderer="lm">
+              <p>First answer</p>
+            </div>
+          </div>
+          <div class="group flex items-start justify-end gap-2">
+            <span class="min-w-0 select-text break-words">
+              <span class="block whitespace-pre-line break-words">Second question</span>
+            </span>
+          </div>
+          <div class="break-words min-w-0 flex-1">
+            <div class="prose dark:prose-invert inline" data-renderer="lm">
+              <p>Second answer</p>
+            </div>
+          </div>
+        </main>
+      `);
+      global.document = doc as any;
+
+      const nodes = parser.getMessageNodes();
+
+      expect(nodes).toHaveLength(4);
+      expect(nodes.map((node) => parser.parseNode(node))).toEqual([
+        expect.objectContaining({ role: 'user', contentHtml: '<p>First question</p>' }),
+        expect.objectContaining({
+          role: 'assistant',
+          contentHtml: expect.stringContaining('<p>First answer</p>'),
+        }),
+        expect.objectContaining({ role: 'user', contentHtml: '<p>Second question</p>' }),
+        expect.objectContaining({
+          role: 'assistant',
+          contentHtml: expect.stringContaining('<p>Second answer</p>'),
+        }),
+      ]);
+    });
+
     it('should extract 4 messages from sample HTML', () => {
       const html = loadSampleHTML('perplexity');
       const doc = createDOMFromHTML(html);
@@ -86,10 +130,10 @@ describe('PerplexityParser', () => {
 
       const nodes = parser.getMessageNodes();
 
-      // First and third should be h1 (user), second and fourth should be div (assistant)
-      expect(nodes[0].tagName.toLowerCase()).toBe('h1');
+      // First and third should be spans (user), second and fourth should be divs (assistant)
+      expect(nodes[0].tagName.toLowerCase()).toBe('span');
       expect(nodes[1].tagName.toLowerCase()).toBe('div');
-      expect(nodes[2].tagName.toLowerCase()).toBe('h1');
+      expect(nodes[2].tagName.toLowerCase()).toBe('span');
       expect(nodes[3].tagName.toLowerCase()).toBe('div');
     });
 
@@ -101,7 +145,7 @@ describe('PerplexityParser', () => {
       const nodes = parser.getMessageNodes();
 
       // First message should be a user query
-      expect(nodes[0].classList.contains('group/query')).toBe(true);
+      expect(nodes[0].classList.contains('select-text')).toBe(true);
     });
 
     it('should handle malformed DOM gracefully', () => {
