@@ -123,27 +123,53 @@ describe('waitForStableVisualization', () => {
 });
 
 describe('requestVisualizationReady', () => {
-  it('asks the service worker to verify the exact cross-origin frame', async () => {
-    const sendMessage = vi.fn().mockResolvedValue({ success: true, ready: true });
+  it('uses short polls and requires four matching DOM signatures', async () => {
+    const responses = [
+      { success: true, ready: true, signature: 'partial' },
+      { success: true, ready: true, signature: 'partial' },
+      { success: true, ready: true, signature: 'complete' },
+      { success: true, ready: true, signature: 'complete' },
+      { success: true, ready: true, signature: 'complete' },
+      { success: true, ready: true, signature: 'complete' },
+    ];
+    const sendMessage = vi.fn(async () => responses.shift()!);
 
     await expect(
       requestVisualizationReady(
         'https://fixture.claudemcpcontent.com/mcp_apps?visualization=1',
-        sendMessage
+        sendMessage,
+        { wait: async () => {}, maxWaitMs: 30000, now: () => 0 }
       )
     ).resolves.toBe(true);
-    expect(sendMessage).toHaveBeenCalledWith({
-      type: 'WAIT_FOR_VISUALIZATION_READY',
+    expect(sendMessage).toHaveBeenCalledTimes(6);
+    expect(sendMessage).toHaveBeenLastCalledWith({
+      type: 'INSPECT_VISUALIZATION_FRAME',
       frameUrl: 'https://fixture.claudemcpcontent.com/mcp_apps?visualization=1',
     });
   });
 
   it('does not treat an inaccessible frame as ready', async () => {
-    const sendMessage = vi.fn().mockResolvedValue({ success: false, ready: false });
+    let now = 0;
+    const sendMessage = vi.fn().mockResolvedValue({
+      success: false,
+      ready: false,
+      signature: '',
+    });
 
     await expect(
-      requestVisualizationReady('https://fixture.claudemcpcontent.com/mcp_apps', sendMessage)
+      requestVisualizationReady(
+        'https://fixture.claudemcpcontent.com/mcp_apps',
+        sendMessage,
+        {
+          wait: async () => {
+            now += 10000;
+          },
+          maxWaitMs: 30000,
+          now: () => now,
+        }
+      )
     ).resolves.toBe(false);
+    expect(sendMessage).toHaveBeenCalledTimes(3);
   });
 
   it('does not ask the service worker to inspect another host', async () => {

@@ -15,8 +15,8 @@ interface CaptureVisibleTabMessage {
   type: 'CAPTURE_VISIBLE_TAB';
 }
 
-interface WaitForVisualizationReadyMessage {
-  type: 'WAIT_FOR_VISUALIZATION_READY';
+interface InspectVisualizationFrameMessage {
+  type: 'INSPECT_VISUALIZATION_FRAME';
   frameUrl: string;
 }
 
@@ -26,89 +26,86 @@ interface CaptureVisibleTabResponse {
   error?: string;
 }
 
-interface WaitForVisualizationReadyResponse {
+interface InspectVisualizationFrameResponse {
   success: boolean;
   ready: boolean;
+  signature: string;
   error?: string;
 }
 
-type BackgroundMessage = CaptureVisibleTabMessage | WaitForVisualizationReadyMessage;
+type BackgroundMessage = CaptureVisibleTabMessage | InspectVisualizationFrameMessage;
 
 const CAPTURE_INTERVAL_MS = 550;
-const VISUALIZATION_FRAME_TIMEOUT_MS = 30000;
-const VISUALIZATION_MUTATION_QUIET_MS = 2000;
 let lastCaptureAt = 0;
 
-/** Wait inside the exact Claude visualization frame until its DOM is ready. */
-async function waitForVisualizationFrame(
+/** Read one immediate readiness snapshot from the exact visualization frame. */
+async function inspectVisualizationFrame(
   sender: chrome.runtime.MessageSender,
   frameUrl: string
-): Promise<WaitForVisualizationReadyResponse> {
+): Promise<InspectVisualizationFrameResponse> {
   if (!sender.tab?.id || !frameUrl) {
-    return { success: false, ready: false, error: 'Missing tab or visualization URL' };
+    return {
+      success: false,
+      ready: false,
+      signature: '',
+      error: 'Missing tab or visualization URL',
+    };
   }
 
   let parsedFrameUrl: URL;
   try {
     parsedFrameUrl = new URL(frameUrl);
   } catch {
-    return { success: false, ready: false, error: 'Invalid visualization URL' };
+    return {
+      success: false,
+      ready: false,
+      signature: '',
+      error: 'Invalid visualization URL',
+    };
   }
   if (
     parsedFrameUrl.protocol !== 'https:' ||
     !parsedFrameUrl.hostname.endsWith('.claudemcpcontent.com')
   ) {
-    return { success: false, ready: false, error: 'Unexpected visualization host' };
+    return {
+      success: false,
+      ready: false,
+      signature: '',
+      error: 'Unexpected visualization host',
+    };
   }
 
   const results = await chrome.scripting.executeScript({
     target: { tabId: sender.tab.id, allFrames: true },
-    args: [frameUrl, VISUALIZATION_FRAME_TIMEOUT_MS, VISUALIZATION_MUTATION_QUIET_MS],
-    func: async (expectedUrl: string, timeoutMs: number, quietMs: number) => {
+    args: [frameUrl],
+    func: (expectedUrl: string) => {
       if (window.location.href !== expectedUrl) {
-        return { matched: false, ready: false };
+        return { matched: false, ready: false, signature: '' };
       }
 
-      const startedAt = Date.now();
-      let lastMutationAt = Date.now();
-      const observer = new MutationObserver(() => {
-        lastMutationAt = Date.now();
-      });
-      observer.observe(document.documentElement, {
-        attributes: true,
-        childList: true,
-        characterData: true,
-        subtree: true,
-      });
-
-      try {
-        while (Date.now() - startedAt < timeoutMs) {
-          const body = document.body;
-          const rect = body?.getBoundingClientRect();
-          const hasSize = Boolean(rect && rect.width >= 16 && rect.height >= 16);
-          const hasContent = Boolean(
-            body &&
-              ((body.innerText || '').trim() ||
-                body.querySelector('svg, canvas, img, video, [role="img"]'))
-          );
-          const imagesReady = Array.from(document.images).every(
-            (image) => image.complete && image.naturalWidth > 0
-          );
-          const fontsReady = !('fonts' in document) || document.fonts.status === 'loaded';
-          const quiet = Date.now() - lastMutationAt >= quietMs;
-
-          if (hasSize && hasContent && imagesReady && fontsReady && quiet) {
-            await new Promise<void>((resolve) =>
-              requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-            );
-            return { matched: true, ready: true };
-          }
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-        return { matched: true, ready: false };
-      } finally {
-        observer.disconnect();
+      const body = document.body;
+      const rect = body?.getBoundingClientRect();
+      const hasSize = Boolean(rect && rect.width >= 16 && rect.height >= 16);
+      const hasContent = Boolean(
+        body &&
+          ((body.innerText || '').trim() ||
+            body.querySelector('svg, canvas, img, video, [role="img"]'))
+      );
+      const imagesReady = Array.from(document.images).every(
+        (image) => image.complete && image.naturalWidth > 0
+      );
+      const fontsReady = !('fonts' in document) || document.fonts.status === 'loaded';
+      const serialized = document.documentElement.outerHTML;
+      let hash = 2166136261;
+      for (let index = 0; index < serialized.length; index += 1) {
+        hash ^= serialized.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
       }
+      return {
+        matched: true,
+        ready: hasSize && hasContent && imagesReady && fontsReady,
+        signature: `${hash >>> 0}:${serialized.length}`,
+      };
     },
   });
 
@@ -117,10 +114,15 @@ async function waitForVisualizationFrame(
     return {
       success: false,
       ready: false,
+      signature: '',
       error: 'Claude visualization frame was not accessible',
     };
   }
-  return { success: true, ready: matched.result?.ready === true };
+  return {
+    success: true,
+    ready: matched.result?.ready === true,
+    signature: matched.result?.signature || '',
+  };
 }
 
 /** Capture only the tab that requested the image, never another active tab. */
@@ -151,16 +153,17 @@ chrome.runtime.onMessage.addListener(
     message: BackgroundMessage,
     sender: chrome.runtime.MessageSender,
     sendResponse: (
-      response: CaptureVisibleTabResponse | WaitForVisualizationReadyResponse
+      response: CaptureVisibleTabResponse | InspectVisualizationFrameResponse
     ) => void
   ) => {
-    if (message.type === 'WAIT_FOR_VISUALIZATION_READY') {
-      waitForVisualizationFrame(sender, message.frameUrl)
+    if (message.type === 'INSPECT_VISUALIZATION_FRAME') {
+      inspectVisualizationFrame(sender, message.frameUrl)
         .then(sendResponse)
         .catch((error) =>
           sendResponse({
             success: false,
             ready: false,
+            signature: '',
             error: error instanceof Error ? error.message : String(error),
           })
         );
@@ -215,13 +218,15 @@ async function downloadJsonl(data: string, url: string): Promise<void> {
  * Content Script를 동적으로 주입하고 실행
  */
 async function executeContentScript(tabId: number): Promise<ExportResponse> {
-  // Content Script 주입
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: ['dist/content.js'],
-  });
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: 'PING_EXPORTER' });
+  } catch {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['dist/content.js'],
+    });
+  }
 
-  // 메시지 전송
   const response = await chrome.tabs.sendMessage(tabId, {
     type: 'EXPORT_CONVERSATION',
   });

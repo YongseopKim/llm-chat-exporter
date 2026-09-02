@@ -190,10 +190,14 @@ async function exportCurrentPage(
       throw new Error(`Could not find active fixture tab for ${url}`);
     }
 
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['dist/content.js'],
-    });
+    try {
+      await chrome.tabs.sendMessage(tab.id, { type: 'PING_EXPORTER' });
+    } catch {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['dist/content.js'],
+      });
+    }
     return await chrome.tabs.sendMessage(tab.id, {
       type: 'EXPORT_CONVERSATION',
     });
@@ -417,6 +421,10 @@ describe('E2E: Export Flow', () => {
         /Before visualization[\s\S]*!\[Treasury flow\]\(data:image\/png;base64,[A-Za-z0-9+/=]+\)[\s\S]*After visualization/
       );
       expect(assistant.content).not.toContain('[Visualization:');
+
+      const repeatedResponse = await exportCurrentPage(browser, VISUALIZATION_CLAUDE_URL);
+      expect(repeatedResponse.success, repeatedResponse.error).toBe(true);
+      expect(repeatedResponse.data).toContain('data:image/png;base64,');
     } finally {
       page.off('request', intercept);
       await page.setRequestInterception(false);

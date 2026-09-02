@@ -3,8 +3,8 @@ interface CaptureVisibleTabRequest {
   type: 'CAPTURE_VISIBLE_TAB';
 }
 
-interface WaitForVisualizationReadyRequest {
-  type: 'WAIT_FOR_VISUALIZATION_READY';
+interface InspectVisualizationFrameRequest {
+  type: 'INSPECT_VISUALIZATION_FRAME';
   frameUrl: string;
 }
 
@@ -14,9 +14,10 @@ interface CaptureVisibleTabResponse {
   error?: string;
 }
 
-interface WaitForVisualizationReadyResponse {
+interface InspectVisualizationFrameResponse {
   success: boolean;
   ready: boolean;
+  signature: string;
   error?: string;
 }
 
@@ -43,15 +44,23 @@ const UNIFORM_CHANNEL_SPREAD = 6;
 const STABLE_MEAN_CHANNEL_DIFFERENCE = 2;
 const ANALYSIS_SIZE_PX = 32;
 const REQUIRED_STABLE_FRAMES = 4;
+const FRAME_INSPECTION_INTERVAL_MS = 500;
+
+interface FrameInspectionOptions {
+  maxWaitMs?: number;
+  now?: () => number;
+  wait?: () => Promise<void>;
+}
 
 type SendRuntimeMessage = (
-  message: WaitForVisualizationReadyRequest
-) => Promise<WaitForVisualizationReadyResponse>;
+  message: InspectVisualizationFrameRequest
+) => Promise<InspectVisualizationFrameResponse>;
 
 /** Ask the service worker to observe readiness inside the cross-origin frame. */
 export async function requestVisualizationReady(
   frameUrl: string,
-  sendMessage: SendRuntimeMessage = (message) => chrome.runtime.sendMessage(message)
+  sendMessage: SendRuntimeMessage = (message) => chrome.runtime.sendMessage(message),
+  options: FrameInspectionOptions = {}
 ): Promise<boolean> {
   if (!frameUrl) {
     return false;
@@ -66,16 +75,50 @@ export async function requestVisualizationReady(
     return false;
   }
 
-  try {
-    const response = await sendMessage({
-      type: 'WAIT_FOR_VISUALIZATION_READY',
-      frameUrl,
-    });
-    return response?.success === true && response.ready === true;
-  } catch (error) {
-    console.warn('LLM Chat Exporter: Could not inspect Claude visualization frame', error);
-    return false;
+  const maxWaitMs = options.maxWaitMs ?? VISUALIZATION_RENDER_TIMEOUT_MS;
+  const now = options.now ?? Date.now;
+  const wait =
+    options.wait ??
+    (() =>
+      new Promise<void>((resolve) =>
+        window.setTimeout(resolve, FRAME_INSPECTION_INTERVAL_MS)
+      ));
+  const startedAt = now();
+  let previousSignature = '';
+  let stableInspections = 0;
+
+  while (now() - startedAt < maxWaitMs) {
+    try {
+      const response = await sendMessage({
+        type: 'INSPECT_VISUALIZATION_FRAME',
+        frameUrl,
+      });
+      if (!response?.success) {
+        previousSignature = '';
+        stableInspections = 0;
+        await wait();
+        continue;
+      }
+      if (response.ready && response.signature) {
+        stableInspections =
+          response.signature === previousSignature ? stableInspections + 1 : 1;
+        previousSignature = response.signature;
+        if (stableInspections >= REQUIRED_STABLE_FRAMES) {
+          return true;
+        }
+      } else {
+        previousSignature = '';
+        stableInspections = 0;
+      }
+      await wait();
+    } catch (error) {
+      console.warn('LLM Chat Exporter: Could not inspect Claude visualization frame', error);
+      previousSignature = '';
+      stableInspections = 0;
+      await wait();
+    }
   }
+  return false;
 }
 
 /**

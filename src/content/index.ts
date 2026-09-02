@@ -18,10 +18,22 @@ interface ExportMessage {
   type: 'EXPORT_CONVERSATION';
 }
 
+interface PingMessage {
+  type: 'PING_EXPORTER';
+}
+
+type ContentMessage = ExportMessage | PingMessage;
+
 interface ExportResponse {
   success: boolean;
   data?: string;
   error?: string;
+}
+
+declare global {
+  interface Window {
+    __llmChatExporterListenerInstalled__?: boolean;
+  }
 }
 
 /**
@@ -89,32 +101,38 @@ async function exportConversation(): Promise<string> {
 /**
  * Message listener - handles export requests from background script
  */
-chrome.runtime.onMessage.addListener(
-  (
-    message: ExportMessage,
-    _sender: chrome.runtime.MessageSender,
-    sendResponse: (response: ExportResponse) => void
-  ) => {
-    if (message.type === 'EXPORT_CONVERSATION') {
-      console.log('LLM Chat Exporter: Export request received');
+if (!window.__llmChatExporterListenerInstalled__) {
+  window.__llmChatExporterListenerInstalled__ = true;
+  chrome.runtime.onMessage.addListener(
+    (
+      message: ContentMessage,
+      _sender: chrome.runtime.MessageSender,
+      sendResponse: (response: ExportResponse) => void
+    ) => {
+      if (message.type === 'PING_EXPORTER') {
+        sendResponse({ success: true });
+        return false;
+      }
 
-      // Execute export asynchronously
-      exportConversation()
-        .then((jsonl) => {
-          sendResponse({ success: true, data: jsonl });
-        })
-        .catch((error) => {
-          console.error('LLM Chat Exporter: Export failed', error);
-          sendResponse({
-            success: false,
-            error: error.message || 'Unknown error occurred'
+      if (message.type === 'EXPORT_CONVERSATION') {
+        console.log('LLM Chat Exporter: Export request received');
+
+        exportConversation()
+          .then((jsonl) => {
+            sendResponse({ success: true, data: jsonl });
+          })
+          .catch((error) => {
+            console.error('LLM Chat Exporter: Export failed', error);
+            sendResponse({
+              success: false,
+              error: error.message || 'Unknown error occurred'
+            });
           });
-        });
 
-      // Return true to indicate async response
-      return true;
+        return true;
+      }
     }
-  }
-);
+  );
+}
 
 console.log('LLM Chat Exporter content script loaded on:', window.location.hostname);
