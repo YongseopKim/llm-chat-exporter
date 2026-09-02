@@ -298,4 +298,45 @@ describe('ClaudeParser - virtualized conversation', () => {
     expect(markdown).toContain(`![Captured chart](${png})`);
     expect(capture).toHaveBeenCalledOnce();
   });
+
+  it('replaces an early snapshot when a visualization iframe mounts later', async () => {
+    const png = 'data:image/png;base64,TEFURV9NT1VOVA==';
+    const capture = vi.fn().mockResolvedValue(png);
+    parser = new ClaudeParser(capture);
+    const doc = createDOMFromHTML(
+      `<html><body>
+        <div data-rs-index="0" data-index="0">
+          <div role="article" aria-setsize="1" aria-posinset="1">
+            <div data-is-streaming="false">
+              <div class="standard-markdown"><p>Before</p></div>
+              <div id="visualization-slot"></div>
+              <div class="standard-markdown"><p>After</p></div>
+            </div>
+          </div>
+        </div>
+      </body></html>`,
+      'https://claude.ai/chat/abc'
+    );
+    install(doc);
+    global.window.scrollTo = vi.fn();
+    let steps = 0;
+
+    await parser.loadAllMessages({
+      stepDelay: 0,
+      timeout: 0,
+      onStep: () => {
+        steps += 1;
+        if (steps === 1) {
+          doc.querySelector('#visualization-slot')!.innerHTML =
+            '<iframe title="visualize: Mounted later"></iframe>';
+        }
+      },
+    });
+    doc.querySelector('[data-index="0"]')?.remove();
+
+    const [collected] = parser.getMessageNodes();
+    const markdown = htmlToMarkdown(parser.parseNode(collected).contentHtml);
+    expect(capture).toHaveBeenCalledOnce();
+    expect(markdown).toContain(`![Mounted later](${png})`);
+  });
 });

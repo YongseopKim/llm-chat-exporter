@@ -298,8 +298,16 @@ export class ClaudeParser extends BaseParser {
   private snapshotMountedMessages(): void {
     for (const node of super.getMessageNodes()) {
       const index = this.getListIndex(node);
-      if (index === null || this.collected.has(index)) {
+      if (index === null) {
         continue;
+      }
+      const existing = this.collected.get(index);
+      if (existing) {
+        const existingVisualizations = existing.querySelectorAll(VISUALIZATION_SELECTOR).length;
+        const liveVisualizations = node.querySelectorAll(VISUALIZATION_SELECTOR).length;
+        if (liveVisualizations <= existingVisualizations) {
+          continue;
+        }
       }
       const clone = node.cloneNode(true) as HTMLElement;
       this.collectedIndices.set(clone, index);
