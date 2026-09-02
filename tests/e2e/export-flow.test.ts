@@ -195,7 +195,7 @@ async function exportCurrentPage(
   }, expectedUrl) as ExportResponse;
 }
 
-async function stubVisibleTabCapture(browser: Browser, dataUrl: string): Promise<void> {
+async function stubVisibleTabCapture(browser: Browser, dataUrls: string[]): Promise<void> {
   const serviceWorkerTarget = browser.targets().find(
     (target) => target.type() === 'service_worker' && target.url().startsWith('chrome-extension://')
   );
@@ -204,15 +204,18 @@ async function stubVisibleTabCapture(browser: Browser, dataUrl: string): Promise
     throw new Error('Extension service worker was not available');
   }
 
-  await serviceWorker.evaluate((capturedTab) => {
+  await serviceWorker.evaluate((capturedTabs) => {
+    let captureIndex = 0;
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (message.type !== 'CAPTURE_VISIBLE_TAB') {
         return undefined;
       }
-      sendResponse({ success: true, dataUrl: capturedTab });
+      const dataUrl = capturedTabs[Math.min(captureIndex, capturedTabs.length - 1)];
+      captureIndex += 1;
+      sendResponse({ success: true, dataUrl });
       return true;
     });
-  }, dataUrl);
+  }, dataUrls);
 }
 
 describe('E2E: Export Flow', () => {
@@ -363,8 +366,20 @@ describe('E2E: Export Flow', () => {
       await page.goto(VISUALIZATION_CLAUDE_URL, { waitUntil: 'domcontentloaded' });
       await page.waitForFunction('window.__visualizationReady === true');
 
-      const screenshot = await page.screenshot({ encoding: 'base64' });
-      await stubVisibleTabCapture(browser, `data:image/png;base64,${screenshot}`);
+      await page.$eval('iframe[title]', (iframe) => {
+        (iframe as HTMLElement).style.visibility = 'hidden';
+      });
+      const blankScreenshot = await page.screenshot({ encoding: 'base64' });
+      await page.$eval('iframe[title]', (iframe) => {
+        (iframe as HTMLElement).style.visibility = 'visible';
+      });
+      const renderedScreenshot = await page.screenshot({ encoding: 'base64' });
+      await stubVisibleTabCapture(browser, [
+        `data:image/png;base64,${blankScreenshot}`,
+        `data:image/png;base64,${blankScreenshot}`,
+        `data:image/png;base64,${renderedScreenshot}`,
+        `data:image/png;base64,${renderedScreenshot}`,
+      ]);
       const response = await exportCurrentPage(browser, VISUALIZATION_CLAUDE_URL);
 
       expect(response.success, response.error).toBe(true);

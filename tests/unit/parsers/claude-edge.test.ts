@@ -293,6 +293,25 @@ describe('ClaudeParser - Edge Cases', () => {
       expect(parsed.contentHtml).toContain('Plain answer');
       expect(parsed.contentHtml).not.toContain('Visualization');
     });
+
+    it('should not wait for a capture when the message has no visualization iframe', async () => {
+      const capture = vi.fn().mockResolvedValue('data:image/png;base64,unused');
+      const capturingParser = new ClaudeParser(capture);
+      const doc = createDOMFromHTML(`
+        <html><body>
+          <div data-is-streaming="false">
+            <div class="standard-markdown"><p>Plain answer</p></div>
+          </div>
+        </body></html>
+      `, 'https://claude.ai/chat/abc');
+      global.document = doc as any;
+      global.window = doc.defaultView as any;
+      global.window.scrollTo = vi.fn();
+
+      await capturingParser.loadAllMessages({ stepDelay: 0, timeout: 0 });
+
+      expect(capture).not.toHaveBeenCalled();
+    });
   });
 
   describe('claude_001: Real captured project chat page', () => {

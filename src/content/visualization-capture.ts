@@ -16,6 +16,22 @@ export interface ScreenshotCrop {
   sourceHeight: number;
 }
 
+export interface VisualizationFrame {
+  dataUrl: string;
+  /** Downscaled RGBA pixels used only for blank/stability detection. */
+  pixels: Uint8ClampedArray;
+}
+
+interface StableVisualizationOptions {
+  maxWaitMs?: number;
+  now?: () => number;
+}
+
+const VISUALIZATION_RENDER_TIMEOUT_MS = 30000;
+const UNIFORM_CHANNEL_SPREAD = 6;
+const STABLE_MEAN_CHANNEL_DIFFERENCE = 2;
+const ANALYSIS_SIZE_PX = 32;
+
 /**
  * Convert a CSS-pixel element rectangle into screenshot pixel coordinates.
  *
@@ -76,7 +92,152 @@ function loadImage(dataUrl: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Capture a fully visible iframe and return a cropped PNG data URI. */
+/** True when every color channel changes too little to contain useful content. */
+function isNearUniform(pixels: Uint8ClampedArray): boolean {
+  if (pixels.length < 4) {
+    return true;
+  }
+
+  const minimum = [255, 255, 255];
+  const maximum = [0, 0, 0];
+  for (let offset = 0; offset + 3 < pixels.length; offset += 4) {
+    for (let channel = 0; channel < 3; channel += 1) {
+      minimum[channel] = Math.min(minimum[channel], pixels[offset + channel]);
+      maximum[channel] = Math.max(maximum[channel], pixels[offset + channel]);
+    }
+  }
+
+  return maximum.every(
+    (value, channel) => value - minimum[channel] <= UNIFORM_CHANNEL_SPREAD
+  );
+}
+
+/** Mean RGB difference between two downscaled frames. */
+function meanChannelDifference(
+  left: Uint8ClampedArray,
+  right: Uint8ClampedArray
+): number {
+  if (left.length !== right.length || left.length < 4) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  let difference = 0;
+  let channels = 0;
+  for (let offset = 0; offset + 3 < left.length; offset += 4) {
+    for (let channel = 0; channel < 3; channel += 1) {
+      difference += Math.abs(left[offset + channel] - right[offset + channel]);
+      channels += 1;
+    }
+  }
+  return channels > 0 ? difference / channels : Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Reject blank frames and require two consecutive rendered frames to agree.
+ * captureVisibleTab() is already rate-limited by the service worker, so each
+ * loop naturally waits at least 550 ms without a second timer here.
+ */
+export async function waitForStableVisualization(
+  captureFrame: () => Promise<VisualizationFrame | null>,
+  isIframeConnected: () => boolean,
+  options: StableVisualizationOptions = {}
+): Promise<VisualizationFrame | null> {
+  const maxWaitMs = options.maxWaitMs ?? VISUALIZATION_RENDER_TIMEOUT_MS;
+  const now = options.now ?? Date.now;
+  const startedAt = now();
+  let previousRendered: VisualizationFrame | null = null;
+
+  while (isIframeConnected() && now() - startedAt < maxWaitMs) {
+    const current = await captureFrame();
+    if (!current) {
+      return null;
+    }
+
+    if (isNearUniform(current.pixels)) {
+      previousRendered = null;
+      continue;
+    }
+
+    if (
+      previousRendered &&
+      meanChannelDifference(previousRendered.pixels, current.pixels) <=
+        STABLE_MEAN_CHANNEL_DIFFERENCE
+    ) {
+      return current;
+    }
+    previousRendered = current;
+  }
+
+  return null;
+}
+
+/** Capture one iframe frame and retain a small pixel sample for analysis. */
+async function captureVisualizationFrame(
+  iframe: HTMLIFrameElement
+): Promise<VisualizationFrame | null> {
+  const rect = iframe.getBoundingClientRect();
+  const request: CaptureVisibleTabRequest = { type: 'CAPTURE_VISIBLE_TAB' };
+  const response = (await chrome.runtime.sendMessage(request)) as CaptureVisibleTabResponse;
+  if (!response?.success || !response.dataUrl) {
+    console.warn(
+      'LLM Chat Exporter: Visible-tab capture failed',
+      response?.error || 'No PNG data returned'
+    );
+    return null;
+  }
+
+  const screenshot = await loadImage(response.dataUrl);
+  const crop = calculateScreenshotCrop(
+    rect,
+    { width: window.innerWidth, height: window.innerHeight },
+    { width: screenshot.naturalWidth, height: screenshot.naturalHeight }
+  );
+  if (!crop) {
+    console.warn('LLM Chat Exporter: Visualization does not fit fully in the visible viewport');
+    return null;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = crop.sourceWidth;
+  canvas.height = crop.sourceHeight;
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return null;
+  }
+
+  context.drawImage(
+    screenshot,
+    crop.sourceX,
+    crop.sourceY,
+    crop.sourceWidth,
+    crop.sourceHeight,
+    0,
+    0,
+    crop.sourceWidth,
+    crop.sourceHeight
+  );
+
+  const analysisCanvas = document.createElement('canvas');
+  analysisCanvas.width = Math.min(ANALYSIS_SIZE_PX, crop.sourceWidth);
+  analysisCanvas.height = Math.min(ANALYSIS_SIZE_PX, crop.sourceHeight);
+  const analysisContext = analysisCanvas.getContext('2d');
+  if (!analysisContext) {
+    return null;
+  }
+  analysisContext.drawImage(canvas, 0, 0, analysisCanvas.width, analysisCanvas.height);
+
+  return {
+    dataUrl: canvas.toDataURL('image/png'),
+    pixels: analysisContext.getImageData(
+      0,
+      0,
+      analysisCanvas.width,
+      analysisCanvas.height
+    ).data,
+  };
+}
+
+/** Capture a fully visible iframe after its rendered pixels become stable. */
 export async function captureVisualizationIframe(
   iframe: HTMLIFrameElement
 ): Promise<string | null> {
@@ -100,49 +261,15 @@ export async function captureVisualizationIframe(
   try {
     iframe.scrollIntoView({ block: 'center', inline: 'nearest' });
     await waitForPaint();
-
-    const rect = iframe.getBoundingClientRect();
-    const request: CaptureVisibleTabRequest = { type: 'CAPTURE_VISIBLE_TAB' };
-    const response = (await chrome.runtime.sendMessage(request)) as CaptureVisibleTabResponse;
-    if (!response?.success || !response.dataUrl) {
-      console.warn(
-        'LLM Chat Exporter: Visible-tab capture failed',
-        response?.error || 'No PNG data returned'
-      );
-      return null;
-    }
-
-    const screenshot = await loadImage(response.dataUrl);
-    const crop = calculateScreenshotCrop(
-      rect,
-      { width: window.innerWidth, height: window.innerHeight },
-      { width: screenshot.naturalWidth, height: screenshot.naturalHeight }
+    const stable = await waitForStableVisualization(
+      () => captureVisualizationFrame(iframe),
+      () => iframe.isConnected
     );
-    if (!crop) {
-      console.warn('LLM Chat Exporter: Visualization does not fit fully in the visible viewport');
+    if (!stable) {
+      console.warn('LLM Chat Exporter: Claude visualization did not finish rendering');
       return null;
     }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = crop.sourceWidth;
-    canvas.height = crop.sourceHeight;
-    const context = canvas.getContext('2d');
-    if (!context) {
-      return null;
-    }
-
-    context.drawImage(
-      screenshot,
-      crop.sourceX,
-      crop.sourceY,
-      crop.sourceWidth,
-      crop.sourceHeight,
-      0,
-      0,
-      crop.sourceWidth,
-      crop.sourceHeight
-    );
-    return canvas.toDataURL('image/png');
+    return stable.dataUrl;
   } catch (error) {
     console.warn('LLM Chat Exporter: Could not capture Claude visualization', error);
     return null;
