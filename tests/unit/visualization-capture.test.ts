@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   calculateScreenshotCrop,
+  requestVisualizationReady,
   waitForStableVisualization,
   type VisualizationFrame,
 } from '../../src/content/visualization-capture';
@@ -65,8 +66,16 @@ describe('waitForStableVisualization', () => {
     ]),
   };
 
-  it('ignores blank frames and returns only after rendered pixels stabilize', async () => {
-    const frames = [blank, blank, rendered, rendered];
+  it('ignores a temporary stable pause and requires four rendered frames', async () => {
+    const partial: VisualizationFrame = {
+      dataUrl: 'data:image/png;base64,partial',
+      pixels: new Uint8ClampedArray([
+        10, 20, 30, 255,
+        190, 110, 30, 255,
+        60, 180, 220, 255,
+      ]),
+    };
+    const frames = [blank, partial, partial, rendered, rendered, rendered, rendered];
     const capture = async () => frames.shift() || null;
 
     await expect(
@@ -110,5 +119,39 @@ describe('waitForStableVisualization', () => {
       })
     ).resolves.toBeNull();
     expect(calls).toBe(0);
+  });
+});
+
+describe('requestVisualizationReady', () => {
+  it('asks the service worker to verify the exact cross-origin frame', async () => {
+    const sendMessage = vi.fn().mockResolvedValue({ success: true, ready: true });
+
+    await expect(
+      requestVisualizationReady(
+        'https://fixture.claudemcpcontent.com/mcp_apps?visualization=1',
+        sendMessage
+      )
+    ).resolves.toBe(true);
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: 'WAIT_FOR_VISUALIZATION_READY',
+      frameUrl: 'https://fixture.claudemcpcontent.com/mcp_apps?visualization=1',
+    });
+  });
+
+  it('does not treat an inaccessible frame as ready', async () => {
+    const sendMessage = vi.fn().mockResolvedValue({ success: false, ready: false });
+
+    await expect(
+      requestVisualizationReady('https://fixture.claudemcpcontent.com/mcp_apps', sendMessage)
+    ).resolves.toBe(false);
+  });
+
+  it('does not ask the service worker to inspect another host', async () => {
+    const sendMessage = vi.fn();
+
+    await expect(
+      requestVisualizationReady('https://example.com/not-a-claude-frame', sendMessage)
+    ).resolves.toBe(false);
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 });

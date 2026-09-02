@@ -18,6 +18,7 @@
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://claude.ai/*",
+    "https://*.claudemcpcontent.com/*",
     "https://gemini.google.com/*",
     "https://grok.com/*",
     "https://www.perplexity.ai/*"

@@ -17,6 +17,8 @@ const __dirname = path.dirname(__filename);
 const VIRTUALIZED_CHATGPT_URL = 'https://chatgpt.com/c/e2e-virtualized-regression';
 const GROUPED_CITATION_CLAUDE_URL = 'https://claude.ai/chat/e2e-grouped-citation-regression';
 const VISUALIZATION_CLAUDE_URL = 'https://claude.ai/chat/e2e-visualization-capture';
+const VISUALIZATION_FRAME_URL =
+  'https://fixture.claudemcpcontent.com/mcp_apps?visualization=e2e';
 
 type ExportResponse = { success: boolean; data?: string; error?: string };
 
@@ -144,10 +146,7 @@ function getVisualizationClaudeHtml(): string {
           <div role="article" aria-setsize="1" aria-posinset="1">
             <div data-is-streaming="false">
               <div class="standard-markdown"><p>Before visualization</p></div>
-              <iframe title="visualize: Treasury flow" srcdoc="
-                <style>html,body{margin:0;width:100%;height:100%;background:#16324f;color:white}</style>
-                <h1>Treasury flow chart</h1>
-              "></iframe>
+              <iframe title="visualize: Treasury flow" src="${VISUALIZATION_FRAME_URL}"></iframe>
               <div class="standard-markdown"><p>After visualization</p></div>
             </div>
           </div>
@@ -355,6 +354,17 @@ describe('E2E: Export Flow', () => {
           status: 200,
           contentType: 'text/html; charset=utf-8',
           body: getVisualizationClaudeHtml(),
+        });
+        return;
+      }
+      if (request.isNavigationRequest() && request.url() === VISUALIZATION_FRAME_URL) {
+        void request.respond({
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+          body: `<!doctype html>
+            <html><head><style>
+              html,body{margin:0;width:100%;height:100%;background:#16324f;color:white}
+            </style></head><body><h1>Treasury flow chart</h1></body></html>`,
         });
         return;
       }

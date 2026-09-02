@@ -3,9 +3,20 @@ interface CaptureVisibleTabRequest {
   type: 'CAPTURE_VISIBLE_TAB';
 }
 
+interface WaitForVisualizationReadyRequest {
+  type: 'WAIT_FOR_VISUALIZATION_READY';
+  frameUrl: string;
+}
+
 interface CaptureVisibleTabResponse {
   success: boolean;
   dataUrl?: string;
+  error?: string;
+}
+
+interface WaitForVisualizationReadyResponse {
+  success: boolean;
+  ready: boolean;
   error?: string;
 }
 
@@ -31,6 +42,41 @@ const VISUALIZATION_RENDER_TIMEOUT_MS = 30000;
 const UNIFORM_CHANNEL_SPREAD = 6;
 const STABLE_MEAN_CHANNEL_DIFFERENCE = 2;
 const ANALYSIS_SIZE_PX = 32;
+const REQUIRED_STABLE_FRAMES = 4;
+
+type SendRuntimeMessage = (
+  message: WaitForVisualizationReadyRequest
+) => Promise<WaitForVisualizationReadyResponse>;
+
+/** Ask the service worker to observe readiness inside the cross-origin frame. */
+export async function requestVisualizationReady(
+  frameUrl: string,
+  sendMessage: SendRuntimeMessage = (message) => chrome.runtime.sendMessage(message)
+): Promise<boolean> {
+  if (!frameUrl) {
+    return false;
+  }
+
+  try {
+    const url = new URL(frameUrl);
+    if (url.protocol !== 'https:' || !url.hostname.endsWith('.claudemcpcontent.com')) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+
+  try {
+    const response = await sendMessage({
+      type: 'WAIT_FOR_VISUALIZATION_READY',
+      frameUrl,
+    });
+    return response?.success === true && response.ready === true;
+  } catch (error) {
+    console.warn('LLM Chat Exporter: Could not inspect Claude visualization frame', error);
+    return false;
+  }
+}
 
 /**
  * Convert a CSS-pixel element rectangle into screenshot pixel coordinates.
@@ -133,7 +179,7 @@ function meanChannelDifference(
 }
 
 /**
- * Reject blank frames and require two consecutive rendered frames to agree.
+ * Reject blank frames and require four consecutive rendered frames to agree.
  * captureVisibleTab() is already rate-limited by the service worker, so each
  * loop naturally waits at least 550 ms without a second timer here.
  */
@@ -146,6 +192,7 @@ export async function waitForStableVisualization(
   const now = options.now ?? Date.now;
   const startedAt = now();
   let previousRendered: VisualizationFrame | null = null;
+  let stableFrames = 0;
 
   while (isIframeConnected() && now() - startedAt < maxWaitMs) {
     const current = await captureFrame();
@@ -155,15 +202,24 @@ export async function waitForStableVisualization(
 
     if (isNearUniform(current.pixels)) {
       previousRendered = null;
+      stableFrames = 0;
       continue;
     }
 
-    if (
-      previousRendered &&
-      meanChannelDifference(previousRendered.pixels, current.pixels) <=
+    if (previousRendered) {
+      if (
+        meanChannelDifference(previousRendered.pixels, current.pixels) <=
         STABLE_MEAN_CHANNEL_DIFFERENCE
-    ) {
-      return current;
+      ) {
+        stableFrames += 1;
+        if (stableFrames >= REQUIRED_STABLE_FRAMES) {
+          return current;
+        }
+      } else {
+        stableFrames = 1;
+      }
+    } else {
+      stableFrames = 1;
     }
     previousRendered = current;
   }
@@ -261,6 +317,11 @@ export async function captureVisualizationIframe(
   try {
     iframe.scrollIntoView({ block: 'center', inline: 'nearest' });
     await waitForPaint();
+    const ready = await requestVisualizationReady(iframe.src);
+    if (!ready || !iframe.isConnected) {
+      console.warn('LLM Chat Exporter: Claude visualization frame was not ready');
+      return null;
+    }
     const stable = await waitForStableVisualization(
       () => captureVisualizationFrame(iframe),
       () => iframe.isConnected

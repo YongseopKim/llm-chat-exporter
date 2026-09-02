@@ -15,14 +15,113 @@ interface CaptureVisibleTabMessage {
   type: 'CAPTURE_VISIBLE_TAB';
 }
 
+interface WaitForVisualizationReadyMessage {
+  type: 'WAIT_FOR_VISUALIZATION_READY';
+  frameUrl: string;
+}
+
 interface CaptureVisibleTabResponse {
   success: boolean;
   dataUrl?: string;
   error?: string;
 }
 
+interface WaitForVisualizationReadyResponse {
+  success: boolean;
+  ready: boolean;
+  error?: string;
+}
+
+type BackgroundMessage = CaptureVisibleTabMessage | WaitForVisualizationReadyMessage;
+
 const CAPTURE_INTERVAL_MS = 550;
+const VISUALIZATION_FRAME_TIMEOUT_MS = 30000;
+const VISUALIZATION_MUTATION_QUIET_MS = 2000;
 let lastCaptureAt = 0;
+
+/** Wait inside the exact Claude visualization frame until its DOM is ready. */
+async function waitForVisualizationFrame(
+  sender: chrome.runtime.MessageSender,
+  frameUrl: string
+): Promise<WaitForVisualizationReadyResponse> {
+  if (!sender.tab?.id || !frameUrl) {
+    return { success: false, ready: false, error: 'Missing tab or visualization URL' };
+  }
+
+  let parsedFrameUrl: URL;
+  try {
+    parsedFrameUrl = new URL(frameUrl);
+  } catch {
+    return { success: false, ready: false, error: 'Invalid visualization URL' };
+  }
+  if (
+    parsedFrameUrl.protocol !== 'https:' ||
+    !parsedFrameUrl.hostname.endsWith('.claudemcpcontent.com')
+  ) {
+    return { success: false, ready: false, error: 'Unexpected visualization host' };
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: sender.tab.id, allFrames: true },
+    args: [frameUrl, VISUALIZATION_FRAME_TIMEOUT_MS, VISUALIZATION_MUTATION_QUIET_MS],
+    func: async (expectedUrl: string, timeoutMs: number, quietMs: number) => {
+      if (window.location.href !== expectedUrl) {
+        return { matched: false, ready: false };
+      }
+
+      const startedAt = Date.now();
+      let lastMutationAt = Date.now();
+      const observer = new MutationObserver(() => {
+        lastMutationAt = Date.now();
+      });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+
+      try {
+        while (Date.now() - startedAt < timeoutMs) {
+          const body = document.body;
+          const rect = body?.getBoundingClientRect();
+          const hasSize = Boolean(rect && rect.width >= 16 && rect.height >= 16);
+          const hasContent = Boolean(
+            body &&
+              ((body.innerText || '').trim() ||
+                body.querySelector('svg, canvas, img, video, [role="img"]'))
+          );
+          const imagesReady = Array.from(document.images).every(
+            (image) => image.complete && image.naturalWidth > 0
+          );
+          const fontsReady = !('fonts' in document) || document.fonts.status === 'loaded';
+          const quiet = Date.now() - lastMutationAt >= quietMs;
+
+          if (hasSize && hasContent && imagesReady && fontsReady && quiet) {
+            await new Promise<void>((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+            );
+            return { matched: true, ready: true };
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        return { matched: true, ready: false };
+      } finally {
+        observer.disconnect();
+      }
+    },
+  });
+
+  const matched = results.find((result) => result.result?.matched === true);
+  if (!matched) {
+    return {
+      success: false,
+      ready: false,
+      error: 'Claude visualization frame was not accessible',
+    };
+  }
+  return { success: true, ready: matched.result?.ready === true };
+}
 
 /** Capture only the tab that requested the image, never another active tab. */
 async function captureRequestingTab(
@@ -49,23 +148,37 @@ async function captureRequestingTab(
 
 chrome.runtime.onMessage.addListener(
   (
-    message: CaptureVisibleTabMessage,
+    message: BackgroundMessage,
     sender: chrome.runtime.MessageSender,
-    sendResponse: (response: CaptureVisibleTabResponse) => void
+    sendResponse: (
+      response: CaptureVisibleTabResponse | WaitForVisualizationReadyResponse
+    ) => void
   ) => {
-    if (message.type !== 'CAPTURE_VISIBLE_TAB') {
-      return undefined;
+    if (message.type === 'WAIT_FOR_VISUALIZATION_READY') {
+      waitForVisualizationFrame(sender, message.frameUrl)
+        .then(sendResponse)
+        .catch((error) =>
+          sendResponse({
+            success: false,
+            ready: false,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        );
+      return true;
     }
 
-    captureRequestingTab(sender)
-      .then(sendResponse)
-      .catch((error) =>
-        sendResponse({
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        })
-      );
-    return true;
+    if (message.type === 'CAPTURE_VISIBLE_TAB') {
+      captureRequestingTab(sender)
+        .then(sendResponse)
+        .catch((error) =>
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        );
+      return true;
+    }
+    return undefined;
   }
 );
 
