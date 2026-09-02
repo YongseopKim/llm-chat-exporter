@@ -146,12 +146,18 @@ function getVisualizationClaudeHtml(): string {
           <div role="article" aria-setsize="1" aria-posinset="1">
             <div data-is-streaming="false">
               <div class="standard-markdown"><p>Before visualization</p></div>
-              <iframe title="visualize: Treasury flow" src="${VISUALIZATION_FRAME_URL}"></iframe>
+              <div id="visualization-slot"><div>Connecting to visualize...</div></div>
               <div class="standard-markdown"><p>After visualization</p></div>
             </div>
           </div>
         </div>
-        <script>window.__visualizationReady = true;</script>
+        <script>
+          window.__visualizationReady = true;
+          setTimeout(() => {
+            document.getElementById('visualization-slot').innerHTML =
+              '<iframe title="visualize: Treasury flow" src="${VISUALIZATION_FRAME_URL}"></iframe>';
+          }, 400);
+        </script>
       </body>
     </html>`;
 }
@@ -375,6 +381,7 @@ describe('E2E: Export Flow', () => {
     try {
       await page.goto(VISUALIZATION_CLAUDE_URL, { waitUntil: 'domcontentloaded' });
       await page.waitForFunction('window.__visualizationReady === true');
+      await page.waitForSelector('iframe[title]');
 
       await page.$eval('iframe[title]', (iframe) => {
         (iframe as HTMLElement).style.visibility = 'hidden';
@@ -384,6 +391,13 @@ describe('E2E: Export Flow', () => {
         (iframe as HTMLElement).style.visibility = 'visible';
       });
       const renderedScreenshot = await page.screenshot({ encoding: 'base64' });
+      await page.evaluate((frameUrl) => {
+        const slot = document.getElementById('visualization-slot')!;
+        slot.innerHTML = '<div>Connecting to visualize...</div>';
+        setTimeout(() => {
+          slot.innerHTML = `<iframe title="visualize: Treasury flow" src="${frameUrl}"></iframe>`;
+        }, 400);
+      }, VISUALIZATION_FRAME_URL);
       await stubVisibleTabCapture(browser, [
         `data:image/png;base64,${blankScreenshot}`,
         `data:image/png;base64,${blankScreenshot}`,

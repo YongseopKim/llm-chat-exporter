@@ -37,6 +37,9 @@ const PROJECT_LINK_SELECTOR = 'a[href^="/cowork/project/"]';
  * (analytics and similar) are never matched.
  */
 const VISUALIZATION_SELECTOR = 'iframe[title]';
+const PENDING_VISUALIZATION_TEXT = 'Connecting to visualize...';
+const PENDING_VISUALIZATION_TIMEOUT_MS = 120000;
+const EXPORT_PLACEHOLDER_SELECTOR = '[data-export-placeholder]';
 
 /** Claude renders the extra URLs for labels such as "Source + 2" in a portal popup */
 const GROUPED_CITATION_PATTERN = /\+\s*\d+\b/;
@@ -59,6 +62,54 @@ interface CitationGroup {
 }
 
 export type VisualizationCapture = (iframe: HTMLIFrameElement) => Promise<string | null>;
+export type PendingVisualizationWaitResult = 'iframe' | 'resolved' | 'timeout';
+export type PendingVisualizationWait = (
+  node: HTMLElement
+) => Promise<PendingVisualizationWaitResult>;
+
+/** Find Claude's visible pre-iframe connection row without matching its ancestors. */
+function findPendingVisualizationLabel(node: HTMLElement): HTMLElement | null {
+  return (
+    Array.from(node.querySelectorAll<HTMLElement>('*')).find(
+      (element) =>
+        element.childElementCount === 0 &&
+        (element.textContent || '').trim() === PENDING_VISUALIZATION_TEXT
+    ) || null
+  );
+}
+
+/** Wait once for Claude to replace its connection row with a visualization iframe. */
+export function waitForPendingVisualization(
+  node: HTMLElement,
+  timeoutMs = PENDING_VISUALIZATION_TIMEOUT_MS
+): Promise<PendingVisualizationWaitResult> {
+  if (node.querySelector(VISUALIZATION_SELECTOR)) {
+    return Promise.resolve('iframe');
+  }
+  if (!findPendingVisualizationLabel(node)) {
+    return Promise.resolve('resolved');
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (result: PendingVisualizationWaitResult) => {
+      if (settled) return;
+      settled = true;
+      observer.disconnect();
+      window.clearTimeout(timer);
+      resolve(result);
+    };
+    const observer = new MutationObserver(() => {
+      if (node.querySelector(VISUALIZATION_SELECTOR)) {
+        finish('iframe');
+      } else if (!findPendingVisualizationLabel(node)) {
+        finish('resolved');
+      }
+    });
+    const timer = window.setTimeout(() => finish('timeout'), timeoutMs);
+    observer.observe(node, { childList: true, characterData: true, subtree: true });
+  });
+}
 
 /** Parse a list-position attribute into a number, or null when it is not one */
 function toIndex(raw: string | null): number | null {
@@ -102,8 +153,17 @@ export class ClaudeParser extends BaseParser {
   /** Captured PNG data URIs for non-virtualized messages without list indices. */
   private visualizationCapturesByNode = new WeakMap<HTMLElement, string[]>();
 
+  /** Positions already attempted, including failures, so scroll steps cannot retry forever. */
+  private readonly visualizationAttemptsByIndex = new Map<number, Set<number>>();
+  private visualizationAttemptsByNode = new WeakMap<HTMLElement, Set<number>>();
+
+  /** Messages whose pre-iframe connection row has already been awaited. */
+  private readonly pendingVisualizationWaitsByIndex = new Set<number>();
+  private pendingVisualizationWaitsByNode = new WeakSet<HTMLElement>();
+
   constructor(
-    private readonly captureVisualization: VisualizationCapture = captureVisualizationIframe
+    private readonly captureVisualization: VisualizationCapture = captureVisualizationIframe,
+    private readonly waitForPending: PendingVisualizationWait = waitForPendingVisualization
   ) {
     super('claude');
   }
@@ -119,8 +179,12 @@ export class ClaudeParser extends BaseParser {
     this.collected.clear();
     this.citationGroupsByIndex.clear();
     this.visualizationCapturesByIndex.clear();
+    this.visualizationAttemptsByIndex.clear();
+    this.pendingVisualizationWaitsByIndex.clear();
     this.citationGroupsByNode = new WeakMap();
     this.visualizationCapturesByNode = new WeakMap();
+    this.visualizationAttemptsByNode = new WeakMap();
+    this.pendingVisualizationWaitsByNode = new WeakSet();
     this.collectedIndices = new WeakMap();
 
     await super.loadAllMessages({
@@ -144,21 +208,44 @@ export class ClaudeParser extends BaseParser {
         continue;
       }
 
-      const iframes = Array.from(node.querySelectorAll<HTMLIFrameElement>(VISUALIZATION_SELECTOR));
+      let iframes = Array.from(
+        node.querySelectorAll<HTMLIFrameElement>(VISUALIZATION_SELECTOR)
+      );
+      const index = this.getListIndex(node);
+
+      if (
+        iframes.length === 0 &&
+        findPendingVisualizationLabel(node) &&
+        !this.hasWaitedForPendingVisualization(node, index)
+      ) {
+        this.markPendingVisualizationWaited(node, index);
+        const result = await this.waitForPending(node);
+        if (result === 'timeout') {
+          this.markPendingVisualizationTimedOut(node);
+        }
+        iframes = Array.from(
+          node.querySelectorAll<HTMLIFrameElement>(VISUALIZATION_SELECTOR)
+        );
+      }
+
       if (iframes.length === 0) {
         continue;
       }
 
-      const index = this.getListIndex(node);
       const captures =
         index === null
           ? this.visualizationCapturesByNode.get(node) || []
           : this.visualizationCapturesByIndex.get(index) || [];
+      const attempts =
+        index === null
+          ? this.visualizationAttemptsByNode.get(node) || new Set<number>()
+          : this.visualizationAttemptsByIndex.get(index) || new Set<number>();
 
       for (let position = 0; position < iframes.length; position += 1) {
-        if (captures[position]) {
+        if (attempts.has(position)) {
           continue;
         }
+        attempts.add(position);
         const png = await this.captureVisualization(iframes[position]);
         if (png) {
           captures[position] = png;
@@ -167,10 +254,36 @@ export class ClaudeParser extends BaseParser {
 
       if (index === null) {
         this.visualizationCapturesByNode.set(node, captures);
+        this.visualizationAttemptsByNode.set(node, attempts);
       } else {
         this.visualizationCapturesByIndex.set(index, captures);
+        this.visualizationAttemptsByIndex.set(index, attempts);
       }
     }
+  }
+
+  private hasWaitedForPendingVisualization(
+    node: HTMLElement,
+    index: number | null
+  ): boolean {
+    return index === null
+      ? this.pendingVisualizationWaitsByNode.has(node)
+      : this.pendingVisualizationWaitsByIndex.has(index);
+  }
+
+  private markPendingVisualizationWaited(node: HTMLElement, index: number | null): void {
+    if (index === null) {
+      this.pendingVisualizationWaitsByNode.add(node);
+    } else {
+      this.pendingVisualizationWaitsByIndex.add(index);
+    }
+  }
+
+  private markPendingVisualizationTimedOut(node: HTMLElement): void {
+    const label = findPendingVisualizationLabel(node);
+    if (!label) return;
+    label.setAttribute('data-export-placeholder', '');
+    label.textContent = '[Visualization: loading timed out]';
   }
 
   /**
@@ -582,18 +695,22 @@ export class ClaudeParser extends BaseParser {
     // Querying both in one call keeps them in document order, so a
     // visualization stays between the paragraphs it was rendered between.
     const selector = this.selectors.content[role];
-    const elements = node.querySelectorAll(`${selector}, ${VISUALIZATION_SELECTOR}`);
+    const elements = node.querySelectorAll(
+      `${selector}, ${VISUALIZATION_SELECTOR}, ${EXPORT_PLACEHOLDER_SELECTOR}`
+    );
 
     const visibleContent: string[] = [];
     for (const el of elements) {
       if (this.isInCollapsedBlock(el as HTMLElement)) {
         continue;
       }
-      visibleContent.push(
-        el.tagName === 'IFRAME'
-          ? this.buildVisualizationContent(node, el as HTMLIFrameElement)
-          : el.innerHTML
-      );
+      if (el.tagName === 'IFRAME') {
+        visibleContent.push(this.buildVisualizationContent(node, el as HTMLIFrameElement));
+      } else if ((el as HTMLElement).matches(EXPORT_PLACEHOLDER_SELECTOR)) {
+        visibleContent.push((el as HTMLElement).outerHTML);
+      } else {
+        visibleContent.push(el.innerHTML);
+      }
     }
 
     const additionalCitations = this.getAdditionalCitationSources(node);
