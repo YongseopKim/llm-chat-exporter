@@ -16,6 +16,7 @@ const __dirname = path.dirname(__filename);
 
 const VIRTUALIZED_CHATGPT_URL = 'https://chatgpt.com/c/e2e-virtualized-regression';
 const GROUPED_CITATION_CLAUDE_URL = 'https://claude.ai/chat/e2e-grouped-citation-regression';
+const VISUALIZATION_CLAUDE_URL = 'https://claude.ai/chat/e2e-visualization-capture';
 
 type ExportResponse = { success: boolean; data?: string; error?: string };
 
@@ -127,6 +128,35 @@ function getGroupedCitationClaudeHtml(): string {
     </html>`;
 }
 
+function getVisualizationClaudeHtml(): string {
+  return `<!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Visualization Capture - Claude</title>
+        <style>
+          body { margin: 0; }
+          iframe { display: block; width: 480px; height: 240px; border: 0; }
+        </style>
+      </head>
+      <body>
+        <div data-rs-index="0" data-index="0">
+          <div role="article" aria-setsize="1" aria-posinset="1">
+            <div data-is-streaming="false">
+              <div class="standard-markdown"><p>Before visualization</p></div>
+              <iframe title="visualize: Treasury flow" srcdoc="
+                <style>html,body{margin:0;width:100%;height:100%;background:#16324f;color:white}</style>
+                <h1>Treasury flow chart</h1>
+              "></iframe>
+              <div class="standard-markdown"><p>After visualization</p></div>
+            </div>
+          </div>
+        </div>
+        <script>window.__visualizationReady = true;</script>
+      </body>
+    </html>`;
+}
+
 async function exportCurrentPage(
   browser: Browser,
   expectedUrl: string
@@ -163,6 +193,26 @@ async function exportCurrentPage(
       type: 'EXPORT_CONVERSATION',
     });
   }, expectedUrl) as ExportResponse;
+}
+
+async function stubVisibleTabCapture(browser: Browser, dataUrl: string): Promise<void> {
+  const serviceWorkerTarget = browser.targets().find(
+    (target) => target.type() === 'service_worker' && target.url().startsWith('chrome-extension://')
+  );
+  const serviceWorker = await serviceWorkerTarget?.worker();
+  if (!serviceWorker) {
+    throw new Error('Extension service worker was not available');
+  }
+
+  await serviceWorker.evaluate((capturedTab) => {
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message.type !== 'CAPTURE_VISIBLE_TAB') {
+        return undefined;
+      }
+      sendResponse({ success: true, dataUrl: capturedTab });
+      return true;
+    });
+  }, dataUrl);
 }
 
 describe('E2E: Export Flow', () => {
@@ -288,6 +338,46 @@ describe('E2E: Export Flow', () => {
       expect(assistant.content).toContain('[Second article](https://second.example/article)');
       expect(assistant.content).toContain('[Third paper](https://third.example/paper)');
       expect(assistant.content.match(/\]\(https?:\/\//g) || []).toHaveLength(3);
+    } finally {
+      page.off('request', intercept);
+      await page.setRequestInterception(false);
+    }
+  }, 30000);
+
+  it('should embed a rendered Claude visualization as an in-place PNG', async () => {
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.isNavigationRequest() && request.url() === VISUALIZATION_CLAUDE_URL) {
+        void request.respond({
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+          body: getVisualizationClaudeHtml(),
+        });
+        return;
+      }
+      void request.continue();
+    };
+    page.on('request', intercept);
+
+    try {
+      await page.goto(VISUALIZATION_CLAUDE_URL, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction('window.__visualizationReady === true');
+
+      const screenshot = await page.screenshot({ encoding: 'base64' });
+      await stubVisibleTabCapture(browser, `data:image/png;base64,${screenshot}`);
+      const response = await exportCurrentPage(browser, VISUALIZATION_CLAUDE_URL);
+
+      expect(response.success, response.error).toBe(true);
+      const records = response.data!
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => JSON.parse(line));
+      const assistant = records.find((record) => record.role === 'assistant');
+
+      expect(assistant.content).toMatch(
+        /Before visualization[\s\S]*!\[Treasury flow\]\(data:image\/png;base64,[A-Za-z0-9+/=]+\)[\s\S]*After visualization/
+      );
+      expect(assistant.content).not.toContain('[Visualization:');
     } finally {
       page.off('request', intercept);
       await page.setRequestInterception(false);

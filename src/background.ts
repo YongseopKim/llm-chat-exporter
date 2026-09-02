@@ -11,6 +11,64 @@ interface ExportResponse {
   error?: string;
 }
 
+interface CaptureVisibleTabMessage {
+  type: 'CAPTURE_VISIBLE_TAB';
+}
+
+interface CaptureVisibleTabResponse {
+  success: boolean;
+  dataUrl?: string;
+  error?: string;
+}
+
+const CAPTURE_INTERVAL_MS = 550;
+let lastCaptureAt = 0;
+
+/** Capture only the tab that requested the image, never another active tab. */
+async function captureRequestingTab(
+  sender: chrome.runtime.MessageSender
+): Promise<CaptureVisibleTabResponse> {
+  if (!sender.tab?.id || sender.tab.windowId === undefined) {
+    return { success: false, error: 'Capture request did not come from a tab' };
+  }
+
+  const [activeTab] = await chrome.tabs.query({ active: true, windowId: sender.tab.windowId });
+  if (activeTab?.id !== sender.tab.id) {
+    return { success: false, error: 'The exporting tab is no longer active' };
+  }
+
+  const remaining = CAPTURE_INTERVAL_MS - (Date.now() - lastCaptureAt);
+  if (remaining > 0) {
+    await new Promise((resolve) => setTimeout(resolve, remaining));
+  }
+
+  const dataUrl = await chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'png' });
+  lastCaptureAt = Date.now();
+  return { success: true, dataUrl };
+}
+
+chrome.runtime.onMessage.addListener(
+  (
+    message: CaptureVisibleTabMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: CaptureVisibleTabResponse) => void
+  ) => {
+    if (message.type !== 'CAPTURE_VISIBLE_TAB') {
+      return undefined;
+    }
+
+    captureRequestingTab(sender)
+      .then(sendResponse)
+      .catch((error) =>
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      );
+    return true;
+  }
+);
+
 /**
  * JSONL 데이터의 첫 줄(메타데이터)에서 title 추출
  */

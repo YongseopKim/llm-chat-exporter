@@ -26,6 +26,7 @@
 import { BaseParser } from './base-parser';
 import type { ScrollOptions } from '../scroller';
 import type { ArtifactData, ProjectInfo } from './interface';
+import { captureVisualizationIframe } from '../visualization-capture';
 
 /** Selector for the project breadcrumb link shown above chats that belong to a project */
 const PROJECT_LINK_SELECTOR = 'a[href^="/cowork/project/"]';
@@ -56,6 +57,8 @@ interface CitationGroup {
   triggerText: string;
   sources: CitationSource[];
 }
+
+export type VisualizationCapture = (iframe: HTMLIFrameElement) => Promise<string | null>;
 
 /** Parse a list-position attribute into a number, or null when it is not one */
 function toIndex(raw: string | null): number | null {
@@ -93,7 +96,15 @@ export class ClaudeParser extends BaseParser {
   /** Preserve a collected clone's original list index without changing its HTML */
   private collectedIndices = new WeakMap<HTMLElement, number>();
 
-  constructor() {
+  /** Captured PNG data URIs, in iframe order, for indexed messages. */
+  private readonly visualizationCapturesByIndex = new Map<number, string[]>();
+
+  /** Captured PNG data URIs for non-virtualized messages without list indices. */
+  private visualizationCapturesByNode = new WeakMap<HTMLElement, string[]>();
+
+  constructor(
+    private readonly captureVisualization: VisualizationCapture = captureVisualizationIframe
+  ) {
     super('claude');
   }
 
@@ -107,13 +118,16 @@ export class ClaudeParser extends BaseParser {
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     this.collected.clear();
     this.citationGroupsByIndex.clear();
+    this.visualizationCapturesByIndex.clear();
     this.citationGroupsByNode = new WeakMap();
+    this.visualizationCapturesByNode = new WeakMap();
     this.collectedIndices = new WeakMap();
 
     await super.loadAllMessages({
       ...options,
       onStep: async () => {
         await this.captureMountedGroupedCitations();
+        await this.captureMountedVisualizations();
         this.snapshotMountedMessages();
         await options.onStep?.();
       },
@@ -121,6 +135,42 @@ export class ClaudeParser extends BaseParser {
 
     this.warnIfIncomplete();
     await this.openLatestArtifact();
+  }
+
+  /** Capture each mounted visualization before virtualization can unmount it. */
+  private async captureMountedVisualizations(): Promise<void> {
+    for (const node of super.getMessageNodes()) {
+      if (node.getAttribute('data-testid') === 'user-message') {
+        continue;
+      }
+
+      const iframes = Array.from(node.querySelectorAll<HTMLIFrameElement>(VISUALIZATION_SELECTOR));
+      if (iframes.length === 0) {
+        continue;
+      }
+
+      const index = this.getListIndex(node);
+      const captures =
+        index === null
+          ? this.visualizationCapturesByNode.get(node) || []
+          : this.visualizationCapturesByIndex.get(index) || [];
+
+      for (let position = 0; position < iframes.length; position += 1) {
+        if (captures[position]) {
+          continue;
+        }
+        const png = await this.captureVisualization(iframes[position]);
+        if (png) {
+          captures[position] = png;
+        }
+      }
+
+      if (index === null) {
+        this.visualizationCapturesByNode.set(node, captures);
+      } else {
+        this.visualizationCapturesByIndex.set(index, captures);
+      }
+    }
   }
 
   /**
@@ -541,7 +591,7 @@ export class ClaudeParser extends BaseParser {
       }
       visibleContent.push(
         el.tagName === 'IFRAME'
-          ? this.buildVisualizationPlaceholder(el as HTMLIFrameElement)
+          ? this.buildVisualizationContent(node, el as HTMLIFrameElement)
           : el.innerHTML
       );
     }
@@ -552,6 +602,27 @@ export class ClaudeParser extends BaseParser {
     }
 
     return visibleContent.join('\n');
+  }
+
+  /** Emit the captured PNG when available, otherwise retain the explicit marker. */
+  private buildVisualizationContent(node: HTMLElement, iframe: HTMLIFrameElement): string {
+    const position = Array.from(node.querySelectorAll(VISUALIZATION_SELECTOR)).indexOf(iframe);
+    const index = this.getListIndex(node) ?? this.collectedIndices.get(node) ?? null;
+    const captures =
+      index === null
+        ? this.visualizationCapturesByNode.get(node)
+        : this.visualizationCapturesByIndex.get(index);
+    const png = position >= 0 ? captures?.[position] : undefined;
+    if (!png) {
+      return this.buildVisualizationPlaceholder(iframe);
+    }
+
+    const rawTitle = iframe.getAttribute('title')?.trim() || '';
+    const title = rawTitle.replace(/^visualize:\s*/i, '') || 'Visualization';
+    const image = document.createElement('img');
+    image.setAttribute('src', png);
+    image.setAttribute('alt', title);
+    return image.outerHTML;
   }
 
   /** Return popup URLs that do not already exist anywhere in the message. */
@@ -612,11 +683,10 @@ export class ClaudeParser extends BaseParser {
    * Build a placeholder standing in for a visualization iframe
    *
    * Claude renders visualizations inside a sandboxed cross-origin iframe
-   * (<hash>.claudemcpcontent.com), so `contentDocument` is null and the
-   * rendered content cannot be read by a content script — this is a hard
-   * browser security boundary, not something a better selector can solve.
-   * The iframe's title is readable from the parent page, so the export at
-   * least records that a visualization was present and what it depicted.
+   * (<hash>.claudemcpcontent.com), so `contentDocument` is null. The exporter
+   * normally captures its rendered pixels through captureVisibleTab(). This
+   * marker remains the honest fallback when the iframe is clipped, oversized,
+   * still loading, or the active tab changes during export.
    *
    * @private
    */

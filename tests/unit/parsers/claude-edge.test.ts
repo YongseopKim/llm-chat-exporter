@@ -10,7 +10,7 @@
  * not just the first .standard-markdown element.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ClaudeParser } from '../../../src/content/parsers/claude';
 import { htmlToMarkdown, inlineImages } from '../../../src/content/converter';
 import { loadEdgeCaseHTML, createDOMFromHTML } from './shared/fixtures';
@@ -188,8 +188,8 @@ describe('ClaudeParser - Edge Cases', () => {
   describe('claude_002: Visualization rendered in a cross-origin iframe', () => {
     // Claude's "visualize" feature renders the picture inside a sandboxed
     // cross-origin iframe (<hash>.claudemcpcontent.com). contentDocument is
-    // null from the page, so the content is unreachable by any content
-    // script — the best we can do is record that it was there.
+    // null from the page, so this placeholder is the fallback when a tab
+    // screenshot cannot be captured and cropped.
     it('should emit a placeholder carrying the visualization title', () => {
       const html = loadEdgeCaseHTML('claude', '002');
       const doc = createDOMFromHTML(`<html><body>${html}</body></html>`);
@@ -200,6 +200,34 @@ describe('ClaudeParser - Edge Cases', () => {
 
       expect(parsed.role).toBe('assistant');
       expect(parsed.contentHtml).toContain('Inferred portrait night desk');
+    });
+
+    it('should embed a captured visualization as a PNG at its original position', async () => {
+      const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB';
+      const capture = vi.fn().mockResolvedValue(png);
+      const capturingParser = new ClaudeParser(capture);
+      const doc = createDOMFromHTML(`
+        <html><body>
+          <div data-is-streaming="false">
+            <div class="standard-markdown"><p>Before picture</p></div>
+            <iframe title="visualize: Yield chain" src="https://example.claudemcpcontent.com/view"></iframe>
+            <div class="standard-markdown"><p>After picture</p></div>
+          </div>
+        </body></html>
+      `, 'https://claude.ai/chat/abc');
+      global.document = doc as any;
+      global.window = doc.defaultView as any;
+      global.window.scrollTo = vi.fn();
+
+      await capturingParser.loadAllMessages({ stepDelay: 0, timeout: 0 });
+      const parsed = capturingParser.parseNode(capturingParser.getMessageNodes()[0]);
+      const markdown = htmlToMarkdown(parsed.contentHtml);
+
+      expect(capture).toHaveBeenCalledOnce();
+      expect(markdown).toContain(`![Yield chain](${png})`);
+      expect(markdown.indexOf('Before picture')).toBeLessThan(markdown.indexOf(png));
+      expect(markdown.indexOf(png)).toBeLessThan(markdown.indexOf('After picture'));
+      expect(markdown).not.toContain('[Visualization:');
     });
 
     it('should keep the visualization in document order between the text blocks', () => {
