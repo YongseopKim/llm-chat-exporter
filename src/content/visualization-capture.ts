@@ -274,6 +274,11 @@ export async function waitForStableVisualization(
 async function captureVisualizationFrame(
   iframe: HTMLIFrameElement
 ): Promise<VisualizationFrame | null> {
+  // Claude and the exporter both scroll while readiness is checked. Re-center
+  // immediately before every screenshot instead of trusting the earlier
+  // scroll position to survive those asynchronous steps.
+  iframe.scrollIntoView({ block: 'center', inline: 'nearest' });
+  await waitForPaint();
   const rect = iframe.getBoundingClientRect();
   const request: CaptureVisibleTabRequest = { type: 'CAPTURE_VISIBLE_TAB' };
   const response = (await chrome.runtime.sendMessage(request)) as CaptureVisibleTabResponse;

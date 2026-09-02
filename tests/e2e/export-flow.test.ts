@@ -151,6 +151,7 @@ function getVisualizationClaudeHtml(): string {
             </div>
           </div>
         </div>
+        <div style="height: 1600px"></div>
         <script>
           window.__visualizationReady = true;
           setTimeout(() => {
@@ -401,6 +402,9 @@ describe('E2E: Export Flow', () => {
         setTimeout(() => {
           slot.innerHTML = `<iframe title="visualize: Treasury flow" src="${frameUrl}"></iframe>`;
         }, 400);
+        setTimeout(() => {
+          window.scrollTo(0, document.body.scrollHeight);
+        }, 1000);
       }, VISUALIZATION_FRAME_URL);
       await stubVisibleTabCapture(browser, [
         `data:image/png;base64,${blankScreenshot}`,
