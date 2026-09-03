@@ -339,4 +339,34 @@ describe('ClaudeParser - virtualized conversation', () => {
     expect(capture).toHaveBeenCalledOnce();
     expect(markdown).toContain(`![Mounted later](${png})`);
   });
+
+  it('keeps the richer snapshot when the live message loses its visualization iframe', async () => {
+    const png = 'data:image/png;base64,UFJFU0VSVkVE';
+    const capture = vi.fn().mockResolvedValue(png);
+    parser = new ClaudeParser(capture);
+    const doc = createDOMFromHTML(
+      `<html><body>
+        <div data-rs-index="0" data-index="0">
+          <div role="article" aria-setsize="1" aria-posinset="1">
+            <div data-is-streaming="false">
+              <div class="standard-markdown"><p>Before</p></div>
+              <iframe title="visualize: Preserved chart"></iframe>
+              <div class="standard-markdown"><p>After</p></div>
+            </div>
+          </div>
+        </div>
+      </body></html>`,
+      'https://claude.ai/chat/abc'
+    );
+    install(doc);
+    global.window.scrollTo = vi.fn();
+
+    await parser.loadAllMessages({ stepDelay: 0, timeout: 0 });
+    doc.querySelector('iframe')?.remove();
+
+    const [collected] = parser.getMessageNodes();
+    const markdown = htmlToMarkdown(parser.parseNode(collected).contentHtml);
+    expect(capture).toHaveBeenCalledOnce();
+    expect(markdown).toContain(`![Preserved chart](${png})`);
+  });
 });

@@ -561,9 +561,10 @@ export class ClaudeParser extends BaseParser {
   /**
    * Get all message nodes, merging what was collected while scrolling
    *
-   * Live nodes take precedence over their snapshots (same content, but still
-   * attached), and everything is ordered by list index rather than by the
-   * order it happened to be collected in.
+   * Live nodes normally take precedence over their snapshots because they are
+   * still attached. A snapshot with more visualization iframes is retained,
+   * since Claude can unmount an iframe without unmounting its message. Everything
+   * is ordered by list index rather than by collection order.
    *
    * Falls back to the live nodes whenever the DOM carries no list indices, so
    * DOM shapes this parser does not recognise behave exactly as before.
@@ -582,6 +583,14 @@ export class ClaudeParser extends BaseParser {
       if (index === null) {
         // Unknown shape: reordering would be a guess, so return the DOM as-is
         return live;
+      }
+      const snapshot = merged.get(index);
+      if (
+        snapshot &&
+        snapshot.querySelectorAll(VISUALIZATION_SELECTOR).length >
+          node.querySelectorAll(VISUALIZATION_SELECTOR).length
+      ) {
+        continue;
       }
       merged.set(index, node);
     }
