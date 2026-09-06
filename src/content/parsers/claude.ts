@@ -122,6 +122,18 @@ export function waitForPendingVisualization(
   });
 }
 
+/**
+ * Read an attachment card's name
+ *
+ * Claude puts it on the card's button, as "Pasted text, pasted, 1,591 lines"
+ * for a pasted prompt or the file name for an uploaded file. The card's own
+ * text is a preview truncated at a few hundred characters, so it is not used.
+ */
+function readAttachmentLabel(card: HTMLElement): string {
+  const labelled = card.matches('[aria-label]') ? card : card.querySelector('[aria-label]');
+  return (labelled?.getAttribute('aria-label') || '').trim();
+}
+
 /** Parse a list-position attribute into a number, or null when it is not one */
 function toIndex(raw: string | null): number | null {
   if (raw === null || raw.trim() === '') {
@@ -248,7 +260,7 @@ export class ClaudeParser extends BaseParser {
   /** Capture each mounted visualization before virtualization can unmount it. */
   private async captureMountedVisualizations(): Promise<void> {
     for (const node of super.getMessageNodes()) {
-      if (node.getAttribute('data-testid') === 'user-message') {
+      if (this.extractRole(node) === 'user') {
         continue;
       }
 
@@ -369,7 +381,7 @@ export class ClaudeParser extends BaseParser {
    */
   private async captureMountedGroupedCitations(): Promise<void> {
     for (const node of super.getMessageNodes()) {
-      if (node.getAttribute('data-testid') === 'user-message') {
+      if (this.extractRole(node) === 'user') {
         continue;
       }
 
@@ -545,6 +557,97 @@ export class ClaudeParser extends BaseParser {
     } else {
       this.citationGroupsByIndex.set(index, groups);
     }
+  }
+
+  /**
+   * Include attachment cards in the message selector
+   *
+   * Measured on 2026-09-06, a user turn whose prompt became an attachment
+   * carries no `[data-testid="user-message"]` at all, so the configured
+   * combined selector matched nothing in that row and the turn was dropped
+   * from the export entirely. Widening the selector here also lets the
+   * scroller treat an attachment mounting as progress.
+   *
+   * @override
+   * @protected
+   */
+  protected override getMessageSelector(): string | undefined {
+    const base = super.getMessageSelector();
+    const attachment = this.selectors.content.attachment;
+    return base && attachment ? `${base}, ${attachment}` : base;
+  }
+
+  /**
+   * Collect message nodes, keeping one node per transcript row
+   *
+   * An attachment card is a message only when nothing else in its row is: a
+   * row holding both a typed message and a file exports through the message
+   * node, with the file appended to it. Two nodes from one row would collide
+   * anyway, since collection is keyed on the row's list index.
+   *
+   * @override
+   * @protected
+   */
+  protected override getNodesWithFallback(): HTMLElement[] {
+    const selector = this.getMessageSelector();
+    if (!selector || !this.selectors.content.attachment) {
+      return super.getNodesWithFallback();
+    }
+
+    return Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(
+      (node) => !this.isRedundantAttachment(node)
+    );
+  }
+
+  /** True for an attachment card that some other node already speaks for. */
+  private isRedundantAttachment(node: HTMLElement): boolean {
+    const attachment = this.selectors.content.attachment;
+    if (!attachment || !node.matches(attachment)) {
+      return false;
+    }
+
+    const row = this.getRowElement(node);
+    if (!row) {
+      return false;
+    }
+
+    const combined = this.selectors.messages.combined;
+    if (combined && row.querySelector(combined)) {
+      return true;
+    }
+
+    // Several files in one row are listed by the first card's placeholder
+    return row.querySelector(attachment) !== node;
+  }
+
+  /** The transcript row a node belongs to, when the DOM is virtualized. */
+  private getRowElement(node: HTMLElement): HTMLElement | null {
+    return node.closest<HTMLElement>(
+      '[data-testid="transcript-row"], [data-index], [data-rs-index], [aria-posinset]'
+    );
+  }
+
+  /**
+   * Build a placeholder for every file attached to a node's row
+   *
+   * @private
+   */
+  private extractAttachmentsHtml(node: HTMLElement): string {
+    const attachment = this.selectors.content.attachment;
+    if (!attachment) {
+      return '';
+    }
+
+    const row = this.getRowElement(node);
+    const cards = row
+      ? Array.from(row.querySelectorAll<HTMLElement>(attachment))
+      : node.matches(attachment)
+        ? [node]
+        : [];
+
+    return cards
+      .map((card) => this.buildAttachmentPlaceholder(readAttachmentLabel(card)))
+      .join('\n');
   }
 
   /**
@@ -743,10 +846,31 @@ export class ClaudeParser extends BaseParser {
    * @override
    * @protected
    */
+  /**
+   * Determine role, treating an attachment card as the user's own turn
+   *
+   * The card carries none of the markers the hybrid strategy looks for, but
+   * an attachment in the transcript is always something the user sent.
+   *
+   * @override
+   * @protected
+   */
+  protected override extractRole(node: HTMLElement): 'user' | 'assistant' {
+    const attachment = this.selectors.content.attachment;
+    if (attachment && node.matches(attachment)) {
+      return 'user';
+    }
+
+    return super.extractRole(node);
+  }
+
   protected override extractContent(node: HTMLElement, role: 'user' | 'assistant'): string {
-    // User messages don't have this complexity, use base implementation
+    // User messages don't have this complexity, use base implementation -
+    // plus a marker for every file attached to the same transcript row.
     if (role === 'user') {
-      return super.extractContent(node, role);
+      return [super.extractContent(node, role), this.extractAttachmentsHtml(node)]
+        .filter((part) => part !== '')
+        .join('\n');
     }
 
     // Querying both in one call keeps them in document order, so a

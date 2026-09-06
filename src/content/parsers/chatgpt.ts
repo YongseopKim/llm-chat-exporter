@@ -256,17 +256,57 @@ export class ChatGPTParser extends BaseParser {
   }
 
   /**
-   * Extract content, falling back to generated images
+   * Extract content, adding attached files and falling back to images
    *
-   * Image-generation turns contain no .markdown element, so the base
-   * implementation returns ''. In that case the generated <img> elements are
-   * the message content.
+   * A user turn whose prompt was long enough to become an attachment holds
+   * nothing the content selectors match — measured on 2026-09-06, such a turn
+   * had a textContent of 23 characters that was just the file name, and all
+   * five user turns in that conversation exported as content: "". The file
+   * tile is listed ahead of the body, which is where the page shows it.
+   *
+   * Image-generation turns contain no .markdown element either. In that case
+   * the generated <img> elements are the message content.
    *
    * @override
    * @protected
    */
   protected override extractContent(node: HTMLElement, role: 'user' | 'assistant'): string {
-    return super.extractContent(node, role) || this.extractImagesHtml(node);
+    const parts = [this.extractAttachmentsHtml(node), super.extractContent(node, role)].filter(
+      (part) => part !== ''
+    );
+
+    return parts.length > 0 ? parts.join('\n') : this.extractImagesHtml(node);
+  }
+
+  /**
+   * Build one placeholder per file tile in the turn
+   *
+   * The tile carries the file name in `aria-label`, and the configured
+   * selector points at the icon inside it, so the name is read from the
+   * nearest labelled ancestor. Tiles are matched by element rather than by
+   * name so two files that happen to share a name both survive.
+   *
+   * @private
+   */
+  private extractAttachmentsHtml(node: HTMLElement): string {
+    const selector = this.selectors.content.attachment;
+    if (!selector) {
+      return '';
+    }
+
+    const tiles = new Set<Element>();
+    node.querySelectorAll(selector).forEach((marker) => {
+      const tile = marker.closest('[aria-label]');
+      if (tile) {
+        tiles.add(tile);
+      }
+    });
+
+    return Array.from(tiles)
+      .map((tile) =>
+        this.buildAttachmentPlaceholder((tile.getAttribute('aria-label') || '').trim())
+      )
+      .join('\n');
   }
 
   /**
@@ -275,13 +315,18 @@ export class ChatGPTParser extends BaseParser {
    * Deliberately does NOT test for the configured content selectors: if
    * ChatGPT renamed those classes this would filter out every message and
    * silently produce an empty export. Instead it asks the weaker, more
-   * durable question — is there any image, or any text that isn't
-   * screen-reader-only scaffolding?
+   * durable question — is there any image, any attached file, or any text
+   * that isn't screen-reader-only scaffolding?
    *
    * @private
    */
   private hasExportableContent(node: HTMLElement): boolean {
     if (node.querySelector('img[src]')) {
+      return true;
+    }
+
+    const attachment = this.selectors.content.attachment;
+    if (attachment && node.querySelector(attachment)) {
       return true;
     }
 

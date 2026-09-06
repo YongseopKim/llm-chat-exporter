@@ -62,6 +62,13 @@ export interface ContentSelectors {
   user: string;
   /** Selector for assistant message content */
   assistant: string;
+  /**
+   * Selector for a marker inside an attached file's card, when the platform
+   * renders one. A pasted prompt long enough to become a file leaves the
+   * message with no readable body, and the file's text is not in the DOM, so
+   * the export names the attachment instead of dropping the turn.
+   */
+  attachment?: string;
 }
 
 /**

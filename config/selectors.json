@@ -14,7 +14,8 @@
         },
         "content": {
           "user": ".whitespace-pre-wrap, .markdown",
-          "assistant": ".markdown"
+          "assistant": ".markdown",
+          "attachment": "[data-testid=\"library-file-icon\"]"
         },
         "generation": "button[aria-label*=\"Stop\"]",
         "role": {
@@ -36,7 +37,8 @@
         },
         "content": {
           "user": ".whitespace-pre-wrap",
-          "assistant": ".standard-markdown, .progressive-markdown"
+          "assistant": ".standard-markdown, .progressive-markdown",
+          "attachment": "[data-testid=\"file-thumbnail\"]"
         },
         "generation": "[data-is-streaming=\"true\"]",
         "role": {

@@ -329,6 +329,16 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 
 **Do not "fix" this**: seeing `content: ""` in a JSONL is expected and does not by itself indicate a parsing bug.
 
+### Attachment-Only Messages Export As A Placeholder (2026-09-06)
+**Decision**: A message whose body is an attached file exports as `[File: <name>]`. The file's text is not recovered.
+**Rationale**:
+- Both ChatGPT and Claude turn a pasted prompt that is long enough into an attachment, and neither puts the file's text in the DOM. Measured 2026-09-06: a ChatGPT turn's whole `textContent` was 23 characters (`나의 말:붙여넣은 마크다운(1).md파일 `), with the content behind a download button; Claude's thumbnail held a 306-character preview ending in `pasted`.
+- Reading the real text would mean downloading the file or opening a modal, which is outside what DOM parsing can promise.
+- Emitting the truncated preview instead would read as the message body and misrepresent the conversation. Naming the attachment is the honest record.
+- The name comes from `aria-label` (ChatGPT: the file tile; Claude: the card's button), located through `content.attachment` in `config/selectors.json`.
+
+**Do not "fix" this**: seeing `[File: ...]` where a long prompt used to be is the expected, complete output - not a parser failure and not something to keep investigating.
+
 ### Configuration-Driven Architecture (Phase 7)
 **Decision**: Externalize all DOM selectors to JSON configuration
 **Benefits**:

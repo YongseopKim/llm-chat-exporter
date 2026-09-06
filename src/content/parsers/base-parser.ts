@@ -378,6 +378,29 @@ export abstract class BaseParser implements ChatParser {
   }
 
   /**
+   * Build the marker that stands in for a file attached to a message
+   *
+   * A prompt pasted at length is turned into an attachment by both ChatGPT
+   * and Claude, and neither puts the file's text in the DOM - ChatGPT shows
+   * only a name and a download button, Claude a preview truncated at a few
+   * hundred characters. The export therefore records that a file was sent and
+   * what it was called, rather than dropping the turn or inventing a body
+   * from a preview.
+   *
+   * @protected
+   * @param label - The attachment's name as the page presents it
+   * @returns HTML the converter emits verbatim, brackets and all
+   */
+  protected buildAttachmentPlaceholder(label: string): string {
+    const paragraph = document.createElement('p');
+    // Marks this as a literal placeholder so the converter does not escape
+    // the brackets into \[File: ...\]
+    paragraph.setAttribute('data-export-placeholder', '');
+    paragraph.textContent = label ? `[File: ${label}]` : '[File]';
+    return paragraph.outerHTML;
+  }
+
+  /**
    * Get conversation title using configured strategy
    *
    * Dispatches to appropriate extraction method based on configuration.
