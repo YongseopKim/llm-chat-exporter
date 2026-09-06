@@ -120,9 +120,23 @@ function wait(ms: number): Promise<void> {
  * already-matched element is ignored, since the export only needs the
  * element to exist to capture it, not to have finished its own rendering.
  *
+ * WHY SILENCE DOES NOT END A STEP THAT IS WAITING FOR A SELECTOR:
+ * The quiet timer used to be armed before anything had mutated, so a step
+ * ended `quietPeriod` ms after the scroll whether or not the list had
+ * rendered the window it was scrolled to. Silence right after a scroll is not
+ * evidence that nothing will mount - it is the normal state of a virtualized
+ * list that has not rendered yet, and a message that mounts a moment later is
+ * unmounted again by the next step, never seen. Measured on 2026-09-06
+ * against a live 16-message claude.ai conversation, this collected 2 of 16.
+ * With a selector the quiet timer is therefore armed only once a matching
+ * element has actually joined or left the set, and `maxWait` is what ends a
+ * step where nothing mounts. Without a selector every mutation is meaningful
+ * and there is nothing specific to wait for, so the old behaviour stands.
+ *
  * @param target - Node to observe for mutations (the scroll container)
- * @param quietPeriod - Ms of silence required before considering it settled
- * @param maxWait - Hard cap on total wait time, in case mutations never stop
+ * @param quietPeriod - Ms of silence required after a change before settling
+ * @param maxWait - Hard cap on total wait time; also the whole wait when
+ *   `selector` is given and nothing matching ever mounts
  * @param selector - When given, scopes "meaningful" to changes in the set of
  *   elements matching this selector rather than any mutation at all
  */
@@ -175,7 +189,9 @@ export function waitForStable(
       characterData: true,
     });
 
-    quietTimer = setTimeout(finish, quietPeriod);
+    if (!selector) {
+      quietTimer = setTimeout(finish, quietPeriod);
+    }
   });
 }
 
@@ -238,6 +254,41 @@ export function findScrollContainer(contentSelector?: string): HTMLElement | nul
 }
 
 /**
+ * Where the topmost mounted message sits in the container's scroll coordinates
+ *
+ * WHY THE WALK IS ANCHORED TO A MESSAGE RATHER THAN COUNTED IN PIXELS:
+ * Stepping a fixed fraction of a viewport assumes the pixels below the step
+ * stay where they were, and in a virtualized list they do not - a row that
+ * mounts replaces an estimated height with its real one, and everything below
+ * shifts. Measured on 2026-09-06 on a live claude.ai conversation, the
+ * container grew from 29592px to 33672px during a single upward walk, which
+ * is enough to carry whole messages past the viewport unseen. Anchoring each
+ * step to the topmost element still mounted re-reads the layout every time,
+ * so a shift is absorbed instead of accumulated. It also stops the walk from
+ * spending dozens of steps inside one very tall message that is already
+ * captured (the largest single turn in that conversation was 30800px, or 37
+ * viewports).
+ *
+ * @param container - The conversation's scroll container
+ * @param contentSelector - Selector for message elements, when known
+ * @returns Offset of the first matching element, or null when there is
+ *   nothing to anchor to (no selector, or nothing mounted)
+ */
+function topmostContentOffset(container: HTMLElement, contentSelector?: string): number | null {
+  if (!contentSelector) {
+    return null;
+  }
+
+  const first = container.querySelector(contentSelector);
+  if (!first) {
+    return null;
+  }
+
+  const offset = first.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  return container.scrollTop + offset;
+}
+
+/**
  * Scroll the conversation back to its beginning so every message is loaded
  *
  * Walks the scroll container upward one viewport at a time, calling `onStep`
@@ -284,8 +335,10 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
     const previousTop = container.scrollTop;
     const previousHeight = container.scrollHeight;
     const pageSize = container.clientHeight || FALLBACK_STEP_PX;
+    const anchorTop = topmostContentOffset(container, contentSelector);
+    const from = anchorTop === null ? previousTop : Math.min(previousTop, anchorTop);
 
-    container.scrollTop = Math.max(0, previousTop - pageSize * STEP_RATIO);
+    container.scrollTop = Math.max(0, from - pageSize * STEP_RATIO);
     await waitForStable(container, quietPeriod, stepDelay, contentSelector);
     await onStep?.();
 

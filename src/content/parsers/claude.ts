@@ -32,6 +32,17 @@ import { captureVisualizationIframe } from '../visualization-capture';
 const PROJECT_LINK_SELECTOR = 'a[href^="/cowork/project/"]';
 
 /**
+ * How many times the conversation may be walked before giving up
+ *
+ * A single walk can come up short when the list renders more slowly than the
+ * walk moves, and `aria-setsize` is what makes that detectable rather than
+ * silent. Retrying is bounded because a message that never mounts will not
+ * start mounting on the fifth attempt, and each pass re-scrolls the whole
+ * conversation.
+ */
+const MAX_COLLECTION_PASSES = 3;
+
+/**
  * Selector for visualization iframes embedded in an assistant message.
  * Scoped to the message node at query time, so page-level iframes
  * (analytics and similar) are never matched.
@@ -173,7 +184,8 @@ export class ClaudeParser extends BaseParser {
    *
    * Overrides base to:
    * 1. Snapshot the mounted messages at every scroll stop (virtualization)
-   * 2. Click the last "Preview contents" button, which loads the artifact panel
+   * 2. Walk the list again while it still holds messages that were missed
+   * 3. Click the last "Preview contents" button, which loads the artifact panel
    */
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     this.collected.clear();
@@ -187,18 +199,50 @@ export class ClaudeParser extends BaseParser {
     this.pendingVisualizationWaitsByNode = new WeakSet();
     this.collectedIndices = new WeakMap();
 
-    await super.loadAllMessages({
-      ...options,
-      onStep: async () => {
-        await this.captureMountedGroupedCitations();
-        await this.captureMountedVisualizations();
-        this.snapshotMountedMessages();
-        await options.onStep?.();
-      },
-    });
+    for (let pass = 0; pass < MAX_COLLECTION_PASSES; pass += 1) {
+      const before = this.collected.size;
+
+      await super.loadAllMessages({
+        ...options,
+        onStep: async () => {
+          await this.captureMountedGroupedCitations();
+          await this.captureMountedVisualizations();
+          this.snapshotMountedMessages();
+          await options.onStep?.();
+        },
+      });
+
+      const expected = this.getAdvertisedLength();
+      if (expected === null || this.collected.size >= expected) {
+        break;
+      }
+      // A pass that gained nothing will gain nothing next time either; stopping
+      // here keeps a genuinely unreachable message from costing another walk.
+      if (this.collected.size === before) {
+        break;
+      }
+    }
 
     this.warnIfIncomplete();
     await this.openLatestArtifact();
+  }
+
+  /**
+   * How many messages the list says the conversation holds
+   *
+   * Claude publishes the conversation's true length on every message
+   * (`aria-setsize`), which is the only signal that distinguishes a short
+   * conversation from a long one that failed to load.
+   *
+   * @private
+   * @returns The advertised length, or null when the DOM does not carry one
+   */
+  private getAdvertisedLength(): number | null {
+    const sizes = Array.from(document.querySelectorAll('[aria-setsize]'), (el) =>
+      Number(el.getAttribute('aria-setsize'))
+    ).filter((n) => Number.isFinite(n) && n > 0);
+
+    return sizes.length === 0 ? null : Math.max(...sizes);
   }
 
   /** Capture each mounted visualization before virtualization can unmount it. */
@@ -538,15 +582,11 @@ export class ClaudeParser extends BaseParser {
    * @private
    */
   private warnIfIncomplete(): void {
-    const sizes = Array.from(document.querySelectorAll('[aria-setsize]'), (el) =>
-      Number(el.getAttribute('aria-setsize'))
-    ).filter((n) => Number.isFinite(n) && n > 0);
-
-    if (sizes.length === 0) {
+    const expected = this.getAdvertisedLength();
+    if (expected === null) {
       return;
     }
 
-    const expected = Math.max(...sizes);
     const collected = this.getMessageNodes().length;
 
     if (collected < expected) {

@@ -145,13 +145,34 @@ describe('waitForStable', () => {
       setTimeout(() => message.appendChild(document.createElement('span')), 100);
 
       const start = Date.now();
+      await waitForStable(container, 40, 150, '.message');
+      const elapsed = Date.now() - start;
+
+      // The inner noise neither settles the wait early nor extends it: with
+      // no message joining the set, the cap is what ends the step.
+      expect(elapsed).toBeGreaterThanOrEqual(145);
+      expect(elapsed).toBeLessThan(400);
+    });
+
+    it('waits for the cap when no message has joined the set yet, instead of settling on the initial silence', async () => {
+      // The regression this guards: a step used to arm the quiet timer before
+      // anything had mutated, so `quietPeriod` ms of silence resolved it and
+      // the scroller moved on. Silence right after a scroll only means the
+      // list has not mounted the new window YET - the message below mounts at
+      // 120ms, long after a 40ms quiet period would have given up on it.
+      const container = document.createElement('div');
+      setTimeout(() => {
+        const message = document.createElement('div');
+        message.className = 'message';
+        container.appendChild(message);
+      }, 120);
+
+      const start = Date.now();
       await waitForStable(container, 40, 1000, '.message');
       const elapsed = Date.now() - start;
 
-      // Should settle on the initial quiet period (~40ms) and ignore the
-      // later noise entirely - if it were still resetting on every mutation
-      // this would run past the last one at 100ms + 40ms quiet = ~140ms
-      expect(elapsed).toBeLessThan(80);
+      expect(elapsed).toBeGreaterThanOrEqual(120);
+      expect(elapsed).toBeLessThan(500);
     });
 
     it('resets the wait when a new message actually joins the matched set', async () => {
@@ -315,6 +336,60 @@ describe('scrollToLoadAll', () => {
       await scrollToLoadAll({ stepDelay: 0, maxSteps: 100 });
 
       expect(warn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('stepping relative to the topmost mounted message', () => {
+    /**
+     * Give an element a fake vertical position, since jsdom has no layout and
+     * reports every rect as zero.
+     */
+    function placeAt(el: Element, top: number): void {
+      el.getBoundingClientRect = () => ({ top, bottom: top, height: 0 }) as DOMRect;
+    }
+
+    beforeEach(() => {
+      document.body.innerHTML = '<div id="chat"><div class="msg"></div></div>';
+    });
+
+    it('jumps to just above the topmost mounted message instead of creeping through it', async () => {
+      // One 30000px-tall message with the viewport near its bottom: stepping
+      // by viewports would spend ~37 steps inside a message already captured.
+      const chat = document.getElementById('chat') as HTMLElement;
+      makeScrollable(chat, { scrollHeight: 100000, clientHeight: 1000, scrollTop: 99000 });
+      placeAt(chat, 0);
+      placeAt(chat.querySelector('.msg') as Element, -30000);
+
+      const seen: number[] = [];
+      await scrollToLoadAll({
+        stepDelay: 0,
+        maxSteps: 3,
+        contentSelector: '.msg',
+        onStep: () => seen.push(chat.scrollTop),
+      });
+
+      // Message top sits at container scroll offset 99000 - 30000 = 69000,
+      // and the step leaves 0.9 of a viewport of overlap above it.
+      expect(seen[1]).toBe(69000 - 900);
+    });
+
+    it('still steps by a viewport when the topmost message is below the viewport', async () => {
+      // Nothing above the viewport has mounted yet, so there is no anchor to
+      // jump to and the walk has to keep moving up on its own.
+      const chat = document.getElementById('chat') as HTMLElement;
+      makeScrollable(chat, { scrollHeight: 100000, clientHeight: 1000, scrollTop: 50000 });
+      placeAt(chat, 0);
+      placeAt(chat.querySelector('.msg') as Element, 20000);
+
+      const seen: number[] = [];
+      await scrollToLoadAll({
+        stepDelay: 0,
+        maxSteps: 3,
+        contentSelector: '.msg',
+        onStep: () => seen.push(chat.scrollTop),
+      });
+
+      expect(seen[1]).toBe(50000 - 900);
     });
   });
 });
