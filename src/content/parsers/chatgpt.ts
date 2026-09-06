@@ -27,8 +27,64 @@ import type { ProjectInfo } from './interface';
  */
 const PROJECT_PATH_PATTERN = /^\/g\/(g-p-[0-9a-f]+)(?:-([^/]+))?\//;
 
-/** ChatGPT's stable, one-based position marker for a visible conversation turn */
+/**
+ * ChatGPT's one-based position marker for a visible conversation turn
+ *
+ * Only a position within what is currently loaded, NOT an identity: loading
+ * older history renumbers every turn already on screen (see `getTurnKey`).
+ */
 const TURN_TEST_ID_PATTERN = /^conversation-turn-(\d+)$/;
+
+/**
+ * Merge a newly observed run of turn keys into the conversation order
+ *
+ * A virtualized walk never sees the whole conversation at once, and the
+ * position markers it does see are not stable, so order has to be recovered
+ * from how the mounted windows overlap: consecutive windows share turns, and
+ * those shared turns pin the new ones into place. Keys that neither sequence
+ * has in common are placed incoming-first, because the walk runs backwards
+ * through the conversation and anything genuinely new is therefore older.
+ *
+ * @param existing - Order recovered so far, oldest first
+ * @param incoming - Keys of one mounted window, in DOM order
+ * @returns The merged order, with each key appearing once
+ */
+function mergeTurnOrder(existing: string[], incoming: string[]): string[] {
+  if (existing.length === 0) {
+    return [...incoming];
+  }
+
+  const known = new Set(existing);
+  const merged: string[] = [];
+  let i = 0;
+  let j = 0;
+
+  while (i < existing.length || j < incoming.length) {
+    if (j >= incoming.length) {
+      merged.push(existing[i]);
+      i += 1;
+    } else if (i >= existing.length || !known.has(incoming[j])) {
+      merged.push(incoming[j]);
+      j += 1;
+    } else if (existing[i] === incoming[j]) {
+      merged.push(existing[i]);
+      i += 1;
+      j += 1;
+    } else {
+      merged.push(existing[i]);
+      i += 1;
+    }
+  }
+
+  const seen = new Set<string>();
+  return merged.filter((key) => {
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
 
 /**
  * ChatGPT platform parser
@@ -38,14 +94,17 @@ const TURN_TEST_ID_PATTERN = /^conversation-turn-(\d+)$/;
  */
 export class ChatGPTParser extends BaseParser {
   /**
-   * Turns captured while walking a virtualized conversation, keyed by their
-   * `conversation-turn-N` position.
+   * Turns captured while walking a virtualized conversation, keyed by an
+   * identity that survives older history loading (see `getTurnKey`).
    *
    * ChatGPT keeps the first and newest turns mounted but unmounts long middle
    * stretches. Detached clones are therefore required: a final DOM read after
    * scrolling cannot recover the turns that disappeared again.
    */
-  private readonly collected = new Map<number, HTMLElement>();
+  private readonly collected = new Map<string, HTMLElement>();
+
+  /** Conversation order of every collected key, oldest first */
+  private order: string[] = [];
 
   constructor() {
     super('chatgpt');
@@ -56,6 +115,7 @@ export class ChatGPTParser extends BaseParser {
    */
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     this.collected.clear();
+    this.order = [];
 
     await super.loadAllMessages({
       ...options,
@@ -112,19 +172,21 @@ export class ChatGPTParser extends BaseParser {
     }
 
     const merged = new Map(this.collected);
+    const liveKeys: string[] = [];
     for (const node of live) {
-      const index = this.getTurnIndex(node);
-      if (index === null) {
+      const key = this.getTurnKey(node);
+      if (key === null) {
         // Unknown DOM shape: returning the live DOM is safer than guessing an
         // order that could silently interleave unrelated messages.
         return live;
       }
-      merged.set(index, node);
+      liveKeys.push(key);
+      merged.set(key, node);
     }
 
-    return Array.from(merged.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([, node]) => node);
+    return mergeTurnOrder(this.order, liveKeys)
+      .map((key) => merged.get(key))
+      .filter((node): node is HTMLElement => node !== undefined);
   }
 
   /** Return currently mounted, non-scaffold ChatGPT turns. */
@@ -132,15 +194,51 @@ export class ChatGPTParser extends BaseParser {
     return super.getMessageNodes().filter((node) => this.hasExportableContent(node));
   }
 
-  /** Clone newly mounted indexed turns before ChatGPT unmounts them again. */
+  /** Clone newly mounted turns before ChatGPT unmounts them again. */
   private snapshotMountedMessages(): void {
+    const keys: string[] = [];
+
     for (const node of this.getLiveMessageNodes()) {
-      const index = this.getTurnIndex(node);
-      if (index === null || this.collected.has(index)) {
-        continue;
+      const key = this.getTurnKey(node);
+      if (key === null) {
+        // Nothing identifies this window, so it cannot be merged into the
+        // order; the live DOM is what getMessageNodes falls back to.
+        return;
       }
-      this.collected.set(index, node.cloneNode(true) as HTMLElement);
+      keys.push(key);
+      if (!this.collected.has(key)) {
+        this.collected.set(key, node.cloneNode(true) as HTMLElement);
+      }
     }
+
+    this.order = mergeTurnOrder(this.order, keys);
+  }
+
+  /**
+   * Identify a turn in a way that survives older history loading
+   *
+   * `conversation-turn-N` counts from the oldest turn currently loaded, so
+   * paging in older history renumbers every turn already on screen. Measured
+   * on 2026-09-06, one message moved from conversation-turn-1 to
+   * conversation-turn-7 mid-export while a different message took over
+   * conversation-turn-1 - keying snapshots on the number stored that message
+   * twice and dropped whatever the old key had held.
+   *
+   * `data-turn-id` is a per-turn identifier that does not move, so it is
+   * preferred. The position is kept only as a fallback for DOM shapes that
+   * carry no id, where it behaves exactly as before.
+   *
+   * @private
+   * @returns A stable key, or null when the node carries neither marker
+   */
+  private getTurnKey(node: HTMLElement): string | null {
+    const id = node.closest('[data-turn-id]')?.getAttribute('data-turn-id')?.trim();
+    if (id) {
+      return `id:${id}`;
+    }
+
+    const index = this.getTurnIndex(node);
+    return index === null ? null : `position:${index}`;
   }
 
   /** Read the numeric suffix from `data-testid="conversation-turn-N"`. */
