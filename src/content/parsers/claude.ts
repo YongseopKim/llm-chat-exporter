@@ -53,6 +53,7 @@ const HISTORY_LOAD_TIMEOUT_MS = 5000;
  * (analytics and similar) are never matched.
  */
 const VISUALIZATION_SELECTOR = 'iframe[title]';
+const PENDING_VISUALIZATION_TEXT = 'Connecting to visualize...';
 const EXPORT_PLACEHOLDER_SELECTOR = '[data-export-placeholder]';
 
 /** Claude renders the extra URLs for labels such as "Source + 2" in a portal popup */
@@ -837,8 +838,21 @@ export class ClaudeParser extends BaseParser {
     // Querying both in one call keeps them in document order, so a
     // visualization stays between the paragraphs it was rendered between.
     const selector = this.selectors.content[role];
-    const elements = node.querySelectorAll(
-      `${selector}, ${VISUALIZATION_SELECTOR}, ${EXPORT_PLACEHOLDER_SELECTOR}`
+    const elements = Array.from(
+      node.querySelectorAll(
+        `${selector}, ${VISUALIZATION_SELECTOR}, ${EXPORT_PLACEHOLDER_SELECTOR}`
+      )
+    );
+    for (const candidate of node.querySelectorAll<HTMLElement>('*')) {
+      if (
+        candidate.childElementCount === 0 &&
+        (candidate.textContent || '').trim() === PENDING_VISUALIZATION_TEXT
+      ) {
+        elements.push(candidate);
+      }
+    }
+    elements.sort((left, right) =>
+      left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
     );
 
     const visibleContent: string[] = [];
@@ -848,6 +862,8 @@ export class ClaudeParser extends BaseParser {
       }
       if (el.tagName === 'IFRAME') {
         visibleContent.push(this.buildVisualizationPlaceholder(el as HTMLIFrameElement));
+      } else if ((el.textContent || '').trim() === PENDING_VISUALIZATION_TEXT) {
+        visibleContent.push(this.buildPlaceholderHtml('Visualization omitted: still connecting'));
       } else if ((el as HTMLElement).matches(EXPORT_PLACEHOLDER_SELECTOR)) {
         visibleContent.push((el as HTMLElement).outerHTML);
       } else {
@@ -931,13 +947,16 @@ export class ClaudeParser extends BaseParser {
     // Titles arrive as "visualize: <description>"; the tool name is noise
     const title = rawTitle.replace(/^visualize:\s*/i, '');
 
+    return this.buildPlaceholderHtml(
+      title ? `Visualization omitted: ${title}` : 'Visualization omitted'
+    );
+  }
+
+  /** Build literal bracketed text that survives Markdown conversion unchanged. */
+  private buildPlaceholderHtml(label: string): string {
     const p = document.createElement('p');
-    // Marks this as a literal placeholder so the converter emits it verbatim
-    // instead of escaping the brackets into \[Visualization: ...\]
     p.setAttribute('data-export-placeholder', '');
-    p.textContent = title
-      ? `[Visualization omitted: ${title}]`
-      : '[Visualization omitted]';
+    p.textContent = `[${label}]`;
     return p.outerHTML;
   }
 

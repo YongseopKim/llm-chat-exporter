@@ -654,6 +654,39 @@ describe('htmlToMarkdown', () => {
     });
   });
 
+  describe('Claude visualization and code UI cleanup', () => {
+    it('should preserve an omission marker for an empty Mermaid container', () => {
+      const html = `
+        <p>Before Mermaid</p>
+        <div data-not-prose><div data-mermaid="true" role="img" aria-label="Mermaid diagram"></div></div>
+        <p>After Mermaid</p>`;
+
+      const markdown = htmlToMarkdown(html);
+
+      expect(markdown).toContain('[Visualization omitted: Mermaid diagram]');
+      expect(markdown.indexOf('Before Mermaid')).toBeLessThan(
+        markdown.indexOf('[Visualization omitted: Mermaid diagram]')
+      );
+      expect(markdown.indexOf('[Visualization omitted: Mermaid diagram]')).toBeLessThan(
+        markdown.indexOf('After Mermaid')
+      );
+    });
+
+    it('should remove Claude copy-button UI without removing its code block', () => {
+      const html = `
+        <div role="group" aria-label="Code">
+          <button aria-label="Copy to clipboard"><span aria-hidden="true">private-icon</span></button>
+          <pre><code>exported code</code></pre>
+        </div>`;
+
+      const markdown = htmlToMarkdown(html);
+
+      expect(markdown).toContain('exported code');
+      expect(markdown).not.toContain('private-icon');
+      expect(markdown).not.toContain('Copy to clipboard');
+    });
+  });
+
   // ============================================================
   // Image Binary Inlining
   // ============================================================

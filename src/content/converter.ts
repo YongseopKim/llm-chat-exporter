@@ -57,6 +57,24 @@ function isMermaidRenderedSvg(svg: Element): boolean {
 function cleanCodeBlockHtml(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
 
+  // Claude may retain only an empty rendered Mermaid container. The source is
+  // unrecoverable, but its position must not disappear from a text export.
+  doc.querySelectorAll<HTMLElement>('[data-mermaid="true"]').forEach((container) => {
+    if ((container.textContent || '').trim() || container.querySelector('pre, code')) {
+      return;
+    }
+    const placeholder = doc.createElement('p');
+    placeholder.setAttribute('data-export-placeholder', '');
+    const title = container.getAttribute('aria-label')?.trim() || 'Mermaid diagram';
+    placeholder.textContent = `[Visualization omitted: ${title}]`;
+    container.replaceWith(placeholder);
+  });
+
+  // Claude puts its copy control beside the code block inside exported prose.
+  doc.querySelectorAll('button[aria-label="Copy to clipboard"]').forEach((button) => {
+    button.remove();
+  });
+
   // Mermaid Preserving Renderer: Remove rendered diagrams and toggle buttons
   // Keep only the original source (.mpr-source)
   doc.querySelectorAll('.mpr-rendered').forEach((el) => el.remove());

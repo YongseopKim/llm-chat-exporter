@@ -231,6 +231,31 @@ describe('ClaudeParser - Edge Cases', () => {
       expect(markdown).not.toContain('data:image/png');
     });
 
+    it('should keep an omission marker for a visualization still connecting', () => {
+      const doc = createDOMFromHTML(`
+        <html><body>
+          <div data-is-streaming="false">
+            <div class="standard-markdown"><h3>Before visualization</h3></div>
+            <div class="contents"><div><span>V</span><div>Connecting to visualize...</div></div></div>
+            <div class="standard-markdown"><h3>After visualization</h3></div>
+          </div>
+        </body></html>
+      `, 'https://claude.ai/chat/abc');
+      global.document = doc as any;
+
+      const parsed = parser.parseNode(parser.getMessageNodes()[0]);
+      const markdown = htmlToMarkdown(parsed.contentHtml);
+
+      expect(markdown).toContain('[Visualization omitted: still connecting]');
+      expect(markdown.indexOf('Before visualization')).toBeLessThan(
+        markdown.indexOf('[Visualization omitted: still connecting]')
+      );
+      expect(markdown.indexOf('[Visualization omitted: still connecting]')).toBeLessThan(
+        markdown.indexOf('After visualization')
+      );
+      expect(markdown).not.toContain('Connecting to visualize...');
+    });
+
     it('should keep the visualization in document order between the text blocks', () => {
       const html = loadEdgeCaseHTML('claude', '002');
       const doc = createDOMFromHTML(`<html><body>${html}</body></html>`);

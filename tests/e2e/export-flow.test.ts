@@ -147,7 +147,14 @@ function getVisualizationClaudeHtml(): string {
             <div data-is-streaming="false">
               <div class="standard-markdown"><p>Before visualization</p></div>
               <div id="visualization-slot"><div>Connecting to visualize...</div></div>
-              <div class="standard-markdown"><p>After visualization</p></div>
+              <div class="standard-markdown">
+                <p>After visualization</p>
+                <div data-not-prose><div data-mermaid="true" role="img" aria-label="Mermaid diagram"></div></div>
+                <div role="group" aria-label="Code">
+                  <button aria-label="Copy to clipboard"><span aria-hidden="true">private-icon</span></button>
+                  <pre><code>ASCII fallback</code></pre>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -377,6 +384,9 @@ describe('E2E: Export Flow', () => {
       expect(assistant.content).toMatch(
         /Before visualization[\s\S]*\[Visualization omitted: Treasury flow\][\s\S]*After visualization/
       );
+      expect(assistant.content).toContain('[Visualization omitted: Mermaid diagram]');
+      expect(assistant.content).toContain('ASCII fallback');
+      expect(assistant.content).not.toContain('private-icon');
       expect(assistant.content).not.toContain('data:image/png');
 
       const repeatedResponse = await exportCurrentPage(browser, VISUALIZATION_CLAUDE_URL);
