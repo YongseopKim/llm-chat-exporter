@@ -104,6 +104,27 @@ describe('ClaudeParser - virtualized conversation', () => {
     expect(parser.getMessageNodes()).toHaveLength(2);
   });
 
+  it('exports a fully mounted conversation without scrolling', async () => {
+    const doc = createDOMFromHTML(
+      `<html><body>
+        ${Array.from({ length: TOTAL }, (_, index) => messageHtml(index)).join('')}
+      </body></html>`,
+      'https://claude.ai/chat/abc'
+    );
+    install(doc);
+    global.window.scrollTo = vi.fn();
+
+    await parser.loadAllMessages({ stepDelay: 0, timeout: 0 });
+
+    expect(global.window.scrollTo).not.toHaveBeenCalled();
+    const messages = parser.getMessageNodes().map((node) => parser.parseNode(node));
+    expect(messages.filter((message) => message.role === 'assistant')).toEqual([
+      expect.objectContaining({ contentHtml: '<p>A1</p>' }),
+      expect.objectContaining({ contentHtml: '<p>A3</p>' }),
+      expect.objectContaining({ contentHtml: '<p>A5</p>' }),
+    ]);
+  });
+
   it('collects every message while scrolling through the list', async () => {
     const { doc } = createVirtualizedDocument();
     install(doc);

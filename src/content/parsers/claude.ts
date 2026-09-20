@@ -123,6 +123,9 @@ export class ClaudeParser extends BaseParser {
   /** Preserve a collected clone's original list index without changing its HTML */
   private collectedIndices = new WeakMap<HTMLElement, number>();
 
+  /** Complete transcript copied once when no virtualized walk is necessary. */
+  private fullyMountedLiveNodes: HTMLElement[] | null = null;
+
   constructor() {
     super('claude');
   }
@@ -140,13 +143,48 @@ export class ClaudeParser extends BaseParser {
     this.citationGroupsByIndex.clear();
     this.citationGroupsByNode = new WeakMap();
     this.collectedIndices = new WeakMap();
+    this.fullyMountedLiveNodes = null;
+
+    await this.loadEarlierMessages(
+      options.timeout === 0 ? 0 : HISTORY_LOAD_TIMEOUT_MS
+    );
+
+    const liveNodes = super.getMessageNodes();
+    const advertisedLength = this.getAdvertisedLength();
+    const allAssistantBodiesReady = liveNodes.every(
+      (node) =>
+        this.extractRole(node) === 'user' ||
+        this.messageContentSize(node) > 0 ||
+        node.querySelector(VISUALIZATION_SELECTOR) !== null
+    );
+    if (
+      !this.isGenerating() &&
+      options.onStep === undefined &&
+      advertisedLength !== null &&
+      liveNodes.length >= advertisedLength &&
+      allAssistantBodiesReady
+    ) {
+      await this.captureMountedGroupedCitations();
+      this.fullyMountedLiveNodes = liveNodes.map((node) => {
+        const clone = node.cloneNode(true) as HTMLElement;
+        const index = this.getListIndex(node);
+        if (index !== null) {
+          this.collectedIndices.set(clone, index);
+        }
+        return clone;
+      });
+      await this.openLatestArtifact();
+      return;
+    }
 
     for (let pass = 0; pass < MAX_COLLECTION_PASSES; pass += 1) {
       const before = this.collected.size;
 
-      await this.loadEarlierMessages(
-        options.timeout === 0 ? 0 : HISTORY_LOAD_TIMEOUT_MS
-      );
+      if (pass > 0) {
+        await this.loadEarlierMessages(
+          options.timeout === 0 ? 0 : HISTORY_LOAD_TIMEOUT_MS
+        );
+      }
 
       await super.loadAllMessages({
         ...options,
@@ -630,6 +668,10 @@ export class ClaudeParser extends BaseParser {
    * @override
    */
   override getMessageNodes(): HTMLElement[] {
+    if (this.fullyMountedLiveNodes) {
+      return this.fullyMountedLiveNodes;
+    }
+
     const live = super.getMessageNodes();
     if (this.collected.size === 0) {
       return live;
