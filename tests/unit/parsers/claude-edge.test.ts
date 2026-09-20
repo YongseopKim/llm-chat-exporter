@@ -11,10 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-  ClaudeParser,
-  waitForPendingVisualization,
-} from '../../../src/content/parsers/claude';
+import { ClaudeParser } from '../../../src/content/parsers/claude';
 import { htmlToMarkdown, inlineImages } from '../../../src/content/converter';
 import { loadEdgeCaseHTML, createDOMFromHTML } from './shared/fixtures';
 
@@ -205,28 +202,8 @@ describe('ClaudeParser - Edge Cases', () => {
       expect(parsed.contentHtml).toContain('Inferred portrait night desk');
     });
 
-    it('observes the pending row until Claude inserts an iframe', async () => {
-      const doc = createDOMFromHTML(`
-        <html><body><div id="message">
-          <div>Connecting to visualize...</div>
-        </div></body></html>
-      `, 'https://claude.ai/chat/abc');
-      global.document = doc as any;
-      global.window = doc.defaultView as any;
-      const node = doc.querySelector<HTMLElement>('#message')!;
-
-      const waiting = waitForPendingVisualization(node, 100);
-      const iframe = doc.createElement('iframe');
-      iframe.title = 'visualize: Inserted later';
-      node.appendChild(iframe);
-
-      await expect(waiting).resolves.toBe('iframe');
-    });
-
-    it('should embed a captured visualization as a PNG at its original position', async () => {
-      const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB';
-      const capture = vi.fn().mockResolvedValue(png);
-      const capturingParser = new ClaudeParser(capture);
+    it('should omit image capture and keep a marker at the original position', async () => {
+      const capturingParser = new ClaudeParser();
       const doc = createDOMFromHTML(`
         <html><body>
           <div data-is-streaming="false">
@@ -244,11 +221,14 @@ describe('ClaudeParser - Edge Cases', () => {
       const parsed = capturingParser.parseNode(capturingParser.getMessageNodes()[0]);
       const markdown = htmlToMarkdown(parsed.contentHtml);
 
-      expect(capture).toHaveBeenCalledOnce();
-      expect(markdown).toContain(`![Yield chain](${png})`);
-      expect(markdown.indexOf('Before picture')).toBeLessThan(markdown.indexOf(png));
-      expect(markdown.indexOf(png)).toBeLessThan(markdown.indexOf('After picture'));
-      expect(markdown).not.toContain('[Visualization:');
+      expect(markdown).toContain('[Visualization omitted: Yield chain]');
+      expect(markdown.indexOf('Before picture')).toBeLessThan(
+        markdown.indexOf('[Visualization omitted:')
+      );
+      expect(markdown.indexOf('[Visualization omitted:')).toBeLessThan(
+        markdown.indexOf('After picture')
+      );
+      expect(markdown).not.toContain('data:image/png');
     });
 
     it('should keep the visualization in document order between the text blocks', () => {
@@ -279,7 +259,7 @@ describe('ClaudeParser - Edge Cases', () => {
       // The MCP tool-name prefix is noise, not part of the title
       expect(md).not.toContain('visualize: Inferred');
       // Brackets must survive unescaped so the marker stays greppable
-      expect(md).toContain('[Visualization: Inferred portrait night desk]');
+      expect(md).toContain('[Visualization omitted: Inferred portrait night desk]');
       expect(md).not.toContain('\\[Visualization');
     });
 
@@ -296,9 +276,9 @@ describe('ClaudeParser - Edge Cases', () => {
         .find((m) => m.role === 'assistant');
 
       expect(assistant).toBeTruthy();
-      expect(assistant!.contentHtml).toContain('[Visualization: Power plant to gpu voltage ladder]');
-      expect(assistant!.contentHtml).toContain('[Visualization: Gpu cluster bandwidth hierarchy]');
-      expect(assistant!.contentHtml).toContain('[Visualization: Training vs inference requirements]');
+      expect(assistant!.contentHtml).toContain('[Visualization omitted: Power plant to gpu voltage ladder]');
+      expect(assistant!.contentHtml).toContain('[Visualization omitted: Gpu cluster bandwidth hierarchy]');
+      expect(assistant!.contentHtml).toContain('[Visualization omitted: Training vs inference requirements]');
     });
 
     it('should not emit a placeholder for messages without a visualization', () => {
@@ -315,103 +295,6 @@ describe('ClaudeParser - Edge Cases', () => {
       expect(parsed.contentHtml).not.toContain('Visualization');
     });
 
-    it('should not wait for a capture when the message has no visualization iframe', async () => {
-      const capture = vi.fn().mockResolvedValue('data:image/png;base64,unused');
-      const capturingParser = new ClaudeParser(capture);
-      const doc = createDOMFromHTML(`
-        <html><body>
-          <div data-is-streaming="false">
-            <div class="standard-markdown"><p>Plain answer</p></div>
-          </div>
-        </body></html>
-      `, 'https://claude.ai/chat/abc');
-      global.document = doc as any;
-      global.window = doc.defaultView as any;
-      global.window.scrollTo = vi.fn();
-
-      await capturingParser.loadAllMessages({ stepDelay: 0, timeout: 0 });
-
-      expect(capture).not.toHaveBeenCalled();
-    });
-
-    it('waits once for a late iframe and then captures it', async () => {
-      const png = 'data:image/png;base64,LATE';
-      const capture = vi.fn().mockResolvedValue(png);
-      const waitForPending = vi.fn(async (node: HTMLElement) => {
-        const iframe = node.ownerDocument.createElement('iframe');
-        iframe.title = 'visualize: Late chart';
-        iframe.src = 'https://fixture.claudemcpcontent.com/mcp_apps';
-        node.appendChild(iframe);
-        return 'iframe' as const;
-      });
-      const capturingParser = new ClaudeParser(capture, waitForPending);
-      const doc = createDOMFromHTML(`
-        <html><body>
-          <div data-is-streaming="false">
-            <div class="standard-markdown"><p>Before</p></div>
-            <div><div>Connecting to visualize...</div></div>
-            <div class="standard-markdown"><p>After</p></div>
-          </div>
-        </body></html>
-      `, 'https://claude.ai/chat/abc');
-      global.document = doc as any;
-      global.window = doc.defaultView as any;
-      global.window.scrollTo = vi.fn();
-
-      await capturingParser.loadAllMessages({ stepDelay: 0, timeout: 0 });
-
-      expect(waitForPending).toHaveBeenCalledOnce();
-      expect(capture).toHaveBeenCalledOnce();
-      const markdown = htmlToMarkdown(
-        capturingParser.parseNode(capturingParser.getMessageNodes()[0]).contentHtml
-      );
-      expect(markdown).toContain(`![Late chart](${png})`);
-    });
-
-    it('does not repeat a failed capture at every scroll step', async () => {
-      const capture = vi.fn().mockResolvedValue(null);
-      const capturingParser = new ClaudeParser(capture);
-      const doc = createDOMFromHTML(`
-        <html><body>
-          <div data-is-streaming="false">
-            <iframe title="visualize: Failed chart"
-              src="https://fixture.claudemcpcontent.com/mcp_apps"></iframe>
-          </div>
-        </body></html>
-      `, 'https://claude.ai/chat/abc');
-      global.document = doc as any;
-      global.window = doc.defaultView as any;
-      global.window.scrollTo = vi.fn();
-
-      await capturingParser.loadAllMessages({ stepDelay: 0, timeout: 0 });
-
-      expect(capture).toHaveBeenCalledOnce();
-    });
-
-    it('exports an explicit placeholder when late iframe creation times out', async () => {
-      const waitForPending = vi.fn().mockResolvedValue('timeout');
-      const capturingParser = new ClaudeParser(vi.fn(), waitForPending);
-      const doc = createDOMFromHTML(`
-        <html><body>
-          <div data-is-streaming="false">
-            <div class="standard-markdown"><p>Before</p></div>
-            <div><div>Connecting to visualize...</div></div>
-            <div class="standard-markdown"><p>After</p></div>
-          </div>
-        </body></html>
-      `, 'https://claude.ai/chat/abc');
-      global.document = doc as any;
-      global.window = doc.defaultView as any;
-      global.window.scrollTo = vi.fn();
-
-      await capturingParser.loadAllMessages({ stepDelay: 0, timeout: 0 });
-      const markdown = htmlToMarkdown(
-        capturingParser.parseNode(capturingParser.getMessageNodes()[0]).contentHtml
-      );
-
-      expect(waitForPending).toHaveBeenCalledOnce();
-      expect(markdown).toContain('[Visualization: loading timed out]');
-    });
   });
 
   describe('claude_001: Real captured project chat page', () => {

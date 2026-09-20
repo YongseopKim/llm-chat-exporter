@@ -26,7 +26,6 @@
 import { BaseParser } from './base-parser';
 import type { ScrollOptions } from '../scroller';
 import type { ArtifactData, ProjectInfo } from './interface';
-import { captureVisualizationIframe } from '../visualization-capture';
 
 /** Selector for the project breadcrumb link shown above chats that belong to a project */
 const PROJECT_LINK_SELECTOR = 'a[href^="/cowork/project/"]';
@@ -54,8 +53,6 @@ const HISTORY_LOAD_TIMEOUT_MS = 5000;
  * (analytics and similar) are never matched.
  */
 const VISUALIZATION_SELECTOR = 'iframe[title]';
-const PENDING_VISUALIZATION_TEXT = 'Connecting to visualize...';
-const PENDING_VISUALIZATION_TIMEOUT_MS = 120000;
 const EXPORT_PLACEHOLDER_SELECTOR = '[data-export-placeholder]';
 
 /** Claude renders the extra URLs for labels such as "Source + 2" in a portal popup */
@@ -76,56 +73,6 @@ interface CitationGroup {
   triggerHref: string;
   triggerText: string;
   sources: CitationSource[];
-}
-
-export type VisualizationCapture = (iframe: HTMLIFrameElement) => Promise<string | null>;
-export type PendingVisualizationWaitResult = 'iframe' | 'resolved' | 'timeout';
-export type PendingVisualizationWait = (
-  node: HTMLElement
-) => Promise<PendingVisualizationWaitResult>;
-
-/** Find Claude's visible pre-iframe connection row without matching its ancestors. */
-function findPendingVisualizationLabel(node: HTMLElement): HTMLElement | null {
-  return (
-    Array.from(node.querySelectorAll<HTMLElement>('*')).find(
-      (element) =>
-        element.childElementCount === 0 &&
-        (element.textContent || '').trim() === PENDING_VISUALIZATION_TEXT
-    ) || null
-  );
-}
-
-/** Wait once for Claude to replace its connection row with a visualization iframe. */
-export function waitForPendingVisualization(
-  node: HTMLElement,
-  timeoutMs = PENDING_VISUALIZATION_TIMEOUT_MS
-): Promise<PendingVisualizationWaitResult> {
-  if (node.querySelector(VISUALIZATION_SELECTOR)) {
-    return Promise.resolve('iframe');
-  }
-  if (!findPendingVisualizationLabel(node)) {
-    return Promise.resolve('resolved');
-  }
-
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (result: PendingVisualizationWaitResult) => {
-      if (settled) return;
-      settled = true;
-      observer.disconnect();
-      window.clearTimeout(timer);
-      resolve(result);
-    };
-    const observer = new MutationObserver(() => {
-      if (node.querySelector(VISUALIZATION_SELECTOR)) {
-        finish('iframe');
-      } else if (!findPendingVisualizationLabel(node)) {
-        finish('resolved');
-      }
-    });
-    const timer = window.setTimeout(() => finish('timeout'), timeoutMs);
-    observer.observe(node, { childList: true, characterData: true, subtree: true });
-  });
 }
 
 /**
@@ -176,24 +123,7 @@ export class ClaudeParser extends BaseParser {
   /** Preserve a collected clone's original list index without changing its HTML */
   private collectedIndices = new WeakMap<HTMLElement, number>();
 
-  /** Captured PNG data URIs, in iframe order, for indexed messages. */
-  private readonly visualizationCapturesByIndex = new Map<number, string[]>();
-
-  /** Captured PNG data URIs for non-virtualized messages without list indices. */
-  private visualizationCapturesByNode = new WeakMap<HTMLElement, string[]>();
-
-  /** Positions already attempted, including failures, so scroll steps cannot retry forever. */
-  private readonly visualizationAttemptsByIndex = new Map<number, Set<number>>();
-  private visualizationAttemptsByNode = new WeakMap<HTMLElement, Set<number>>();
-
-  /** Messages whose pre-iframe connection row has already been awaited. */
-  private readonly pendingVisualizationWaitsByIndex = new Set<number>();
-  private pendingVisualizationWaitsByNode = new WeakSet<HTMLElement>();
-
-  constructor(
-    private readonly captureVisualization: VisualizationCapture = captureVisualizationIframe,
-    private readonly waitForPending: PendingVisualizationWait = waitForPendingVisualization
-  ) {
+  constructor() {
     super('claude');
   }
 
@@ -208,13 +138,7 @@ export class ClaudeParser extends BaseParser {
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     this.collected.clear();
     this.citationGroupsByIndex.clear();
-    this.visualizationCapturesByIndex.clear();
-    this.visualizationAttemptsByIndex.clear();
-    this.pendingVisualizationWaitsByIndex.clear();
     this.citationGroupsByNode = new WeakMap();
-    this.visualizationCapturesByNode = new WeakMap();
-    this.visualizationAttemptsByNode = new WeakMap();
-    this.pendingVisualizationWaitsByNode = new WeakSet();
     this.collectedIndices = new WeakMap();
 
     for (let pass = 0; pass < MAX_COLLECTION_PASSES; pass += 1) {
@@ -228,7 +152,6 @@ export class ClaudeParser extends BaseParser {
         ...options,
         onStep: async () => {
           await this.captureMountedGroupedCitations();
-          await this.captureMountedVisualizations();
           this.snapshotMountedMessages();
           await options.onStep?.();
         },
@@ -313,91 +236,6 @@ export class ClaudeParser extends BaseParser {
     ).filter((n) => Number.isFinite(n) && n > 0);
 
     return sizes.length === 0 ? null : Math.max(...sizes);
-  }
-
-  /** Capture each mounted visualization before virtualization can unmount it. */
-  private async captureMountedVisualizations(): Promise<void> {
-    for (const node of super.getMessageNodes()) {
-      if (this.extractRole(node) === 'user') {
-        continue;
-      }
-
-      let iframes = Array.from(
-        node.querySelectorAll<HTMLIFrameElement>(VISUALIZATION_SELECTOR)
-      );
-      const index = this.getListIndex(node);
-
-      if (
-        iframes.length === 0 &&
-        findPendingVisualizationLabel(node) &&
-        !this.hasWaitedForPendingVisualization(node, index)
-      ) {
-        this.markPendingVisualizationWaited(node, index);
-        const result = await this.waitForPending(node);
-        if (result === 'timeout') {
-          this.markPendingVisualizationTimedOut(node);
-        }
-        iframes = Array.from(
-          node.querySelectorAll<HTMLIFrameElement>(VISUALIZATION_SELECTOR)
-        );
-      }
-
-      if (iframes.length === 0) {
-        continue;
-      }
-
-      const captures =
-        index === null
-          ? this.visualizationCapturesByNode.get(node) || []
-          : this.visualizationCapturesByIndex.get(index) || [];
-      const attempts =
-        index === null
-          ? this.visualizationAttemptsByNode.get(node) || new Set<number>()
-          : this.visualizationAttemptsByIndex.get(index) || new Set<number>();
-
-      for (let position = 0; position < iframes.length; position += 1) {
-        if (attempts.has(position)) {
-          continue;
-        }
-        attempts.add(position);
-        const png = await this.captureVisualization(iframes[position]);
-        if (png) {
-          captures[position] = png;
-        }
-      }
-
-      if (index === null) {
-        this.visualizationCapturesByNode.set(node, captures);
-        this.visualizationAttemptsByNode.set(node, attempts);
-      } else {
-        this.visualizationCapturesByIndex.set(index, captures);
-        this.visualizationAttemptsByIndex.set(index, attempts);
-      }
-    }
-  }
-
-  private hasWaitedForPendingVisualization(
-    node: HTMLElement,
-    index: number | null
-  ): boolean {
-    return index === null
-      ? this.pendingVisualizationWaitsByNode.has(node)
-      : this.pendingVisualizationWaitsByIndex.has(index);
-  }
-
-  private markPendingVisualizationWaited(node: HTMLElement, index: number | null): void {
-    if (index === null) {
-      this.pendingVisualizationWaitsByNode.add(node);
-    } else {
-      this.pendingVisualizationWaitsByIndex.add(index);
-    }
-  }
-
-  private markPendingVisualizationTimedOut(node: HTMLElement): void {
-    const label = findPendingVisualizationLabel(node);
-    if (!label) return;
-    label.setAttribute('data-export-placeholder', '');
-    label.textContent = '[Visualization: loading timed out]';
   }
 
   /**
@@ -967,7 +805,7 @@ export class ClaudeParser extends BaseParser {
         continue;
       }
       if (el.tagName === 'IFRAME') {
-        visibleContent.push(this.buildVisualizationContent(node, el as HTMLIFrameElement));
+        visibleContent.push(this.buildVisualizationPlaceholder(el as HTMLIFrameElement));
       } else if ((el as HTMLElement).matches(EXPORT_PLACEHOLDER_SELECTOR)) {
         visibleContent.push((el as HTMLElement).outerHTML);
       } else {
@@ -981,27 +819,6 @@ export class ClaudeParser extends BaseParser {
     }
 
     return visibleContent.join('\n');
-  }
-
-  /** Emit the captured PNG when available, otherwise retain the explicit marker. */
-  private buildVisualizationContent(node: HTMLElement, iframe: HTMLIFrameElement): string {
-    const position = Array.from(node.querySelectorAll(VISUALIZATION_SELECTOR)).indexOf(iframe);
-    const index = this.getListIndex(node) ?? this.collectedIndices.get(node) ?? null;
-    const captures =
-      index === null
-        ? this.visualizationCapturesByNode.get(node)
-        : this.visualizationCapturesByIndex.get(index);
-    const png = position >= 0 ? captures?.[position] : undefined;
-    if (!png) {
-      return this.buildVisualizationPlaceholder(iframe);
-    }
-
-    const rawTitle = iframe.getAttribute('title')?.trim() || '';
-    const title = rawTitle.replace(/^visualize:\s*/i, '') || 'Visualization';
-    const image = document.createElement('img');
-    image.setAttribute('src', png);
-    image.setAttribute('alt', title);
-    return image.outerHTML;
   }
 
   /** Return popup URLs that do not already exist anywhere in the message. */
@@ -1061,11 +878,9 @@ export class ClaudeParser extends BaseParser {
   /**
    * Build a placeholder standing in for a visualization iframe
    *
-   * Claude renders visualizations inside a sandboxed cross-origin iframe
-   * (<hash>.claudemcpcontent.com), so `contentDocument` is null. The exporter
-   * normally captures its rendered pixels through captureVisibleTab(). This
-   * marker remains the honest fallback when the iframe is clipped, oversized,
-   * still loading, or the active tab changes during export.
+   * Claude renders visualizations inside a sandboxed cross-origin iframe.
+   * Images are deliberately not captured or embedded; callers request ASCII
+   * art when the visual information itself must survive a text export.
    *
    * @private
    */
@@ -1078,7 +893,9 @@ export class ClaudeParser extends BaseParser {
     // Marks this as a literal placeholder so the converter emits it verbatim
     // instead of escaping the brackets into \[Visualization: ...\]
     p.setAttribute('data-export-placeholder', '');
-    p.textContent = title ? `[Visualization: ${title}]` : '[Visualization]';
+    p.textContent = title
+      ? `[Visualization omitted: ${title}]`
+      : '[Visualization omitted]';
     return p.outerHTML;
   }
 

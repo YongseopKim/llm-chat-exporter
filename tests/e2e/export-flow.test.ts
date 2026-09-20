@@ -205,29 +205,6 @@ async function exportCurrentPage(
   }, expectedUrl) as ExportResponse;
 }
 
-async function stubVisibleTabCapture(browser: Browser, dataUrls: string[]): Promise<void> {
-  const serviceWorkerTarget = browser.targets().find(
-    (target) => target.type() === 'service_worker' && target.url().startsWith('chrome-extension://')
-  );
-  const serviceWorker = await serviceWorkerTarget?.worker();
-  if (!serviceWorker) {
-    throw new Error('Extension service worker was not available');
-  }
-
-  await serviceWorker.evaluate((capturedTabs) => {
-    let captureIndex = 0;
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-      if (message.type !== 'CAPTURE_VISIBLE_TAB') {
-        return undefined;
-      }
-      const dataUrl = capturedTabs[Math.min(captureIndex, capturedTabs.length - 1)];
-      captureIndex += 1;
-      sendResponse({ success: true, dataUrl });
-      return true;
-    });
-  }, dataUrls);
-}
-
 describe('E2E: Export Flow', () => {
   let browser: Browser;
   let page: Page;
@@ -357,7 +334,7 @@ describe('E2E: Export Flow', () => {
     }
   }, 30000);
 
-  it('should embed a rendered Claude visualization as an in-place PNG', async () => {
+  it('should mark a Claude visualization as omitted without embedding image data', async () => {
     await page.setRequestInterception(true);
     const intercept = (request: HTTPRequest) => {
       if (request.isNavigationRequest() && request.url() === VISUALIZATION_CLAUDE_URL) {
@@ -388,30 +365,6 @@ describe('E2E: Export Flow', () => {
       await page.waitForFunction('window.__visualizationReady === true');
       await page.waitForSelector('iframe[title]');
 
-      await page.$eval('iframe[title]', (iframe) => {
-        (iframe as HTMLElement).style.visibility = 'hidden';
-      });
-      const blankScreenshot = await page.screenshot({ encoding: 'base64' });
-      await page.$eval('iframe[title]', (iframe) => {
-        (iframe as HTMLElement).style.visibility = 'visible';
-      });
-      const renderedScreenshot = await page.screenshot({ encoding: 'base64' });
-      await page.evaluate((frameUrl) => {
-        const slot = document.getElementById('visualization-slot')!;
-        slot.innerHTML = '<div>Connecting to visualize...</div>';
-        setTimeout(() => {
-          slot.innerHTML = `<iframe title="visualize: Treasury flow" src="${frameUrl}"></iframe>`;
-        }, 400);
-        setTimeout(() => {
-          window.scrollTo(0, document.body.scrollHeight);
-        }, 1000);
-      }, VISUALIZATION_FRAME_URL);
-      await stubVisibleTabCapture(browser, [
-        `data:image/png;base64,${blankScreenshot}`,
-        `data:image/png;base64,${blankScreenshot}`,
-        `data:image/png;base64,${renderedScreenshot}`,
-        `data:image/png;base64,${renderedScreenshot}`,
-      ]);
       const response = await exportCurrentPage(browser, VISUALIZATION_CLAUDE_URL);
 
       expect(response.success, response.error).toBe(true);
@@ -422,13 +375,14 @@ describe('E2E: Export Flow', () => {
       const assistant = records.find((record) => record.role === 'assistant');
 
       expect(assistant.content).toMatch(
-        /Before visualization[\s\S]*!\[Treasury flow\]\(data:image\/png;base64,[A-Za-z0-9+/=]+\)[\s\S]*After visualization/
+        /Before visualization[\s\S]*\[Visualization omitted: Treasury flow\][\s\S]*After visualization/
       );
-      expect(assistant.content).not.toContain('[Visualization:');
+      expect(assistant.content).not.toContain('data:image/png');
 
       const repeatedResponse = await exportCurrentPage(browser, VISUALIZATION_CLAUDE_URL);
       expect(repeatedResponse.success, repeatedResponse.error).toBe(true);
-      expect(repeatedResponse.data).toContain('data:image/png;base64,');
+      expect(repeatedResponse.data).toContain('[Visualization omitted: Treasury flow]');
+      expect(repeatedResponse.data).not.toContain('data:image/png');
     } finally {
       page.off('request', intercept);
       await page.setRequestInterception(false);

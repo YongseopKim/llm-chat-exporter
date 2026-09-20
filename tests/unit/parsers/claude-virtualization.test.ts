@@ -335,10 +335,8 @@ describe('ClaudeParser - virtualized conversation', () => {
     await expect(parser.loadAllMessages({ stepDelay: 0 })).rejects.toThrow(/generating/i);
   });
 
-  it('keeps a captured visualization after its live message is unmounted', async () => {
-    const png = 'data:image/png;base64,VklSVFVBTElaRUQ=';
-    const capture = vi.fn().mockResolvedValue(png);
-    parser = new ClaudeParser(capture);
+  it('keeps an omitted-visualization marker after its live message is unmounted', async () => {
+    parser = new ClaudeParser();
     const doc = createDOMFromHTML(
       `<html><body>
         <div data-rs-index="0" data-index="0">
@@ -361,14 +359,12 @@ describe('ClaudeParser - virtualized conversation', () => {
 
     const [collected] = parser.getMessageNodes();
     const markdown = htmlToMarkdown(parser.parseNode(collected).contentHtml);
-    expect(markdown).toContain(`![Captured chart](${png})`);
-    expect(capture).toHaveBeenCalledOnce();
+    expect(markdown).toContain('[Visualization omitted: Captured chart]');
+    expect(markdown).not.toContain('data:image/png');
   });
 
   it('replaces an early snapshot when a visualization iframe mounts later', async () => {
-    const png = 'data:image/png;base64,TEFURV9NT1VOVA==';
-    const capture = vi.fn().mockResolvedValue(png);
-    parser = new ClaudeParser(capture);
+    parser = new ClaudeParser();
     const doc = createDOMFromHTML(
       `<html><body>
         <div data-rs-index="0" data-index="0">
@@ -402,14 +398,12 @@ describe('ClaudeParser - virtualized conversation', () => {
 
     const [collected] = parser.getMessageNodes();
     const markdown = htmlToMarkdown(parser.parseNode(collected).contentHtml);
-    expect(capture).toHaveBeenCalledOnce();
-    expect(markdown).toContain(`![Mounted later](${png})`);
+    expect(markdown).toContain('[Visualization omitted: Mounted later]');
+    expect(markdown).not.toContain('data:image/png');
   });
 
   it('keeps the richer snapshot when the live message loses its visualization iframe', async () => {
-    const png = 'data:image/png;base64,UFJFU0VSVkVE';
-    const capture = vi.fn().mockResolvedValue(png);
-    parser = new ClaudeParser(capture);
+    parser = new ClaudeParser();
     const doc = createDOMFromHTML(
       `<html><body>
         <div data-rs-index="0" data-index="0">
@@ -432,7 +426,7 @@ describe('ClaudeParser - virtualized conversation', () => {
 
     const [collected] = parser.getMessageNodes();
     const markdown = htmlToMarkdown(parser.parseNode(collected).contentHtml);
-    expect(capture).toHaveBeenCalledOnce();
-    expect(markdown).toContain(`![Preserved chart](${png})`);
+    expect(markdown).toContain('[Visualization omitted: Preserved chart]');
+    expect(markdown).not.toContain('data:image/png');
   });
 });

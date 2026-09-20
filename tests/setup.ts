@@ -22,7 +22,6 @@ global.chrome = {
   tabs: {
     query: vi.fn(),
     sendMessage: vi.fn(),
-    captureVisibleTab: vi.fn(),
   },
   scripting: {
     executeScript: vi.fn(),
