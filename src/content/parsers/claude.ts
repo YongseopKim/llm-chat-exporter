@@ -403,9 +403,8 @@ export class ClaudeParser extends BaseParser {
   /**
    * Copy every currently mounted message into the collection
    *
-   * Called at each scroll stop. Messages already collected are left alone, so
-   * the first (most complete) capture of a message wins and re-visiting a
-   * scroll position costs nothing.
+   * Called at each scroll stop. Claude can mount the message shell before its
+   * markdown body, so a later, richer rendering must replace an early clone.
    *
    * @private
    */
@@ -419,7 +418,13 @@ export class ClaudeParser extends BaseParser {
       if (existing) {
         const existingVisualizations = existing.querySelectorAll(VISUALIZATION_SELECTOR).length;
         const liveVisualizations = node.querySelectorAll(VISUALIZATION_SELECTOR).length;
-        if (liveVisualizations <= existingVisualizations) {
+        const existingContentSize = this.messageContentSize(existing);
+        const liveContentSize = this.messageContentSize(node);
+        if (
+          liveVisualizations < existingVisualizations ||
+          (liveVisualizations === existingVisualizations &&
+            liveContentSize <= existingContentSize)
+        ) {
           continue;
         }
       }
@@ -427,6 +432,20 @@ export class ClaudeParser extends BaseParser {
       this.collectedIndices.set(clone, index);
       this.collected.set(index, clone);
     }
+  }
+
+  /** Measure only exportable message bodies, excluding controls and status UI. */
+  private messageContentSize(node: HTMLElement): number {
+    const role = this.extractRole(node);
+    const selector = this.selectors.content[role];
+    if (!selector) {
+      return 0;
+    }
+
+    return Array.from(node.querySelectorAll<HTMLElement>(selector)).reduce(
+      (size, content) => size + content.innerHTML.length,
+      0
+    );
   }
 
   /**
@@ -786,12 +805,16 @@ export class ClaudeParser extends BaseParser {
         return live;
       }
       const snapshot = merged.get(index);
-      if (
-        snapshot &&
-        snapshot.querySelectorAll(VISUALIZATION_SELECTOR).length >
-          node.querySelectorAll(VISUALIZATION_SELECTOR).length
-      ) {
-        continue;
+      if (snapshot) {
+        const snapshotVisualizations = snapshot.querySelectorAll(VISUALIZATION_SELECTOR).length;
+        const liveVisualizations = node.querySelectorAll(VISUALIZATION_SELECTOR).length;
+        if (
+          snapshotVisualizations > liveVisualizations ||
+          (snapshotVisualizations === liveVisualizations &&
+            this.messageContentSize(snapshot) > this.messageContentSize(node))
+        ) {
+          continue;
+        }
       }
       merged.set(index, node);
     }

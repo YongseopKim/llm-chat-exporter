@@ -145,6 +145,40 @@ describe('ClaudeParser - virtualized conversation', () => {
     expect(parser.getMessageNodes()).toHaveLength(TOTAL);
   });
 
+  it('replaces an empty snapshot when assistant content renders before unmount', async () => {
+    const doc = createDOMFromHTML(
+      `<html><body>
+        <div data-rs-index="0" data-index="0">
+          <div role="article" aria-setsize="1" aria-posinset="1">
+            <div data-is-streaming="false">
+              <div class="standard-markdown"></div>
+            </div>
+          </div>
+        </div>
+      </body></html>`,
+      'https://claude.ai/chat/abc'
+    );
+    install(doc);
+    global.window.scrollTo = vi.fn();
+    let steps = 0;
+
+    await parser.loadAllMessages({
+      stepDelay: 0,
+      timeout: 0,
+      onStep: () => {
+        steps += 1;
+        if (steps === 1) {
+          doc.querySelector('.standard-markdown')!.innerHTML = '<p>Rendered later</p>';
+        } else {
+          doc.querySelector('[data-index="0"]')?.remove();
+        }
+      },
+    });
+
+    const [assistant] = parser.getMessageNodes();
+    expect(parser.parseNode(assistant).contentHtml).toBe('<p>Rendered later</p>');
+  });
+
   it('returns collected messages in list order, not collection order', async () => {
     const { doc } = createVirtualizedDocument();
     install(doc);
