@@ -113,6 +113,38 @@ describe('ClaudeParser - virtualized conversation', () => {
     expect(parser.getMessageNodes()).toHaveLength(TOTAL);
   });
 
+  it('loads earlier messages exposed behind Claude\'s history button', async () => {
+    const doc = createDOMFromHTML(
+      `<html><body>
+        <div role="feed" aria-label="Chat messages">
+          <button>Load earlier messages</button>
+          <div id="messages">
+            ${messageHtml(2)}
+            ${messageHtml(3)}
+            ${messageHtml(4)}
+            ${messageHtml(5)}
+          </div>
+        </div>
+      </body></html>`,
+      'https://claude.ai/chat/abc'
+    );
+    install(doc);
+    global.window.scrollTo = vi.fn();
+
+    const button = doc.querySelector('button') as HTMLButtonElement;
+    button.addEventListener('click', () => {
+      const messages = doc.getElementById('messages') as HTMLElement;
+      messages.innerHTML = Array.from({ length: TOTAL }, (_, index) => messageHtml(index)).join(
+        ''
+      );
+      button.remove();
+    });
+
+    await parser.loadAllMessages({ stepDelay: 0, timeout: 0 });
+
+    expect(parser.getMessageNodes()).toHaveLength(TOTAL);
+  });
+
   it('returns collected messages in list order, not collection order', async () => {
     const { doc } = createVirtualizedDocument();
     install(doc);

@@ -42,6 +42,12 @@ const PROJECT_LINK_SELECTOR = 'a[href^="/cowork/project/"]';
  */
 const MAX_COLLECTION_PASSES = 3;
 
+/** Claude initially hides older turns behind this button on some conversations. */
+const LOAD_EARLIER_MESSAGES_LABEL = 'Load earlier messages';
+
+/** Bound one history-page request without making ordinary exports wait. */
+const HISTORY_LOAD_TIMEOUT_MS = 5000;
+
 /**
  * Selector for visualization iframes embedded in an assistant message.
  * Scoped to the message node at query time, so page-level iframes
@@ -214,6 +220,10 @@ export class ClaudeParser extends BaseParser {
     for (let pass = 0; pass < MAX_COLLECTION_PASSES; pass += 1) {
       const before = this.collected.size;
 
+      await this.loadEarlierMessages(
+        options.timeout === 0 ? 0 : HISTORY_LOAD_TIMEOUT_MS
+      );
+
       await super.loadAllMessages({
         ...options,
         onStep: async () => {
@@ -237,6 +247,54 @@ export class ClaudeParser extends BaseParser {
 
     this.warnIfIncomplete();
     await this.openLatestArtifact();
+  }
+
+  /**
+   * Ask Claude to mount the older page of a partially loaded transcript.
+   *
+   * This is separate from virtualized scrolling: the button can be visible
+   * while the conversation scroller is already at its top. Scrolling cannot
+   * cross that server-side pagination boundary, so the old turns never enter
+   * the DOM unless the button is activated.
+   */
+  private async loadEarlierMessages(timeoutMs: number): Promise<boolean> {
+    const button = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+      (candidate) =>
+        (candidate.getAttribute('aria-label') || candidate.textContent || '').trim() ===
+        LOAD_EARLIER_MESSAGES_LABEL
+    );
+
+    if (!button) {
+      return false;
+    }
+
+    const before = super.getMessageNodes().length;
+    await new Promise<void>((resolve) => {
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        observer.disconnect();
+        window.clearTimeout(timer);
+        resolve();
+      };
+      const observer = new MutationObserver(() => {
+        if (super.getMessageNodes().length > before) {
+          finish();
+        }
+      });
+      const timer = window.setTimeout(finish, timeoutMs);
+
+      observer.observe(document.body, { childList: true, subtree: true });
+      button.click();
+
+      // Covers synchronous DOM replacement in tests and any future client.
+      if (super.getMessageNodes().length > before || timeoutMs === 0) {
+        finish();
+      }
+    });
+
+    return true;
   }
 
   /**
