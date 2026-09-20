@@ -13,6 +13,9 @@ import { ParserFactory } from './parsers/factory';
 import { scrollToLoadAll } from './scroller';
 import { buildJsonl } from './serializer';
 import { getPlatformName } from '../utils/background-utils';
+import { exportMessageType, pingMessageType } from '../content-script-loader';
+
+declare const __LLM_CHAT_EXPORTER_BUILD_ID__: string;
 
 interface ExportMessage {
   type: 'EXPORT_CONVERSATION';
@@ -33,6 +36,7 @@ interface ExportResponse {
 declare global {
   interface Window {
     __llmChatExporterListenerInstalled__?: boolean;
+    __llmChatExporterBuilds__?: Set<string>;
   }
 }
 
@@ -101,20 +105,25 @@ async function exportConversation(): Promise<string> {
 /**
  * Message listener - handles export requests from background script
  */
-if (!window.__llmChatExporterListenerInstalled__) {
+window.__llmChatExporterBuilds__ ??= new Set<string>();
+
+if (!window.__llmChatExporterBuilds__.has(__LLM_CHAT_EXPORTER_BUILD_ID__)) {
+  window.__llmChatExporterBuilds__.add(__LLM_CHAT_EXPORTER_BUILD_ID__);
   window.__llmChatExporterListenerInstalled__ = true;
+  const currentPingType = pingMessageType(__LLM_CHAT_EXPORTER_BUILD_ID__);
+  const currentExportType = exportMessageType(__LLM_CHAT_EXPORTER_BUILD_ID__);
   chrome.runtime.onMessage.addListener(
     (
       message: ContentMessage,
       _sender: chrome.runtime.MessageSender,
       sendResponse: (response: ExportResponse) => void
     ) => {
-      if (message.type === 'PING_EXPORTER') {
+      if (message.type === currentPingType || message.type === 'PING_EXPORTER') {
         sendResponse({ success: true });
         return false;
       }
 
-      if (message.type === 'EXPORT_CONVERSATION') {
+      if (message.type === currentExportType || message.type === 'EXPORT_CONVERSATION') {
         console.log('LLM Chat Exporter: Export request received');
 
         exportConversation()

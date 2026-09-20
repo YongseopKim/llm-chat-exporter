@@ -1,6 +1,7 @@
 import * as esbuild from 'esbuild';
 
 const isWatch = process.argv.includes('--watch');
+const buildId = `${Date.now()}`;
 
 const commonOptions = {
   bundle: true,
@@ -8,6 +9,9 @@ const commonOptions = {
   sourcemap: isWatch,
   target: ['chrome90'],
   format: 'esm',
+  define: {
+    __LLM_CHAT_EXPORTER_BUILD_ID__: JSON.stringify(buildId),
+  },
 };
 
 async function build() {

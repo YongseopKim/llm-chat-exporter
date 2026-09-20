@@ -4,12 +4,12 @@
  */
 
 import { isSupportedUrl, generateFilename } from './utils/background-utils';
+import {
+  executeVersionedContentScript,
+  type ExportResponse,
+} from './content-script-loader';
 
-interface ExportResponse {
-  success: boolean;
-  data?: string;
-  error?: string;
-}
+declare const __LLM_CHAT_EXPORTER_BUILD_ID__: string;
 
 /**
  * JSONL 데이터의 첫 줄(메타데이터)에서 title 추출
@@ -44,20 +44,15 @@ async function downloadJsonl(data: string, url: string): Promise<void> {
  * Content Script를 동적으로 주입하고 실행
  */
 async function executeContentScript(tabId: number): Promise<ExportResponse> {
-  try {
-    await chrome.tabs.sendMessage(tabId, { type: 'PING_EXPORTER' });
-  } catch {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['dist/content.js'],
-    });
-  }
-
-  const response = await chrome.tabs.sendMessage(tabId, {
-    type: 'EXPORT_CONVERSATION',
+  return executeVersionedContentScript(tabId, __LLM_CHAT_EXPORTER_BUILD_ID__, {
+    sendMessage: (targetTabId, message) => chrome.tabs.sendMessage(targetTabId, message),
+    inject: async (targetTabId) => {
+      await chrome.scripting.executeScript({
+        target: { tabId: targetTabId },
+        files: ['dist/content.js'],
+      });
+    },
   });
-
-  return response as ExportResponse;
 }
 
 /**
