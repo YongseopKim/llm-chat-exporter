@@ -26,6 +26,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Phase 7: Configuration-Driven Architecture (2025-11-29)
 - ⏳ Phase 6: Documentation & Deployment (optional)
 
+## Version Up
+
+When the user says "version up" (버전 업), bump the **patch** version by default unless they name minor/major:
+1. `npm version patch --no-git-tag-version` (updates `package.json` + `package-lock.json`)
+2. Bump the patch number of `"version"` in `manifest.json` (the version Chrome shows)
+3. `npm install && npm run build && npm test`
+4. Tell the user to reload the extension at `chrome://extensions/`
+
+Note: `manifest.json` (0.1.x) and `package.json` (1.0.x) have separate version lines; bump each by one patch.
+
 ## Development Commands
 
 ### Build System
