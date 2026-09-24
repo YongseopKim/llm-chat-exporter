@@ -1,6 +1,6 @@
 {
   "name": "llm-chat-exporter",
-  "version": "1.0.1",
+  "version": "1.1.1",
   "description": "> ChatGPT, Claude, Gemini 웹 UI의 대화를 단축키 하나로 로컬에 아카이빙하는 Chrome Extension",
   "main": "index.js",
   "directories": {

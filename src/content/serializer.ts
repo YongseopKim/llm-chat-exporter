@@ -15,7 +15,8 @@ import type { ParsedMessage, ExportMetadata, ExportedMessage, ArtifactData } fro
 /**
  * Build JSONL string from parsed messages and metadata
  *
- * @param parsedMessages - Array of messages with HTML content
+ * @param parsedMessages - Messages with HTML content (converted here) or
+ *   Markdown content (written verbatim)
  * @param metadata - Export metadata (platform, URL, title, etc.)
  * @returns Promise resolving to the JSONL string with metadata line + message lines
  *
@@ -44,10 +45,9 @@ export async function buildJsonl(
   // Lines 2-N: Messages
   const messageLines = await Promise.all(
     parsedMessages.map(async (pm) => {
-      const inlinedHtml = await inlineImages(pm.contentHtml);
       const message: ExportedMessage = {
         role: pm.role,
-        content: htmlToMarkdown(inlinedHtml),
+        content: pm.contentMarkdown ?? htmlToMarkdown(await inlineImages(pm.contentHtml ?? '')),
         timestamp: pm.timestamp || new Date().toISOString()
       };
       return JSON.stringify(message);
@@ -58,14 +58,7 @@ export async function buildJsonl(
 
   // Optional artifact line (Claude only)
   if (artifact) {
-    const inlinedArtifactHtml = await inlineImages(artifact.contentHtml);
-    const artifactLine = JSON.stringify({
-      _artifact: true,
-      title: artifact.title,
-      version: artifact.version,
-      content: htmlToMarkdown(inlinedArtifactHtml)
-    });
-    lines.push(artifactLine);
+    lines.push(JSON.stringify({ _artifact: true, ...artifact }));
   }
 
   // Combine all lines with newline separator

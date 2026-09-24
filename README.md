@@ -6,12 +6,12 @@ A Chrome Extension that exports conversations from ChatGPT, Claude, and Gemini w
 
 ## Introduction
 
-**LLM Chat Exporter** extracts conversations from LLM web interfaces using DOM parsing—no API keys required. It preserves conversations exactly as they appear in the web UI, including service-optimized system prompts and rich formatting.
+**LLM Chat Exporter** extracts conversations from LLM web interfaces—no API keys required. It preserves conversations exactly as they appear in the web UI, including service-optimized system prompts and rich formatting. Most platforms are read by parsing the page's DOM; Claude is read from the conversation API that claude.ai's own page loads, using your existing session.
 
 ### Core Values
 
 - **Context Preservation**: Captures the complete web UI experience, not just raw API responses
-- **Local-First**: All processing happens in-browser with zero external network requests
+- **Local-First**: All processing happens in-browser; the only requests go to the chat site itself (Claude's conversation API, same-origin images)
 - **Data Ownership**: Your conversations stay on your machine permanently
 
 ### Use Cases
@@ -143,7 +143,7 @@ llm-chat-exporter/
 │           ├── base-parser.ts # BaseParser (shared logic)
 │           ├── config-loader.ts # Configuration singleton
 │           ├── chatgpt.ts     # ChatGPTParser
-│           ├── claude.ts      # ClaudeParser
+│           ├── claude.ts      # ClaudeParser (conversation API, no DOM)
 │           └── gemini.ts      # GeminiParser
 ├── tests/
 │   ├── unit/                  # Unit tests (12 files)
@@ -157,11 +157,11 @@ llm-chat-exporter/
 **Design Patterns**:
 - **Strategy Pattern**: Platform-specific parsers implement `ChatParser` interface
 - **Factory Pattern**: `ParserFactory` selects parser based on URL hostname
-- **Configuration-Driven**: All DOM selectors in `config/selectors.json`
+- **Configuration-Driven**: All DOM selectors in `config/selectors.json` (Claude needs none)
 
 **Selector Strategies by Platform**:
 - **ChatGPT**: Attribute-based (`data-message-author-role`, `data-turn`)
-- **Claude**: Hybrid (`data-testid` + `data-is-streaming`)
+- **Claude**: No selectors - reads `/api/organizations/<org>/chat_conversations/<id>`
 - **Gemini**: Tag name-based (`user-query`, `model-response`)
 
 ### Testing
@@ -200,7 +200,7 @@ See `config/README.md` for detailed selector update guide.
 
 - DOM structure changes may require selector updates
 - Images are stored as URLs only (no binary download)
-- Claude Artifacts have limited support
+- Claude artifacts: only the latest version of the latest artifact is exported
 - Single conversation export only (no batch/history export)
 
 ### Mermaid Diagrams

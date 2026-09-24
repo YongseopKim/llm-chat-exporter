@@ -31,7 +31,6 @@ config/
   "lastUpdated": "2025-11-29",
   "platforms": {
     "chatgpt": { ... },
-    "claude": { ... },
     "gemini": { ... }
   }
 }
@@ -62,20 +61,9 @@ Reads role from data attributes:
 }
 ```
 
-### 2. Hybrid Strategy (Claude)
+Claude has no entry: its parser reads the conversation API instead of the DOM (see "Claude Exports From The Conversation API" in CLAUDE.md).
 
-Checks multiple attributes with priority:
-
-```json
-"role": {
-  "strategy": "hybrid",
-  "userTestId": "user-message",
-  "assistantTestId": "assistant-message",
-  "streamingAttribute": "data-is-streaming"
-}
-```
-
-### 3. Tag Name Strategy (Gemini)
+### 2. Tag Name Strategy (Gemini)
 
 Uses custom element tag names:
 

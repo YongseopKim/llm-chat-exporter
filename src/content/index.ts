@@ -1,19 +1,13 @@
 /**
  * Content Script
  * Background Script의 메시지를 받아 대화 내용을 추출
- *
- * Phase 3: Core utilities integrated
- * - Parser Factory (returns null until Phase 4)
- * - Scroller (simplified fallback)
- * - Serializer (JSONL builder)
- * - Converter (HTML→Markdown with Turndown)
  */
 
 import { ParserFactory } from './parsers/factory';
-import { scrollToLoadAll } from './scroller';
 import { buildJsonl } from './serializer';
 import { getPlatformName } from '../utils/background-utils';
-import { exportMessageType, pingMessageType } from '../content-script-loader';
+import { exportMessageType, pingMessageType, type ExportResponse } from '../content-script-loader';
+import type { ExportMetadata } from './parsers/interface';
 
 declare const __LLM_CHAT_EXPORTER_BUILD_ID__: string;
 
@@ -27,12 +21,6 @@ interface PingMessage {
 
 type ContentMessage = ExportMessage | PingMessage;
 
-interface ExportResponse {
-  success: boolean;
-  data?: string;
-  error?: string;
-}
-
 declare global {
   interface Window {
     __llmChatExporterListenerInstalled__?: boolean;
@@ -42,64 +30,52 @@ declare global {
 
 /**
  * Main export function
- * Orchestrates parser, scroller, and serializer
+ * Reads the conversation through the platform's parser and serializes it
  */
-async function exportConversation(): Promise<string> {
+async function exportConversation(): Promise<ExportResponse> {
   console.log('LLM Chat Exporter: Starting export...');
 
-  // 1. Get parser for current platform
   const parser = ParserFactory.getParser(window.location.href);
   if (!parser) {
-    // Phase 3: Parsers not implemented yet
     throw new Error(
-      'Platform parser not implemented yet (Phase 4 pending). ' +
-      `Current platform: ${getPlatformName(window.location.href)}`
+      `No parser for this platform: ${getPlatformName(window.location.href)}`
     );
   }
 
-  // 2. Check if response is generating
   if (parser.isGenerating()) {
     throw new Error('Response is still generating. Please wait until it completes.');
   }
 
-  // 3. Load all messages (scroll to ensure all messages are in DOM)
-  console.log('LLM Chat Exporter: Loading all messages...');
-  await parser.loadAllMessages();
+  const conversation = await parser.readConversation();
 
-  // 4. Get and parse message nodes
-  console.log('LLM Chat Exporter: Parsing messages...');
-  const nodes = parser.getMessageNodes();
-
-  // Check for empty conversation
-  if (nodes.length === 0) {
+  if (conversation.messages.length === 0) {
     throw new Error(
       'No messages found in this conversation. ' +
       'Please ensure the conversation has at least one message before exporting.'
     );
   }
 
-  const parsedMessages = nodes.map((node) => parser.parseNode(node));
+  console.log(`LLM Chat Exporter: Found ${conversation.messages.length} messages`);
+  for (const warning of conversation.warnings) {
+    console.warn(`LLM Chat Exporter: ${warning}`);
+  }
 
-  console.log(`LLM Chat Exporter: Found ${parsedMessages.length} messages`);
-
-  // 5. Extract artifact if available (Claude only)
-  const artifact = parser.getArtifact?.() ?? null;
-
-  // 6. Extract project info if this conversation belongs to a project
-  const project = parser.getProjectInfo?.() ?? null;
-
-  // 7. Build JSONL with metadata
-  const title = parser.getTitle();
-  const jsonl = await buildJsonl(parsedMessages, {
-    platform: getPlatformName(window.location.href) as any,
+  const jsonl = await buildJsonl(conversation.messages, {
+    platform: getPlatformName(window.location.href) as ExportMetadata['platform'],
     url: window.location.href,
     exported_at: new Date().toISOString(),
-    ...(title && { title }),
-    ...(project && { project })
-  }, artifact);
+    ...(conversation.title && { title: conversation.title }),
+    ...(conversation.project && { project: conversation.project }),
+    ...(conversation.warnings.length > 0 && { warnings: conversation.warnings }),
+  }, conversation.artifact);
 
   console.log('LLM Chat Exporter: Export complete');
-  return jsonl;
+  return {
+    success: true,
+    data: jsonl,
+    messageCount: conversation.messages.length,
+    warnings: conversation.warnings,
+  };
 }
 
 /**
@@ -127,9 +103,7 @@ if (!window.__llmChatExporterBuilds__.has(__LLM_CHAT_EXPORTER_BUILD_ID__)) {
         console.log('LLM Chat Exporter: Export request received');
 
         exportConversation()
-          .then((jsonl) => {
-            sendResponse({ success: true, data: jsonl });
-          })
+          .then(sendResponse)
           .catch((error) => {
             console.error('LLM Chat Exporter: Export failed', error);
             sendResponse({

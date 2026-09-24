@@ -39,13 +39,17 @@ describe('ConfigLoader', () => {
       expect(config.platforms).toBeDefined();
     });
 
-    it('should have all five platforms', () => {
+    it('should have every DOM-parsed platform', () => {
       const config = ConfigLoader.getInstance().getConfig();
       expect(config.platforms.chatgpt).toBeDefined();
-      expect(config.platforms.claude).toBeDefined();
       expect(config.platforms.gemini).toBeDefined();
       expect(config.platforms.grok).toBeDefined();
       expect(config.platforms.perplexity).toBeDefined();
+    });
+
+    it('should not configure Claude, which reads the conversation API instead', () => {
+      const config = ConfigLoader.getInstance().getConfig();
+      expect((config.platforms as Record<string, unknown>).claude).toBeUndefined();
     });
   });
 
@@ -53,12 +57,6 @@ describe('ConfigLoader', () => {
     it('should return ChatGPT platform config', () => {
       const config = ConfigLoader.getInstance().getPlatformConfig('chatgpt');
       expect(config.hostname).toBe('chatgpt.com');
-      expect(config.selectors).toBeDefined();
-    });
-
-    it('should return Claude platform config', () => {
-      const config = ConfigLoader.getInstance().getPlatformConfig('claude');
-      expect(config.hostname).toBe('claude.ai');
       expect(config.selectors).toBeDefined();
     });
 
@@ -89,14 +87,6 @@ describe('ConfigLoader', () => {
       expect(selectors.generation).toBe('button[aria-label*="Stop"]');
     });
 
-    it('should return Claude selectors with hybrid strategy', () => {
-      const selectors = ConfigLoader.getInstance().getSelectors('claude');
-      expect(selectors.role.strategy).toBe('hybrid');
-      expect(selectors.role.userTestId).toBe('user-message');
-      expect(selectors.role.streamingAttribute).toBe('data-is-streaming');
-      expect(selectors.generation).toBe('[data-is-streaming="true"]');
-    });
-
     it('should return Gemini selectors with tagname strategy', () => {
       const selectors = ConfigLoader.getInstance().getSelectors('gemini');
       expect(selectors.role.strategy).toBe('tagname');
@@ -108,12 +98,6 @@ describe('ConfigLoader', () => {
       const selectors = ConfigLoader.getInstance().getSelectors('chatgpt');
       expect(selectors.messages.primary).toBe('[data-turn]');
       expect(selectors.messages.fallbacks).toContain('[data-message-author-role]');
-    });
-
-    it('should return message selectors for Claude (combined)', () => {
-      const selectors = ConfigLoader.getInstance().getSelectors('claude');
-      expect(selectors.messages.combined).toContain('[data-testid="user-message"]');
-      expect(selectors.messages.combined).toContain('[data-is-streaming]');
     });
 
     it('should return message selectors for Gemini (combined)', () => {
@@ -130,15 +114,11 @@ describe('ConfigLoader', () => {
 
     it('should return content selectors for all platforms', () => {
       const chatgpt = ConfigLoader.getInstance().getSelectors('chatgpt');
-      const claude = ConfigLoader.getInstance().getSelectors('claude');
       const gemini = ConfigLoader.getInstance().getSelectors('gemini');
       const perplexity = ConfigLoader.getInstance().getSelectors('perplexity');
 
       expect(chatgpt.content.user).toBe('.whitespace-pre-wrap, .markdown');
       expect(chatgpt.content.assistant).toBe('.markdown');
-
-      expect(claude.content.user).toBe('.whitespace-pre-wrap');
-      expect(claude.content.assistant).toBe('.standard-markdown, .progressive-markdown');
 
       expect(gemini.content.user).toBe('.query-text');
       expect(gemini.content.assistant).toBe('.response-container-content');
@@ -152,7 +132,6 @@ describe('ConfigLoader', () => {
     it('should return correct hostname for each platform', () => {
       const loader = ConfigLoader.getInstance();
       expect(loader.getHostname('chatgpt')).toBe('chatgpt.com');
-      expect(loader.getHostname('claude')).toBe('claude.ai');
       expect(loader.getHostname('gemini')).toBe('gemini.google.com');
       expect(loader.getHostname('grok')).toBe('grok.com');
       expect(loader.getHostname('perplexity')).toBe('perplexity.ai');

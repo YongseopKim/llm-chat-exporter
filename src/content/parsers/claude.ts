@@ -1,988 +1,360 @@
 /**
  * Claude Parser
  *
- * Implements ChatParser interface for claude.ai platform.
- * Extends BaseParser with configuration-driven selectors.
+ * Reads the conversation from the API claude.ai's own web app loads it from,
+ * not from the rendered page:
+ *   GET /api/organizations/<org>/chat_conversations/<id>
+ *       ?tree=True&rendering_mode=messages&render_all_tools=true
  *
- * DOM Structure (from actual sample validation):
- * - User messages: [data-testid="user-message"]
- * - Assistant messages: [data-is-streaming] (current) OR [data-testid="assistant-message"] (fallback)
- * - User content: .whitespace-pre-wrap
- * - Assistant content: .standard-markdown or .progressive-markdown
- * - Generating: [data-is-streaming="true"]
+ * WHY NOT THE DOM:
+ * Claude renders a virtualized list behind a paginated "Load earlier
+ * messages" button and hides thinking and tool steps in collapsed blocks that
+ * only inline styles tell apart. Each of those had to be reverse-engineered
+ * from the page and each broke silently: on 2026-09-24 a new app-shell style
+ * (`--desktop-top-bar-row-height: 0px`) made every assistant turn of seven
+ * live conversations export as an empty string. The API returns the same
+ * conversation the page shows, as Markdown, with nothing to scroll or guess.
  *
- * Key Characteristics:
- * - Hybrid selector approach (data-testid + data-is-streaming)
- * - Aggressive DOM virtualization in long conversations
- * - Streaming state via data-is-streaming attribute
- * - Most stable generation detection (attribute-based, not button-based)
+ * The request goes to claude.ai itself with the user's own session - the
+ * same request the page makes - so no data leaves the browser.
  *
- * Role Strategy: hybrid (data-testid priority, then streaming attribute presence)
- *
- * @see config/selectors.json for current selectors
- * @see samples/README.md for validated selectors and DOM analysis
+ * Response shape measured on 2026-09-24:
+ * - `chat_messages` holds every branch; the page shows the one ending at
+ *   `current_leaf_message_uuid`, walked back through `parent_message_uuid`
+ * - assistant `content` interleaves thinking, tool_use, tool_result and text
+ *   blocks; only text is what the page shows as the answer
+ * - text blocks carry `citations` whose offsets index into that block's text
  */
 
-import { BaseParser } from './base-parser';
-import type { ScrollOptions } from '../scroller';
-import type { ArtifactData, ProjectInfo } from './interface';
+import type {
+  ArtifactData,
+  ChatParser,
+  Conversation,
+  ParsedMessage,
+  ProjectInfo,
+} from './interface';
 
-/** Selector for the project breadcrumb link shown above chats that belong to a project */
-const PROJECT_LINK_SELECTOR = 'a[href^="/cowork/project/"]';
+const HOSTNAME = 'claude.ai';
 
-/**
- * How many times the conversation may be walked before giving up
- *
- * A single walk can come up short when the list renders more slowly than the
- * walk moves, and `aria-setsize` is what makes that detectable rather than
- * silent. Retrying is bounded because a message that never mounts will not
- * start mounting on the fifth attempt, and each pass re-scrolls the whole
- * conversation.
- */
-const MAX_COLLECTION_PASSES = 3;
+/** Present on the message being streamed; the API has no in-progress flag */
+const GENERATING_SELECTOR = '[data-is-streaming="true"]';
 
-/** Claude initially hides older turns behind this button on some conversations. */
-const LOAD_EARLIER_MESSAGES_LABEL = 'Load earlier messages';
+const CONVERSATION_PATH = /^\/chat\/([^/?#]+)/;
 
-/** Bound one history-page request without making ordinary exports wait. */
-const HISTORY_LOAD_TIMEOUT_MS = 5000;
+/** Cookie in which claude.ai records the organization the page is using */
+const ACTIVE_ORG_COOKIE = 'lastActiveOrg';
 
-/**
- * Selector for visualization iframes embedded in an assistant message.
- * Scoped to the message node at query time, so page-level iframes
- * (analytics and similar) are never matched.
- */
-const VISUALIZATION_SELECTOR = 'iframe[title]';
-const PENDING_VISUALIZATION_TEXT = 'Connecting to visualize...';
-const EXPORT_PLACEHOLDER_SELECTOR = '[data-export-placeholder]';
+/** The query the web app uses: every branch, with content split into blocks */
+const CONVERSATION_QUERY = 'tree=True&rendering_mode=messages&render_all_tools=true';
 
-/** Claude renders the extra URLs for labels such as "Source + 2" in a portal popup */
-const GROUPED_CITATION_PATTERN = /\+\s*\d+\b/;
+const ARTIFACT_TOOL = 'artifacts';
 
-/** Portal element created while a grouped citation has keyboard focus or pointer hover */
-const CITATION_POPUP_SELECTOR = '[role="presentation"][data-open]';
+/** Visualizations render in a sandboxed iframe titled "visualize: <title>" */
+const VISUALIZATION_TOOL_PREFIX = 'visualize';
 
-/** A grouped citation popup normally mounts immediately; this only bounds UI drift */
-const CITATION_POPUP_TIMEOUT_MS = 500;
-
-interface CitationSource {
-  href: string;
-  title: string;
+interface ApiSource {
+  url?: string;
+  title?: string;
 }
 
-interface CitationGroup {
-  triggerHref: string;
-  triggerText: string;
-  sources: CitationSource[];
+interface ApiCitation extends ApiSource {
+  end_index?: number;
+  sources?: ApiSource[];
 }
 
-/**
- * Read an attachment card's name
- *
- * Claude puts it on the card's button, as "Pasted text, pasted, 1,591 lines"
- * for a pasted prompt or the file name for an uploaded file. The card's own
- * text is a preview truncated at a few hundred characters, so it is not used.
- */
-function readAttachmentLabel(card: HTMLElement): string {
-  const labelled = card.matches('[aria-label]') ? card : card.querySelector('[aria-label]');
-  return (labelled?.getAttribute('aria-label') || '').trim();
+interface ApiBlock {
+  type: string;
+  text?: string;
+  citations?: ApiCitation[];
+  name?: string;
+  input?: Record<string, unknown>;
 }
 
-/** Parse a list-position attribute into a number, or null when it is not one */
-function toIndex(raw: string | null): number | null {
-  if (raw === null || raw.trim() === '') {
-    return null;
+interface ApiFile {
+  file_name?: string;
+}
+
+interface ApiMessage {
+  uuid: string;
+  parent_message_uuid?: string;
+  sender: 'human' | 'assistant';
+  created_at?: string;
+  content?: ApiBlock[];
+  attachments?: ApiFile[];
+  files?: ApiFile[];
+}
+
+interface ApiConversation {
+  name?: string;
+  project_uuid?: string | null;
+  current_leaf_message_uuid?: string;
+  chat_messages: ApiMessage[];
+}
+
+function apiGet(path: string): Promise<Response> {
+  return fetch(new URL(path, document.location.origin).href, { credentials: 'include' });
+}
+
+function readCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match && match[1] ? decodeURIComponent(match[1]) : null;
+}
+
+function stringField(input: Record<string, unknown> | undefined, key: string): string | undefined {
+  const value = input?.[key];
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
+/** The messages of the branch the page shows, oldest first */
+function currentBranch(conversation: ApiConversation): ApiMessage[] {
+  const byId = new Map(conversation.chat_messages.map((message) => [message.uuid, message]));
+  const branch: ApiMessage[] = [];
+
+  let message = byId.get(conversation.current_leaf_message_uuid ?? '');
+  while (message && branch.length < byId.size) {
+    branch.push(message);
+    message = byId.get(message.parent_message_uuid ?? '');
   }
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : null;
+
+  return branch.reverse();
+}
+
+/**
+ * Numbers a turn's cited sources by URL, in order of first citation
+ *
+ * Rendered as Markdown reference definitions, so plain text reads "[1]" with
+ * the URL listed under the turn and a Markdown viewer turns markers into links.
+ */
+class SourceList {
+  private readonly numbers = new Map<string, number>();
+  private readonly definitions: string[] = [];
+
+  number(source: ApiSource): number | null {
+    if (!source.url) {
+      return null;
+    }
+    const known = this.numbers.get(source.url);
+    if (known !== undefined) {
+      return known;
+    }
+
+    const next = this.numbers.size + 1;
+    this.numbers.set(source.url, next);
+    const title = (source.title || source.url).replace(/"/g, '\\"');
+    this.definitions.push(`[${next}]: ${source.url} "${title}"`);
+    return next;
+  }
+
+  render(): string {
+    return this.definitions.join('\n');
+  }
+}
+
+/** A text block with a marker after each cited span */
+function citedText(block: ApiBlock, sources: SourceList): string {
+  const text = block.text ?? '';
+  const markers = new Map<number, Set<number>>();
+
+  const citations = (block.citations ?? [])
+    .filter((c) => typeof c.end_index === 'number' && c.end_index >= 0 && c.end_index <= text.length)
+    .sort((a, b) => (a.end_index as number) - (b.end_index as number));
+
+  for (const citation of citations) {
+    const cited = citation.sources?.length ? citation.sources : [citation];
+    for (const source of cited) {
+      const number = sources.number(source);
+      if (number !== null) {
+        const at = citation.end_index as number;
+        markers.set(at, (markers.get(at) ?? new Set()).add(number));
+      }
+    }
+  }
+
+  let result = '';
+  let cursor = 0;
+  for (const [at, numbers] of markers) {
+    result += `${text.slice(cursor, at)} ${[...numbers].map((n) => `[${n}]`).join('')}`;
+    cursor = at;
+  }
+  return result + text.slice(cursor);
+}
+
+/**
+ * Replays artifact commands so the latest version can be exported whole
+ *
+ * `create` and `rewrite` carry the full content; `update` replaces one
+ * string in the previous version.
+ */
+class ArtifactHistory {
+  private readonly artifacts = new Map<string, { title: string; content: string; versions: number }>();
+  private latestId: string | null = null;
+
+  /** Apply one command and return the artifact's title */
+  apply(input: Record<string, unknown> | undefined): string {
+    const id = stringField(input, 'id') ?? 'artifact';
+    const previous = this.artifacts.get(id);
+    const title = stringField(input, 'title') ?? previous?.title ?? 'Artifact';
+
+    let content = previous?.content ?? '';
+    if (input?.command === 'update') {
+      const oldText = stringField(input, 'old_str');
+      const newText = typeof input.new_str === 'string' ? input.new_str : '';
+      if (oldText) {
+        content = content.replace(oldText, () => newText);
+      }
+    } else if (typeof input?.content === 'string') {
+      content = input.content;
+    }
+
+    this.artifacts.set(id, { title, content, versions: (previous?.versions ?? 0) + 1 });
+    this.latestId = id;
+    return title;
+  }
+
+  latest(): ArtifactData | null {
+    const artifact = this.latestId === null ? undefined : this.artifacts.get(this.latestId);
+    return artifact
+      ? { title: artifact.title, version: `v${artifact.versions}`, content: artifact.content }
+      : null;
+  }
+}
+
+function userMarkdown(message: ApiMessage): string {
+  const parts = (message.content ?? [])
+    .filter((block) => block.type === 'text')
+    .map((block) => (block.text ?? '').trim());
+
+  // Only the file's name: see "Attachment-Only Messages Export As A
+  // Placeholder" in CLAUDE.md
+  for (const file of [...(message.attachments ?? []), ...(message.files ?? [])]) {
+    parts.push(`[File: ${file.file_name || 'Pasted text'}]`);
+  }
+
+  return parts.filter((part) => part !== '').join('\n\n');
+}
+
+function assistantMarkdown(message: ApiMessage, artifacts: ArtifactHistory): string {
+  const sources = new SourceList();
+  const parts: string[] = [];
+
+  for (const block of message.content ?? []) {
+    if (block.type === 'text') {
+      parts.push(citedText(block, sources).trim());
+    } else if (block.type === 'tool_use' && block.name === ARTIFACT_TOOL) {
+      parts.push(`[Artifact: ${artifacts.apply(block.input)}]`);
+    } else if (block.type === 'tool_use' && block.name?.startsWith(VISUALIZATION_TOOL_PREFIX)) {
+      const title = stringField(block.input, 'title');
+      parts.push(title ? `[Visualization omitted: ${title}]` : '[Visualization omitted]');
+    }
+  }
+  parts.push(sources.render());
+
+  return parts.filter((part) => part !== '').join('\n\n');
 }
 
 /**
  * Claude platform parser
- *
- * Configuration-driven parser using BaseParser infrastructure.
- * All parsing logic is inherited from BaseParser with claude configuration.
- *
- * Overrides:
- * - extractContent: Handles multiple .standard-markdown blocks and filters collapsed content
  */
-export class ClaudeParser extends BaseParser {
-  /**
-   * Messages captured while scrolling, keyed by their position in the list
-   *
-   * Cloned on capture: the live node is unmounted as soon as it leaves the
-   * viewport, so only a detached copy survives to the end of the export.
-   */
-  private readonly collected = new Map<number, HTMLElement>();
-
-  /** Grouped citation data captured while its message was mounted */
-  private readonly citationGroupsByIndex = new Map<number, CitationGroup[]>();
-
-  /** Citation data for non-virtualized DOM shapes that carry no list index */
-  private citationGroupsByNode = new WeakMap<HTMLElement, CitationGroup[]>();
-
-  /** Preserve a collected clone's original list index without changing its HTML */
-  private collectedIndices = new WeakMap<HTMLElement, number>();
-
-  /** Complete transcript copied once when no virtualized walk is necessary. */
-  private fullyMountedLiveNodes: HTMLElement[] | null = null;
-
-  constructor() {
-    super('claude');
+export class ClaudeParser implements ChatParser {
+  canHandle(hostname: string): boolean {
+    return hostname !== '' && hostname.toLowerCase().includes(HOSTNAME);
   }
 
-  /**
-   * Load all messages, collecting them as the conversation scrolls past
-   *
-   * Overrides base to:
-   * 1. Snapshot the mounted messages at every scroll stop (virtualization)
-   * 2. Walk the list again while it still holds messages that were missed
-   * 3. Click the last "Preview contents" button, which loads the artifact panel
-   */
-  override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
-    this.collected.clear();
-    this.citationGroupsByIndex.clear();
-    this.citationGroupsByNode = new WeakMap();
-    this.collectedIndices = new WeakMap();
-    this.fullyMountedLiveNodes = null;
+  isGenerating(): boolean {
+    return document.querySelector(GENERATING_SELECTOR) !== null;
+  }
 
-    await this.loadEarlierMessages(
-      options.timeout === 0 ? 0 : HISTORY_LOAD_TIMEOUT_MS
-    );
-
-    const liveNodes = super.getMessageNodes();
-    const advertisedLength = this.getAdvertisedLength();
-    const allAssistantBodiesReady = liveNodes.every(
-      (node) =>
-        this.extractRole(node) === 'user' ||
-        this.messageContentSize(node) > 0 ||
-        node.querySelector(VISUALIZATION_SELECTOR) !== null
-    );
-    if (
-      !this.isGenerating() &&
-      options.onStep === undefined &&
-      advertisedLength !== null &&
-      liveNodes.length >= advertisedLength &&
-      allAssistantBodiesReady
-    ) {
-      await this.captureMountedGroupedCitations();
-      this.fullyMountedLiveNodes = liveNodes.map((node) => {
-        const clone = node.cloneNode(true) as HTMLElement;
-        const index = this.getListIndex(node);
-        if (index !== null) {
-          this.collectedIndices.set(clone, index);
-        }
-        return clone;
-      });
-      await this.openLatestArtifact();
-      return;
+  async readConversation(): Promise<Conversation> {
+    const conversationId = document.location.pathname.match(CONVERSATION_PATH)?.[1];
+    if (!conversationId) {
+      throw new Error('Claude: open a conversation (claude.ai/chat/...) before exporting.');
     }
 
-    for (let pass = 0; pass < MAX_COLLECTION_PASSES; pass += 1) {
-      const before = this.collected.size;
+    const { org, conversation } = await this.fetchConversation(conversationId);
+    const artifacts = new ArtifactHistory();
+    const messages: ParsedMessage[] = currentBranch(conversation).map((message) => ({
+      role: message.sender === 'human' ? 'user' : 'assistant',
+      contentMarkdown:
+        message.sender === 'human' ? userMarkdown(message) : assistantMarkdown(message, artifacts),
+      timestamp: message.created_at,
+    }));
 
-      if (pass > 0) {
-        await this.loadEarlierMessages(
-          options.timeout === 0 ? 0 : HISTORY_LOAD_TIMEOUT_MS
-        );
-      }
-
-      await super.loadAllMessages({
-        ...options,
-        onStep: async () => {
-          await this.captureMountedGroupedCitations();
-          this.snapshotMountedMessages();
-          await options.onStep?.();
-        },
-      });
-
-      const expected = this.getAdvertisedLength();
-      if (expected === null || this.collected.size >= expected) {
-        break;
-      }
-      // A pass that gained nothing will gain nothing next time either; stopping
-      // here keeps a genuinely unreachable message from costing another walk.
-      if (this.collected.size === before) {
-        break;
-      }
-    }
-
-    this.warnIfIncomplete();
-    await this.openLatestArtifact();
-  }
-
-  /**
-   * Ask Claude to mount the older page of a partially loaded transcript.
-   *
-   * This is separate from virtualized scrolling: the button can be visible
-   * while the conversation scroller is already at its top. Scrolling cannot
-   * cross that server-side pagination boundary, so the old turns never enter
-   * the DOM unless the button is activated.
-   */
-  private async loadEarlierMessages(timeoutMs: number): Promise<boolean> {
-    const button = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
-      (candidate) =>
-        (candidate.getAttribute('aria-label') || candidate.textContent || '').trim() ===
-        LOAD_EARLIER_MESSAGES_LABEL
-    );
-
-    if (!button) {
-      return false;
-    }
-
-    const before = super.getMessageNodes().length;
-    await new Promise<void>((resolve) => {
-      let finished = false;
-      const finish = () => {
-        if (finished) return;
-        finished = true;
-        observer.disconnect();
-        window.clearTimeout(timer);
-        resolve();
-      };
-      const observer = new MutationObserver(() => {
-        if (super.getMessageNodes().length > before) {
-          finish();
-        }
-      });
-      const timer = window.setTimeout(finish, timeoutMs);
-
-      observer.observe(document.body, { childList: true, subtree: true });
-      button.click();
-
-      // Covers synchronous DOM replacement in tests and any future client.
-      if (super.getMessageNodes().length > before || timeoutMs === 0) {
-        finish();
-      }
-    });
-
-    return true;
-  }
-
-  /**
-   * How many messages the list says the conversation holds
-   *
-   * Claude publishes the conversation's true length on every message
-   * (`aria-setsize`), which is the only signal that distinguishes a short
-   * conversation from a long one that failed to load.
-   *
-   * @private
-   * @returns The advertised length, or null when the DOM does not carry one
-   */
-  private getAdvertisedLength(): number | null {
-    const sizes = Array.from(document.querySelectorAll('[aria-setsize]'), (el) =>
-      Number(el.getAttribute('aria-setsize'))
-    ).filter((n) => Number.isFinite(n) && n > 0);
-
-    return sizes.length === 0 ? null : Math.max(...sizes);
-  }
-
-  /**
-   * Copy every currently mounted message into the collection
-   *
-   * Called at each scroll stop. Claude can mount the message shell before its
-   * markdown body, so a later, richer rendering must replace an early clone.
-   *
-   * @private
-   */
-  private snapshotMountedMessages(): void {
-    for (const node of super.getMessageNodes()) {
-      const index = this.getListIndex(node);
-      if (index === null) {
-        continue;
-      }
-      const existing = this.collected.get(index);
-      if (existing) {
-        const existingVisualizations = existing.querySelectorAll(VISUALIZATION_SELECTOR).length;
-        const liveVisualizations = node.querySelectorAll(VISUALIZATION_SELECTOR).length;
-        const existingContentSize = this.messageContentSize(existing);
-        const liveContentSize = this.messageContentSize(node);
-        if (
-          liveVisualizations < existingVisualizations ||
-          (liveVisualizations === existingVisualizations &&
-            liveContentSize <= existingContentSize)
-        ) {
-          continue;
-        }
-      }
-      const clone = node.cloneNode(true) as HTMLElement;
-      this.collectedIndices.set(clone, index);
-      this.collected.set(index, clone);
-    }
-  }
-
-  /** Measure only exportable message bodies, excluding controls and status UI. */
-  private messageContentSize(node: HTMLElement): number {
-    const role = this.extractRole(node);
-    const selector = this.selectors.content[role];
-    if (!selector) {
-      return 0;
-    }
-
-    return Array.from(node.querySelectorAll<HTMLElement>(selector)).reduce(
-      (size, content) => size + content.innerHTML.length,
-      0
-    );
-  }
-
-  /**
-   * Open each mounted "Source + N" citation and retain every URL from its
-   * portal popup before virtualization unmounts the message.
-   *
-   * Claude keeps only the first URL inside the message. The remaining links
-   * live under #portal-root and exist only while the trigger is active, so
-   * cloning the message alone can never preserve them.
-   */
-  private async captureMountedGroupedCitations(): Promise<void> {
-    for (const node of super.getMessageNodes()) {
-      if (this.extractRole(node) === 'user') {
-        continue;
-      }
-
-      const groupedLinks = Array.from(node.querySelectorAll<HTMLAnchorElement>('a[href]')).filter(
-        (anchor) => GROUPED_CITATION_PATTERN.test(anchor.textContent || '')
-      );
-
-      if (groupedLinks.length === 0) {
-        continue;
-      }
-
-      const index = this.getListIndex(node);
-      const groups = this.getStoredCitationGroups(node, index);
-      const captured = new Set(groups.map((group) => this.citationGroupKey(group)));
-
-      for (const anchor of groupedLinks) {
-        const triggerHref = this.normalizeCitationUrl(anchor.getAttribute('href'));
-        const triggerText = (anchor.textContent || '').trim().replace(/\s+/g, ' ');
-        if (!triggerHref || !triggerText) {
-          continue;
-        }
-
-        const key = `${triggerHref}\n${triggerText}`;
-        if (captured.has(key)) {
-          continue;
-        }
-
-        const sources = await this.readGroupedCitationPopup(anchor, triggerHref);
-        if (sources.length === 0) {
-          continue;
-        }
-
-        groups.push({ triggerHref, triggerText, sources });
-        captured.add(key);
-      }
-
-      this.storeCitationGroups(node, index, groups);
-    }
-  }
-
-  /** Read one grouped citation popup without following any of its links. */
-  private async readGroupedCitationPopup(
-    anchor: HTMLAnchorElement,
-    triggerHref: string
-  ): Promise<CitationSource[]> {
-    this.dispatchCitationHover(anchor, true);
-    anchor.focus({ preventScroll: true });
-    const popup = await this.waitForCitationPopup(triggerHref);
-
-    const sources = popup
-      ? Array.from(popup.querySelectorAll<HTMLAnchorElement>('a[href]'))
-          .map((source) => {
-            const href = this.normalizeCitationUrl(source.getAttribute('href'));
-            const title = (
-              source.querySelector('h3')?.textContent ||
-              source.textContent ||
-              href ||
-              ''
-            )
-              .trim()
-              .replace(/\s+/g, ' ');
-            return href && title ? { href, title } : null;
-          })
-          .filter((source): source is CitationSource => source !== null)
-      : [];
-
-    anchor.blur();
-    this.dispatchCitationHover(anchor, false);
-    return Array.from(new Map(sources.map((source) => [source.href, source])).values());
-  }
-
-  /**
-   * Reproduce the pointer boundary events Claude uses to mount preview cards.
-   * These do not click the anchor or follow its URL.
-   */
-  private dispatchCitationHover(anchor: HTMLAnchorElement, entering: boolean): void {
-    const eventTypes = entering
-      ? ['pointerover', 'pointerenter', 'mouseover', 'mouseenter']
-      : ['pointerout', 'pointerleave', 'mouseout', 'mouseleave'];
-
-    for (const type of eventTypes) {
-      anchor.dispatchEvent(
-        new MouseEvent(type, {
-          bubbles: type.endsWith('over') || type.endsWith('out'),
-          cancelable: true,
-          composed: true,
-        })
-      );
-    }
-  }
-
-  /** Wait until the portal popup containing the trigger's primary URL is mounted. */
-  private waitForCitationPopup(triggerHref: string): Promise<HTMLElement | null> {
-    const findPopup = (): HTMLElement | null => {
-      for (const candidate of document.querySelectorAll<HTMLElement>(CITATION_POPUP_SELECTOR)) {
-        const containsTrigger = Array.from(
-          candidate.querySelectorAll<HTMLAnchorElement>('a[href]')
-        ).some((link) => this.normalizeCitationUrl(link.getAttribute('href')) === triggerHref);
-        if (containsTrigger) {
-          return candidate;
-        }
-      }
-      return null;
+    return {
+      messages,
+      title: conversation.name || undefined,
+      project: await this.readProject(org, conversation.project_uuid),
+      artifact: artifacts.latest(),
+      warnings: this.compareWithPage(messages.length),
     };
-
-    const immediate = findPopup();
-    if (immediate) {
-      return Promise.resolve(immediate);
-    }
-
-    return new Promise((resolve) => {
-      let finished = false;
-      const finish = (popup: HTMLElement | null) => {
-        if (finished) {
-          return;
-        }
-        finished = true;
-        clearTimeout(timer);
-        observer.disconnect();
-        resolve(popup);
-      };
-      const observer = new MutationObserver(() => {
-        const popup = findPopup();
-        if (popup) {
-          finish(popup);
-        }
-      });
-      const timer = setTimeout(() => finish(null), CITATION_POPUP_TIMEOUT_MS);
-
-      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
-
-      const popup = findPopup();
-      if (popup) {
-        finish(popup);
-      }
-    });
-  }
-
-  /** Convert a citation href to a comparable absolute HTTP(S) URL. */
-  private normalizeCitationUrl(raw: string | null): string | null {
-    if (!raw) {
-      return null;
-    }
-
-    try {
-      const url = new URL(raw, document.baseURI);
-      return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private citationGroupKey(group: CitationGroup): string {
-    return `${group.triggerHref}\n${group.triggerText}`;
-  }
-
-  private getStoredCitationGroups(
-    node: HTMLElement,
-    index: number | null
-  ): CitationGroup[] {
-    return index === null
-      ? [...(this.citationGroupsByNode.get(node) || [])]
-      : [...(this.citationGroupsByIndex.get(index) || [])];
-  }
-
-  private storeCitationGroups(
-    node: HTMLElement,
-    index: number | null,
-    groups: CitationGroup[]
-  ): void {
-    if (index === null) {
-      this.citationGroupsByNode.set(node, groups);
-    } else {
-      this.citationGroupsByIndex.set(index, groups);
-    }
   }
 
   /**
-   * Include attachment cards in the message selector
-   *
-   * Measured on 2026-09-06, a user turn whose prompt became an attachment
-   * carries no `[data-testid="user-message"]` at all, so the configured
-   * combined selector matched nothing in that row and the turn was dropped
-   * from the export entirely. Widening the selector here also lets the
-   * scroller treat an attachment mounting as progress.
-   *
-   * @override
-   * @protected
+   * Load the conversation from the organization the page is using, or from
+   * whichever of the user's organizations holds it when none is recorded
    */
-  protected override getMessageSelector(): string | undefined {
-    const base = super.getMessageSelector();
-    const attachment = this.selectors.content.attachment;
-    return base && attachment ? `${base}, ${attachment}` : base;
-  }
+  private async fetchConversation(
+    conversationId: string
+  ): Promise<{ org: string; conversation: ApiConversation }> {
+    const active = readCookie(ACTIVE_ORG_COOKIE);
+    const orgs = active ? [active] : await this.listOrganizations();
 
-  /**
-   * Collect message nodes, keeping one node per transcript row
-   *
-   * An attachment card is a message only when nothing else in its row is: a
-   * row holding both a typed message and a file exports through the message
-   * node, with the file appended to it. Two nodes from one row would collide
-   * anyway, since collection is keyed on the row's list index.
-   *
-   * @override
-   * @protected
-   */
-  protected override getNodesWithFallback(): HTMLElement[] {
-    const selector = this.getMessageSelector();
-    if (!selector || !this.selectors.content.attachment) {
-      return super.getNodesWithFallback();
-    }
-
-    return Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(
-      (node) => !this.isRedundantAttachment(node)
-    );
-  }
-
-  /** True for an attachment card that some other node already speaks for. */
-  private isRedundantAttachment(node: HTMLElement): boolean {
-    const attachment = this.selectors.content.attachment;
-    if (!attachment || !node.matches(attachment)) {
-      return false;
-    }
-
-    const row = this.getRowElement(node);
-    if (!row) {
-      return false;
-    }
-
-    const combined = this.selectors.messages.combined;
-    if (combined && row.querySelector(combined)) {
-      return true;
-    }
-
-    // Several files in one row are listed by the first card's placeholder
-    return row.querySelector(attachment) !== node;
-  }
-
-  /** The transcript row a node belongs to, when the DOM is virtualized. */
-  private getRowElement(node: HTMLElement): HTMLElement | null {
-    return node.closest<HTMLElement>(
-      '[data-testid="transcript-row"], [data-index], [data-rs-index], [aria-posinset]'
-    );
-  }
-
-  /**
-   * Build a placeholder for every file attached to a node's row
-   *
-   * @private
-   */
-  private extractAttachmentsHtml(node: HTMLElement): string {
-    const attachment = this.selectors.content.attachment;
-    if (!attachment) {
-      return '';
-    }
-
-    const row = this.getRowElement(node);
-    const cards = row
-      ? Array.from(row.querySelectorAll<HTMLElement>(attachment))
-      : node.matches(attachment)
-        ? [node]
-        : [];
-
-    return cards
-      .map((card) => this.buildAttachmentPlaceholder(readAttachmentLabel(card)))
-      .join('\n');
-  }
-
-  /**
-   * Read a message's position in the virtualized list
-   *
-   * Claude wraps each message in the list machinery's own element:
-   *   <div data-rs-index="1" data-index="1">
-   *     <div role="article" aria-setsize="2" aria-posinset="2"> ... </div>
-   *
-   * `data-index` is preferred over `aria-posinset` so a document never mixes
-   * 0-based and 1-based keys, which would interleave the merged order.
-   *
-   * @private
-   * @returns The list index, or null when the DOM carries no position
-   */
-  private getListIndex(node: HTMLElement): number | null {
-    const indexed = node.closest('[data-index], [data-rs-index]');
-    if (indexed) {
-      return toIndex(
-        indexed.getAttribute('data-index') ?? indexed.getAttribute('data-rs-index')
+    let status = 0;
+    for (const org of orgs) {
+      const response = await apiGet(
+        `/api/organizations/${org}/chat_conversations/${conversationId}?${CONVERSATION_QUERY}`
       );
-    }
-
-    const article = node.closest('[aria-posinset]');
-    return article ? toIndex(article.getAttribute('aria-posinset')) : null;
-  }
-
-  /**
-   * Warn when the list says it holds more messages than were collected
-   *
-   * Claude publishes the conversation's true length on every message
-   * (`aria-setsize`), which is the only way to tell a short conversation apart
-   * from a long one that failed to load.
-   *
-   * @private
-   */
-  private warnIfIncomplete(): void {
-    const expected = this.getAdvertisedLength();
-    if (expected === null) {
-      return;
-    }
-
-    const collected = this.getMessageNodes().length;
-
-    if (collected < expected) {
-      console.warn(
-        `Claude: collected ${collected} of ${expected} messages. ` +
-          'The rest never mounted while scrolling - scroll through the ' +
-          'conversation manually and export again.'
-      );
-    }
-  }
-
-  /**
-   * Get all message nodes, merging what was collected while scrolling
-   *
-   * Live nodes normally take precedence over their snapshots because they are
-   * still attached. A snapshot with more visualization iframes is retained,
-   * since Claude can unmount an iframe without unmounting its message. Everything
-   * is ordered by list index rather than by collection order.
-   *
-   * Falls back to the live nodes whenever the DOM carries no list indices, so
-   * DOM shapes this parser does not recognise behave exactly as before.
-   *
-   * @override
-   */
-  override getMessageNodes(): HTMLElement[] {
-    if (this.fullyMountedLiveNodes) {
-      return this.fullyMountedLiveNodes;
-    }
-
-    const live = super.getMessageNodes();
-    if (this.collected.size === 0) {
-      return live;
-    }
-
-    const merged = new Map(this.collected);
-    for (const node of live) {
-      const index = this.getListIndex(node);
-      if (index === null) {
-        // Unknown shape: reordering would be a guess, so return the DOM as-is
-        return live;
+      if (response.ok) {
+        return { org, conversation: (await response.json()) as ApiConversation };
       }
-      const snapshot = merged.get(index);
-      if (snapshot) {
-        const snapshotVisualizations = snapshot.querySelectorAll(VISUALIZATION_SELECTOR).length;
-        const liveVisualizations = node.querySelectorAll(VISUALIZATION_SELECTOR).length;
-        if (
-          snapshotVisualizations > liveVisualizations ||
-          (snapshotVisualizations === liveVisualizations &&
-            this.messageContentSize(snapshot) > this.messageContentSize(node))
-        ) {
-          continue;
-        }
-      }
-      merged.set(index, node);
+      status = response.status;
     }
 
-    return Array.from(merged.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([, node]) => node);
-  }
-
-  /**
-   * Click the last artifact "Preview contents" button to load the panel
-   *
-   * Only the last button is clicked because the artifact panel always
-   * shows the latest version when opened.
-   */
-  private async openLatestArtifact(): Promise<void> {
-    const buttons = document.querySelectorAll('[aria-label="Preview contents"]');
-    if (buttons.length === 0) {
-      return;
-    }
-
-    const lastButton = buttons[buttons.length - 1] as HTMLElement;
-    lastButton.click();
-
-    // Wait for the artifact panel to render
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-
-  /**
-   * Extract artifact data from the artifact panel
-   *
-   * Reads content from #markdown-artifact .standard-markdown,
-   * title from the last .artifact-block-cell button,
-   * and version from [data-testid="artifact-version-trigger"].
-   *
-   * @returns ArtifactData if panel exists with content, null otherwise
-   */
-  getArtifact(): ArtifactData | null {
-    const panel = document.querySelector('#markdown-artifact');
-    if (!panel) {
-      return null;
-    }
-
-    const contentEl = panel.querySelector('.standard-markdown');
-    if (!contentEl) {
-      return null;
-    }
-
-    const contentHtml = contentEl.innerHTML;
-
-    // Extract title from the last artifact-block-cell's button
-    const blockCells = document.querySelectorAll('.artifact-block-cell');
-    let title = 'Artifact';
-    if (blockCells.length > 0) {
-      const lastCell = blockCells[blockCells.length - 1];
-      const btn = lastCell.querySelector('[aria-label="Preview contents"]');
-      title = btn?.textContent?.trim() || 'Artifact';
-    }
-
-    // Extract version from version trigger button
-    const versionTrigger = document.querySelector('[data-testid="artifact-version-trigger"]');
-    const version = versionTrigger?.textContent?.trim() || 'v1';
-
-    return { title, version, contentHtml };
-  }
-
-  /**
-   * Get project info for the current conversation
-   *
-   * Unlike ChatGPT, Claude project chats share the same /chat/<uuid> URL as
-   * regular chats, so the only signal is a breadcrumb link
-   * (`<a href="/cowork/project/<uuid>">Project Name</a>`) rendered above the
-   * chat when it belongs to a project. Absent for regular chats.
-   *
-   * @returns ProjectInfo if this conversation belongs to a project, null otherwise
-   */
-  getProjectInfo(): ProjectInfo | null {
-    const link = document.querySelector(PROJECT_LINK_SELECTOR);
-    if (!link) {
-      return null;
-    }
-
-    const href = link.getAttribute('href') || '';
-    const id = href.replace('/cowork/project/', '').trim();
-    const name = link.textContent?.trim();
-
-    if (!id || !name) {
-      return null;
-    }
-
-    return { id, name };
-  }
-
-  /**
-   * Extract content from assistant message node
-   *
-   * Claude UI may contain multiple .standard-markdown blocks:
-   * - Collapsed thinking blocks (overflow-hidden with height: 0px)
-   * - Short intermediate messages
-   * - Collapsed web search results
-   * - Main response content
-   *
-   * It may also contain a visualization rendered in an iframe.
-   *
-   * This override:
-   * 1. Finds all content elements matching selector, plus visualization iframes
-   * 2. Filters out elements inside collapsed containers
-   * 3. Concatenates visible content in document order
-   *
-   * @override
-   * @protected
-   */
-  /**
-   * Determine role, treating an attachment card as the user's own turn
-   *
-   * The card carries none of the markers the hybrid strategy looks for, but
-   * an attachment in the transcript is always something the user sent.
-   *
-   * @override
-   * @protected
-   */
-  protected override extractRole(node: HTMLElement): 'user' | 'assistant' {
-    const attachment = this.selectors.content.attachment;
-    if (attachment && node.matches(attachment)) {
-      return 'user';
-    }
-
-    return super.extractRole(node);
-  }
-
-  protected override extractContent(node: HTMLElement, role: 'user' | 'assistant'): string {
-    // User messages don't have this complexity, use base implementation -
-    // plus a marker for every file attached to the same transcript row.
-    if (role === 'user') {
-      return [super.extractContent(node, role), this.extractAttachmentsHtml(node)]
-        .filter((part) => part !== '')
-        .join('\n');
-    }
-
-    // Querying both in one call keeps them in document order, so a
-    // visualization stays between the paragraphs it was rendered between.
-    const selector = this.selectors.content[role];
-    const elements = Array.from(
-      node.querySelectorAll(
-        `${selector}, ${VISUALIZATION_SELECTOR}, ${EXPORT_PLACEHOLDER_SELECTOR}`
-      )
+    throw new Error(
+      `Claude: could not load this conversation (HTTP ${status}). ` +
+        'Reload the page, check that you are signed in, and export again.'
     );
-    for (const candidate of node.querySelectorAll<HTMLElement>('*')) {
-      if (
-        candidate.childElementCount === 0 &&
-        (candidate.textContent || '').trim() === PENDING_VISUALIZATION_TEXT
-      ) {
-        elements.push(candidate);
-      }
-    }
-    elements.sort((left, right) =>
-      left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
-    );
-
-    const visibleContent: string[] = [];
-    for (const el of elements) {
-      if (this.isInCollapsedBlock(el as HTMLElement)) {
-        continue;
-      }
-      if (el.tagName === 'IFRAME') {
-        visibleContent.push(this.buildVisualizationPlaceholder(el as HTMLIFrameElement));
-      } else if ((el.textContent || '').trim() === PENDING_VISUALIZATION_TEXT) {
-        visibleContent.push(this.buildPlaceholderHtml('Visualization omitted: still connecting'));
-      } else if ((el as HTMLElement).matches(EXPORT_PLACEHOLDER_SELECTOR)) {
-        visibleContent.push((el as HTMLElement).outerHTML);
-      } else {
-        visibleContent.push(el.innerHTML);
-      }
-    }
-
-    const additionalCitations = this.getAdditionalCitationSources(node);
-    if (additionalCitations.length > 0) {
-      visibleContent.push(this.buildAdditionalCitationSources(additionalCitations));
-    }
-
-    return visibleContent.join('\n');
   }
 
-  /** Return popup URLs that do not already exist anywhere in the message. */
-  private getAdditionalCitationSources(node: HTMLElement): CitationSource[] {
-    const index = this.getListIndex(node) ?? this.collectedIndices.get(node) ?? null;
-    const groups =
-      index === null
-        ? this.citationGroupsByNode.get(node) || []
-        : this.citationGroupsByIndex.get(index) || [];
-    if (groups.length === 0) {
+  private async listOrganizations(): Promise<string[]> {
+    const response = await apiGet('/api/organizations');
+    if (!response.ok) {
       return [];
     }
-
-    const knownUrls = new Set(
-      Array.from(node.querySelectorAll<HTMLAnchorElement>('a[href]'))
-        .map((anchor) => this.normalizeCitationUrl(anchor.getAttribute('href')))
-        .filter((href): href is string => href !== null)
-    );
-    const additional: CitationSource[] = [];
-
-    for (const group of groups) {
-      for (const source of group.sources) {
-        if (knownUrls.has(source.href)) {
-          continue;
-        }
-        knownUrls.add(source.href);
-        additional.push(source);
-      }
-    }
-
-    return additional;
+    const organizations = (await response.json()) as Array<{ uuid?: string }>;
+    return organizations.map((org) => org.uuid).filter((uuid): uuid is string => !!uuid);
   }
 
-  /** Build clearly labelled HTML for links recovered from Claude's portal. */
-  private buildAdditionalCitationSources(sources: CitationSource[]): string {
-    const section = document.createElement('div');
-    section.setAttribute('data-export-additional-citations', '');
-
-    const label = document.createElement('p');
-    label.textContent = 'LLM Chat Exporter: additional citation sources hidden by Claude';
-    section.appendChild(label);
-
-    const list = document.createElement('ul');
-    for (const source of sources) {
-      const item = document.createElement('li');
-      const link = document.createElement('a');
-      link.href = source.href;
-      link.textContent = source.title;
-      item.appendChild(link);
-      list.appendChild(item);
+  /** The project's name is optional metadata, so a failed lookup keeps the id */
+  private async readProject(org: string, projectId?: string | null): Promise<ProjectInfo | null> {
+    if (!projectId) {
+      return null;
     }
-    section.appendChild(list);
 
-    return section.outerHTML;
+    let name: string | undefined;
+    try {
+      const response = await apiGet(`/api/organizations/${org}/projects/${projectId}`);
+      name = response.ok ? ((await response.json()) as { name?: string }).name : undefined;
+    } catch {
+      name = undefined;
+    }
+    return { id: projectId, name: name || projectId };
   }
 
   /**
-   * Build a placeholder standing in for a visualization iframe
-   *
-   * Claude renders visualizations inside a sandboxed cross-origin iframe.
-   * Images are deliberately not captured or embedded; callers request ASCII
-   * art when the visual information itself must survive a text export.
-   *
-   * @private
+   * The page's list advertises its length on every row (`aria-setsize`), so a
+   * branch that came out longer or shorter than what the page shows is caught
    */
-  private buildVisualizationPlaceholder(iframe: HTMLIFrameElement): string {
-    const rawTitle = iframe.getAttribute('title')?.trim() || '';
-    // Titles arrive as "visualize: <description>"; the tool name is noise
-    const title = rawTitle.replace(/^visualize:\s*/i, '');
-
-    return this.buildPlaceholderHtml(
-      title ? `Visualization omitted: ${title}` : 'Visualization omitted'
+  private compareWithPage(exported: number): string[] {
+    const listed = Math.max(
+      0,
+      ...Array.from(
+        document.querySelectorAll('[aria-setsize]'),
+        (el) => Number(el.getAttribute('aria-setsize')) || 0
+      )
     );
-  }
 
-  /** Build literal bracketed text that survives Markdown conversion unchanged. */
-  private buildPlaceholderHtml(label: string): string {
-    const p = document.createElement('p');
-    p.setAttribute('data-export-placeholder', '');
-    p.textContent = `[${label}]`;
-    return p.outerHTML;
-  }
-
-  /**
-   * Check if element is inside a collapsed block
-   *
-   * Collapsed blocks have:
-   * - Class: overflow-hidden
-   * - Style: height: 0px OR opacity: 0
-   *
-   * @private
-   * @param el - Element to check
-   * @returns true if element is inside collapsed block
-   */
-  private isInCollapsedBlock(el: HTMLElement): boolean {
-    let parent = el.parentElement;
-    while (parent) {
-      // Check for collapsed overflow-hidden containers
-      if (parent.classList.contains('overflow-hidden')) {
-        const style = parent.getAttribute('style') || '';
-        if (style.includes('height: 0px') || style.includes('opacity: 0')) {
-          return true;
-        }
-      }
-      parent = parent.parentElement;
-    }
-    return false;
+    return listed > 0 && listed !== exported
+      ? [`The page lists ${listed} messages but the export holds ${exported}.`]
+      : [];
   }
 }

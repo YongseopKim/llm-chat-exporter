@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BaseParser } from '../../src/content/parsers/base-parser';
 import { ConfigLoader } from '../../src/content/parsers/config-loader';
 import type { PlatformKey } from '../../src/content/parsers/config-types';
+import { createDOMFromHTML } from './parsers/shared/fixtures';
 
 // Test implementation of BaseParser
 class TestParser extends BaseParser {
@@ -37,11 +38,6 @@ describe('BaseParser', () => {
       expect(parser.canHandle('chatgpt.com')).toBe(true);
     });
 
-    it('should create parser for claude platform', () => {
-      const parser = new TestParser('claude');
-      expect(parser.canHandle('claude.ai')).toBe(true);
-    });
-
     it('should create parser for gemini platform', () => {
       const parser = new TestParser('gemini');
       expect(parser.canHandle('gemini.google.com')).toBe(true);
@@ -54,12 +50,6 @@ describe('BaseParser', () => {
       expect(parser.canHandle('chatgpt.com')).toBe(true);
       expect(parser.canHandle('www.chatgpt.com')).toBe(true);
       expect(parser.canHandle('CHATGPT.COM')).toBe(true);
-    });
-
-    it('should return true for matching hostname (claude)', () => {
-      const parser = new TestParser('claude');
-      expect(parser.canHandle('claude.ai')).toBe(true);
-      expect(parser.canHandle('www.claude.ai')).toBe(true);
     });
 
     it('should return true for matching hostname (gemini)', () => {
@@ -105,20 +95,6 @@ describe('BaseParser', () => {
       const nodes = parser.getMessageNodes();
       expect(nodes).toHaveLength(2);
       expect(mockDoc.querySelectorAll).toHaveBeenCalledWith('[data-turn]');
-    });
-
-    it('should use combined selector for Claude', () => {
-      const parser = new TestParser('claude');
-      const mockNodes = [{ tagName: 'div' }];
-      const mockDoc = {
-        querySelectorAll: vi.fn().mockReturnValue(mockNodes),
-      };
-      global.document = mockDoc as any;
-
-      parser.getMessageNodes();
-      expect(mockDoc.querySelectorAll).toHaveBeenCalledWith(
-        '[data-testid="user-message"], [data-is-streaming], [data-testid="assistant-message"]'
-      );
     });
 
     it('should use combined selector for Gemini', () => {
@@ -210,50 +186,6 @@ describe('BaseParser', () => {
     });
   });
 
-  describe('parseNode - hybrid strategy (Claude)', () => {
-    it('should parse user message with data-testid', () => {
-      const parser = new TestParser('claude');
-      const mockNode = {
-        getAttribute: vi.fn((attr) => {
-          if (attr === 'data-testid') return 'user-message';
-          return null;
-        }),
-        hasAttribute: vi.fn().mockReturnValue(false),
-        querySelector: vi.fn().mockReturnValue({ innerHTML: '<p>User text</p>' }),
-      } as any;
-
-      const result = parser.parseNode(mockNode);
-      expect(result.role).toBe('user');
-    });
-
-    it('should parse assistant message with data-testid', () => {
-      const parser = new TestParser('claude');
-      const mockNode = {
-        getAttribute: vi.fn((attr) => {
-          if (attr === 'data-testid') return 'assistant-message';
-          return null;
-        }),
-        hasAttribute: vi.fn().mockReturnValue(false),
-        querySelector: vi.fn().mockReturnValue({ innerHTML: '<p>Assistant text</p>' }),
-      } as any;
-
-      const result = parser.parseNode(mockNode);
-      expect(result.role).toBe('assistant');
-    });
-
-    it('should detect assistant via streaming attribute presence', () => {
-      const parser = new TestParser('claude');
-      const mockNode = {
-        getAttribute: vi.fn().mockReturnValue(null),
-        hasAttribute: vi.fn((attr) => attr === 'data-is-streaming'),
-        querySelector: vi.fn().mockReturnValue({ innerHTML: '<p>Streaming</p>' }),
-      } as any;
-
-      const result = parser.parseNode(mockNode);
-      expect(result.role).toBe('assistant');
-    });
-  });
-
   describe('parseNode - tagname strategy (Gemini)', () => {
     it('should parse user-query element as user', () => {
       const parser = new TestParser('gemini');
@@ -314,17 +246,6 @@ describe('BaseParser', () => {
       global.document = mockDoc as any;
 
       expect(parser.isGenerating()).toBe(false);
-    });
-
-    it('should use attribute-based detection for Claude', () => {
-      const parser = new TestParser('claude');
-      const mockDoc = {
-        querySelector: vi.fn().mockReturnValue({ tagName: 'div' }),
-      };
-      global.document = mockDoc as any;
-
-      expect(parser.isGenerating()).toBe(true);
-      expect(mockDoc.querySelector).toHaveBeenCalledWith('[data-is-streaming="true"]');
     });
   });
 
@@ -464,10 +385,10 @@ describe('BaseParser', () => {
   });
 
   describe('getTitle - selector strategy', () => {
-    it('should extract title from DOM element for Claude', () => {
-      const parser = new TestParser('claude');
+    it('should extract title from DOM element', () => {
+      const parser = new TestParser('gemini');
       const mockElement = {
-        textContent: 'My Claude Chat',
+        textContent: 'My Gemini Chat',
       };
       const mockDoc = {
         querySelector: vi.fn().mockReturnValue(mockElement),
@@ -476,11 +397,11 @@ describe('BaseParser', () => {
       global.document = mockDoc as any;
 
       const title = parser.getTitle();
-      expect(title).toBe('My Claude Chat');
+      expect(title).toBe('My Gemini Chat');
     });
 
     it('should return undefined when selector finds no element', () => {
-      const parser = new TestParser('claude');
+      const parser = new TestParser('gemini');
       const mockDoc = {
         querySelector: vi.fn().mockReturnValue(null),
         querySelectorAll: vi.fn(),
@@ -507,7 +428,7 @@ describe('BaseParser', () => {
     });
 
     it('should trim whitespace from selector result', () => {
-      const parser = new TestParser('claude');
+      const parser = new TestParser('gemini');
       const mockElement = {
         textContent: '  Title with spaces  ',
       };
@@ -521,8 +442,8 @@ describe('BaseParser', () => {
       expect(title).toBe('Title with spaces');
     });
 
-    it('should remove emoji from selector result when emojiPattern provided (Claude)', () => {
-      const parser = new TestParser('claude');
+    it('should remove an emoji with a variation selector from selector result', () => {
+      const parser = new TestParser('gemini');
       const mockElement = {
         textContent: '☑️Zcash',
       };
@@ -554,7 +475,7 @@ describe('BaseParser', () => {
 
   describe('getTitle - error handling', () => {
     it('should log warning but not throw on selector error', () => {
-      const parser = new TestParser('claude');
+      const parser = new TestParser('gemini');
       const mockDoc = {
         querySelector: vi.fn().mockImplementation(() => {
           throw new Error('Selector error');
@@ -640,6 +561,60 @@ describe('BaseParser', () => {
 
       const result = parser.parseNode(mockNode);
       expect(result.contentHtml).toBe('');
+    });
+  });
+
+  /**
+   * A selector that stops matching a message body exports that message as an
+   * empty or truncated string without any error. On 2026-09-24 that went
+   * unnoticed for every assistant turn of seven Claude conversations until
+   * the files were opened, so readConversation compares each export with the
+   * text of its message element.
+   */
+  describe('readConversation', () => {
+    const body = 'Settlement finality is deterministic after one block. '.repeat(8);
+
+    function turn(role: 'user' | 'assistant', inner: string): string {
+      return `<section data-turn="${role}" data-message-author-role="${role}">${inner}</section>`;
+    }
+
+    function read(html: string) {
+      global.document = createDOMFromHTML(`<html><body>${html}</body></html>`) as any;
+      const parser = new TestParser('chatgpt');
+      vi.spyOn(parser, 'loadAllMessages').mockResolvedValue();
+      return parser.readConversation();
+    }
+
+    it('returns every parsed message with the title', async () => {
+      const conversation = await read(
+        `<title>ChatGPT - Arc</title>` +
+          turn('user', '<div class="whitespace-pre-wrap">What is Arc?</div>') +
+          turn('assistant', `<div class="markdown"><p>${body}</p></div>`)
+      );
+
+      expect(conversation.messages.map((m) => m.role)).toEqual(['user', 'assistant']);
+      expect(conversation.title).toBe('Arc');
+      expect(conversation.warnings).toEqual([]);
+    });
+
+    it('warns when a message exports much less text than its element holds', async () => {
+      const conversation = await read(
+        turn('user', '<div class="whitespace-pre-wrap">What is Arc?</div>') +
+          turn('assistant', `<div class="renamed-markdown"><p>${body}</p></div>`)
+      );
+
+      expect(conversation.messages[1].contentHtml).toBe('');
+      expect(conversation.warnings).toEqual([
+        `Message 2 (assistant) exported 0 of the ${body.replace(/\s+/g, '').length} characters on the page.`,
+      ]);
+    });
+
+    it('does not judge messages too short to measure', async () => {
+      const conversation = await read(
+        turn('assistant', '<div class="renamed-markdown"><p>Short reply.</p></div>')
+      );
+
+      expect(conversation.warnings).toEqual([]);
     });
   });
 });

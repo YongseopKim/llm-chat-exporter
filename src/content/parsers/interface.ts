@@ -2,18 +2,16 @@
  * Parser Interface for LLM Chat Platforms
  *
  * This interface defines the contract that all platform-specific parsers
- * (ChatGPT, Claude, Gemini) must implement.
+ * (ChatGPT, Claude, Gemini, Grok, Perplexity) must implement.
  *
  * Design Pattern: Strategy Pattern
  * - Interface: ChatParser
- * - Concrete Strategies: ChatGPTParser, ClaudeParser, GeminiParser (Phase 4)
+ * - Concrete Strategies: BaseParser subclasses (DOM) and ClaudeParser (API)
  * - Context: ParserFactory selects appropriate strategy
  */
 
-import type { ScrollOptions } from '../scroller';
-
 /**
- * Platform-specific parser for extracting conversation data from DOM
+ * Platform-specific source of a conversation
  */
 export interface ChatParser {
   /**
@@ -24,29 +22,6 @@ export interface ChatParser {
   canHandle(hostname: string): boolean;
 
   /**
-   * Load all messages into the DOM (handle virtualization)
-   * Some platforms (e.g., Claude) aggressively unmount messages outside viewport.
-   * This method should scroll/trigger to ensure all messages are in DOM.
-   *
-   * @param options - Scroll tuning, mainly for tests
-   * @throws Error if response is still generating
-   */
-  loadAllMessages(options?: ScrollOptions): Promise<void>;
-
-  /**
-   * Get all message DOM nodes from the current page
-   * @returns Array of HTMLElements representing messages
-   */
-  getMessageNodes(): HTMLElement[];
-
-  /**
-   * Parse a single message node into structured data
-   * @param node - The HTMLElement representing a message
-   * @returns Parsed message with role and HTML content
-   */
-  parseNode(node: HTMLElement): ParsedMessage;
-
-  /**
    * Check if a response is currently being generated
    * Used to prevent exporting incomplete conversations
    * @returns true if generation in progress
@@ -54,22 +29,37 @@ export interface ChatParser {
   isGenerating(): boolean;
 
   /**
-   * Get conversation title
-   * @returns Title string or undefined if not available
+   * Read the whole conversation shown on the current page
+   *
+   * DOM parsers scroll the page and parse its message nodes; Claude reads the
+   * conversation API the page itself loads from.
+   *
+   * @throws Error when the conversation cannot be read
    */
-  getTitle(): string | undefined;
+  readConversation(): Promise<Conversation>;
+}
+
+/**
+ * Everything read from one conversation
+ */
+export interface Conversation {
+  messages: ParsedMessage[];
+
+  /** Conversation title, when the platform exposes one */
+  title?: string;
+
+  /** Project the conversation belongs to (ChatGPT/Claude) */
+  project?: ProjectInfo | null;
+
+  /** Latest artifact of the conversation (Claude) */
+  artifact?: ArtifactData | null;
 
   /**
-   * Get artifact data from the current page (optional, Claude only)
-   * @returns ArtifactData if an artifact panel is open, null otherwise
+   * Signs that the export may not match the page, e.g. a message whose
+   * exported text is much shorter than what the page shows. Recorded in the
+   * export's metadata and shown in the completion notification.
    */
-  getArtifact?(): ArtifactData | null;
-
-  /**
-   * Get project info for the current conversation (optional, ChatGPT/Claude)
-   * @returns ProjectInfo if this conversation belongs to a project, null otherwise
-   */
-  getProjectInfo?(): ProjectInfo | null;
+  warnings: string[];
 }
 
 /**
@@ -83,20 +73,22 @@ export interface ProjectInfo {
 }
 
 /**
- * Artifact data extracted from Claude's artifact panel
+ * Claude artifact, rebuilt from the commands that created and edited it
  */
 export interface ArtifactData {
-  /** Artifact title (from the last artifact-block-cell button) */
   title: string;
-  /** Version string (from artifact-version-trigger, e.g. "v3") */
+  /** "v<n>", counting the commands that produced this version */
   version: string;
-  /** Raw HTML content from #markdown-artifact .standard-markdown */
-  contentHtml: string;
+  /** The artifact's source as Claude wrote it (Markdown, code, ...) */
+  content: string;
 }
 
 /**
  * Parsed message data structure
- * Extracted from DOM before conversion to Markdown
+ *
+ * Carries exactly one of `contentHtml` (read from the DOM, converted to
+ * Markdown by the serializer) or `contentMarkdown` (supplied as Markdown by
+ * the platform and written verbatim).
  */
 export interface ParsedMessage {
   /**
@@ -107,10 +99,15 @@ export interface ParsedMessage {
   /**
    * Message content as HTML (will be converted to Markdown later)
    */
-  contentHtml: string;
+  contentHtml?: string;
 
   /**
-   * ISO 8601 timestamp if available from DOM
+   * Message content already in Markdown
+   */
+  contentMarkdown?: string;
+
+  /**
+   * ISO 8601 timestamp if the platform exposes one
    * If not available, serializer will add export time
    */
   timestamp?: string;
@@ -145,6 +142,11 @@ export interface ExportMetadata {
    * Project info if this conversation belongs to a project (optional)
    */
   project?: ProjectInfo | null;
+
+  /**
+   * Signs that the export may not match the page (optional, see Conversation)
+   */
+  warnings?: string[];
 }
 
 /**

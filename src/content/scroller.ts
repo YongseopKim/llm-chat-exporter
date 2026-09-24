@@ -359,8 +359,8 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
 
   // maxSteps exists to bound a page that lazily loads forever, but hitting it
   // is itself a bad sign: a conversation that never settles at the top may
-  // not have finished loading, and platforms with no equivalent of Claude's
-  // aria-setsize have no other way to detect that they came up short.
+  // not have finished loading, and the DOM parsers have no advertised list
+  // length to detect that they came up short.
   if (!reachedTop) {
     console.warn(
       'scrollToLoadAll: hit the step limit before the conversation settled at the top. ' +

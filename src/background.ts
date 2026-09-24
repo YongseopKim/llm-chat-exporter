@@ -92,15 +92,17 @@ chrome.commands.onCommand.addListener(async (command) => {
       await downloadJsonl(response.data, tab.url);
       console.log('Export completed successfully');
 
-      // Show success notification
-      const messageCount = response.data.split('\n').filter(line => line.trim()).length - 1; // -1 for metadata line
+      // Show success notification, flagging an export that may not match the page
       const title = extractTitleFromJsonl(response.data);
+      const warnings = response.warnings ?? [];
       chrome.notifications.create({
         type: 'basic',
         iconUrl: 'icons/icon48.png',
-        title: 'Export Successful',
-        message: `Exported ${messageCount} messages to ${generateFilename(tab.url, title)}`,
-        priority: 1
+        title: warnings.length > 0 ? 'Exported with warnings' : 'Export Successful',
+        message:
+          `Exported ${response.messageCount ?? 0} messages to ${generateFilename(tab.url, title)}` +
+          (warnings.length > 0 ? `\n${warnings.join('\n')}` : ''),
+        priority: warnings.length > 0 ? 2 : 1
       });
     } else {
       // Error: show user-friendly notification and download error details

@@ -230,6 +230,36 @@ describe('buildJsonl', () => {
     });
   });
 
+  it('should write Markdown content verbatim without HTML conversion', async () => {
+    const converterModule = await import('../../src/content/converter');
+    const htmlToMarkdown = converterModule.htmlToMarkdown as ReturnType<typeof vi.fn>;
+    const messages: ParsedMessage[] = [
+      { role: 'assistant', contentMarkdown: '**Arc** <not html>', timestamp: '2026-09-24T01:00:00Z' }
+    ];
+
+    const jsonl = await buildJsonl(messages, {
+      platform: 'claude',
+      url: 'https://claude.ai/chat/abc',
+      exported_at: '2026-09-24T01:01:00Z'
+    });
+
+    expect(htmlToMarkdown).not.toHaveBeenCalled();
+    expect(JSON.parse(jsonl.split('\n')[1]).content).toBe('**Arc** <not html>');
+  });
+
+  it('should record warnings in the meta line', async () => {
+    const jsonl = await buildJsonl([], {
+      platform: 'chatgpt',
+      url: 'https://chatgpt.com/c/123',
+      exported_at: '2026-09-24T01:01:00Z',
+      warnings: ['Message 2 (assistant) exported 0 of the 480 characters on the page.']
+    });
+
+    expect(JSON.parse(jsonl.split('\n')[0]).warnings).toEqual([
+      'Message 2 (assistant) exported 0 of the 480 characters on the page.'
+    ]);
+  });
+
   // ============================================================
   // Artifact support
   // ============================================================
@@ -249,7 +279,7 @@ describe('buildJsonl', () => {
       const artifact: ArtifactData = {
         title: 'My Document',
         version: 'v3',
-        contentHtml: '<h1>My Document</h1><p>Content here</p>'
+        content: '# My Document\n\nContent here'
       };
 
       const jsonl = await buildJsonl(messages, defaultMetadata, artifact);
@@ -261,7 +291,7 @@ describe('buildJsonl', () => {
       expect(artifactLine._artifact).toBe(true);
       expect(artifactLine.title).toBe('My Document');
       expect(artifactLine.version).toBe('v3');
-      expect(artifactLine.content).toBe('[MD]<h1>My Document</h1><p>Content here</p>[/MD]');
+      expect(artifactLine.content).toBe('# My Document\n\nContent here');
     });
 
     it('should not add artifact line when artifact is undefined', async () => {
@@ -291,21 +321,17 @@ describe('buildJsonl', () => {
       expect(lines.length).toBe(2); // meta + 1 message
     });
 
-    it('should convert artifact contentHtml to markdown', async () => {
+    it('should write artifact content verbatim, since it is already source text', async () => {
       const converterModule = await import('../../src/content/converter');
       const htmlToMarkdown = converterModule.htmlToMarkdown as ReturnType<typeof vi.fn>;
       vi.clearAllMocks();
 
-      const messages: ParsedMessage[] = [];
-      const artifact: ArtifactData = {
-        title: 'Doc',
-        version: 'v1',
-        contentHtml: '<h1>Title</h1>'
-      };
+      const artifact: ArtifactData = { title: 'Doc', version: 'v1', content: '<h1>Raw</h1>' };
 
-      await buildJsonl(messages, defaultMetadata, artifact);
+      const jsonl = await buildJsonl([], defaultMetadata, artifact);
 
-      expect(htmlToMarkdown).toHaveBeenCalledWith('<h1>Title</h1>');
+      expect(htmlToMarkdown).not.toHaveBeenCalled();
+      expect(JSON.parse(jsonl.split('\n')[1]).content).toBe('<h1>Raw</h1>');
     });
   });
 });

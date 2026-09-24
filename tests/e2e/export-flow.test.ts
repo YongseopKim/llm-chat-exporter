@@ -15,10 +15,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const VIRTUALIZED_CHATGPT_URL = 'https://chatgpt.com/c/e2e-virtualized-regression';
-const GROUPED_CITATION_CLAUDE_URL = 'https://claude.ai/chat/e2e-grouped-citation-regression';
-const VISUALIZATION_CLAUDE_URL = 'https://claude.ai/chat/e2e-visualization-capture';
-const VISUALIZATION_FRAME_URL =
-  'https://fixture.claudemcpcontent.com/mcp_apps?visualization=e2e';
+const CLAUDE_CONVERSATION_ID = 'e2e00000-0000-4000-8000-000000000001';
+const CLAUDE_URL = `https://claude.ai/chat/${CLAUDE_CONVERSATION_ID}`;
+const CLAUDE_API_PATH =
+  `/api/organizations/e2e-org/chat_conversations/${CLAUDE_CONVERSATION_ID}`;
 
 type ExportResponse = { success: boolean; data?: string; error?: string };
 
@@ -85,89 +85,73 @@ function getVirtualizedChatGptHtml(): string {
 }
 
 /**
- * Claude keeps only the first URL in a grouped citation inside the message.
- * Hovering the trigger mounts all sources under #portal-root.
+ * A claude.ai page whose DOM holds no message bodies at all: the export must
+ * come from the conversation API, which the content script requests with the
+ * page's own session.
  */
-function getGroupedCitationClaudeHtml(): string {
+function getClaudeHtml(): string {
   return `<!doctype html>
     <html>
-      <head><meta charset="utf-8"><title>Grouped Citation - Claude</title></head>
+      <head><meta charset="utf-8"><title>API Export - Claude</title></head>
       <body>
-        <div id="portal-root"></div>
-        <div data-rs-index="0" data-index="0">
-          <div role="article" aria-setsize="2" aria-posinset="1">
-            <div data-testid="user-message">
-              <p class="whitespace-pre-wrap">Find grouped sources</p>
-            </div>
-          </div>
-        </div>
-        <div data-rs-index="1" data-index="1">
-          <div role="article" aria-setsize="2" aria-posinset="2">
-            <div data-is-streaming="false">
-              <div class="standard-markdown">
-                <p>
-                  Grouped sources
-                  <span class="inline-flex">
-                    <a id="grouped-citation" href="https://primary.example/report">Primary + 2</a>
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div role="article" aria-setsize="2" aria-posinset="1"></div>
+        <div role="article" aria-setsize="2" aria-posinset="2"></div>
         <script>
-          document.getElementById('grouped-citation').addEventListener('pointerover', () => {
-            document.getElementById('portal-root').innerHTML =
-              '<div data-open role="presentation">' +
-                '<a href="https://primary.example/report"><h3>Primary report</h3></a>' +
-                '<a href="https://second.example/article"><h3>Second article</h3></a>' +
-                '<a href="https://third.example/paper"><h3>Third paper</h3></a>' +
-              '</div>';
-          });
-          window.__groupedCitationReady = true;
+          document.cookie = 'lastActiveOrg=e2e-org; path=/';
+          window.__claudeReady = true;
         </script>
       </body>
     </html>`;
 }
 
-function getVisualizationClaudeHtml(): string {
-  return `<!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Visualization Capture - Claude</title>
-        <style>
-          body { margin: 0; }
-          iframe { display: block; width: 480px; height: 240px; border: 0; }
-        </style>
-      </head>
-      <body>
-        <div data-rs-index="0" data-index="0">
-          <div role="article" aria-setsize="1" aria-posinset="1">
-            <div data-is-streaming="false">
-              <div class="standard-markdown"><p>Before visualization</p></div>
-              <div id="visualization-slot"><div>Connecting to visualize...</div></div>
-              <div class="standard-markdown">
-                <p>After visualization</p>
-                <div data-not-prose><div data-mermaid="true" role="img" aria-label="Mermaid diagram"></div></div>
-                <div role="group" aria-label="Code">
-                  <button aria-label="Copy to clipboard"><span aria-hidden="true">private-icon</span></button>
-                  <pre><code>ASCII fallback</code></pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style="height: 1600px"></div>
-        <script>
-          window.__visualizationReady = true;
-          setTimeout(() => {
-            document.getElementById('visualization-slot').innerHTML =
-              '<iframe title="visualize: Treasury flow" src="${VISUALIZATION_FRAME_URL}"></iframe>';
-          }, 400);
-        </script>
-      </body>
-    </html>`;
+function getClaudeConversation(): unknown {
+  const answer = 'Arc settles in one block.';
+  return {
+    uuid: CLAUDE_CONVERSATION_ID,
+    name: 'API Export',
+    project_uuid: null,
+    current_leaf_message_uuid: 'a1',
+    chat_messages: [
+      {
+        uuid: 'h0',
+        parent_message_uuid: '00000000-0000-4000-8000-000000000000',
+        sender: 'human',
+        created_at: '2026-09-24T01:00:00Z',
+        content: [{ type: 'text', text: 'How fast is Arc?' }],
+        attachments: [],
+        files: [],
+      },
+      {
+        uuid: 'a1',
+        parent_message_uuid: 'h0',
+        sender: 'assistant',
+        created_at: '2026-09-24T01:00:05Z',
+        content: [
+          { type: 'thinking', thinking: 'hidden reasoning' },
+          { type: 'tool_use', name: 'web_search', input: { query: 'arc finality' } },
+          { type: 'tool_result', name: 'web_search', content: [] },
+          { type: 'tool_use', name: 'visualize', input: { title: 'Treasury flow' } },
+          {
+            type: 'text',
+            text: answer,
+            citations: [
+              {
+                end_index: answer.length,
+                url: 'https://primary.example/report',
+                title: 'Primary report',
+                sources: [
+                  { url: 'https://primary.example/report', title: 'Primary report' },
+                  { url: 'https://second.example/article', title: 'Second article' },
+                ],
+              },
+            ],
+          },
+        ],
+        attachments: [],
+        files: [],
+      },
+    ],
+  };
 }
 
 async function exportCurrentPage(
@@ -303,14 +287,23 @@ describe('E2E: Export Flow', () => {
     }
   }, 30000);
 
-  it('should export every URL hidden in a grouped Claude citation', async () => {
+  it('should export a Claude conversation from its API through the loaded extension', async () => {
     await page.setRequestInterception(true);
     const intercept = (request: HTTPRequest) => {
-      if (request.isNavigationRequest() && request.url() === GROUPED_CITATION_CLAUDE_URL) {
+      const url = new URL(request.url());
+      if (request.isNavigationRequest() && request.url() === CLAUDE_URL) {
         void request.respond({
           status: 200,
           contentType: 'text/html; charset=utf-8',
-          body: getGroupedCitationClaudeHtml(),
+          body: getClaudeHtml(),
+        });
+        return;
+      }
+      if (url.origin === 'https://claude.ai' && url.pathname === CLAUDE_API_PATH) {
+        void request.respond({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(getClaudeConversation()),
         });
         return;
       }
@@ -319,80 +312,31 @@ describe('E2E: Export Flow', () => {
     page.on('request', intercept);
 
     try {
-      await page.goto(GROUPED_CITATION_CLAUDE_URL, { waitUntil: 'domcontentloaded' });
-      await page.waitForFunction('window.__groupedCitationReady === true');
+      await page.goto(CLAUDE_URL, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction('window.__claudeReady === true');
 
-      const response = await exportCurrentPage(browser, GROUPED_CITATION_CLAUDE_URL);
+      const response = await exportCurrentPage(browser, CLAUDE_URL);
 
       expect(response.success, response.error).toBe(true);
-      const records = response.data!
+      const [meta, ...messages] = response.data!
         .split('\n')
         .filter(Boolean)
         .map((line) => JSON.parse(line));
-      const assistant = records.find((record) => record.role === 'assistant');
 
-      expect(assistant.content).toContain('[Primary + 2](https://primary.example/report)');
-      expect(assistant.content).toContain('[Second article](https://second.example/article)');
-      expect(assistant.content).toContain('[Third paper](https://third.example/paper)');
-      expect(assistant.content.match(/\]\(https?:\/\//g) || []).toHaveLength(3);
-    } finally {
-      page.off('request', intercept);
-      await page.setRequestInterception(false);
-    }
-  }, 30000);
-
-  it('should mark a Claude visualization as omitted without embedding image data', async () => {
-    await page.setRequestInterception(true);
-    const intercept = (request: HTTPRequest) => {
-      if (request.isNavigationRequest() && request.url() === VISUALIZATION_CLAUDE_URL) {
-        void request.respond({
-          status: 200,
-          contentType: 'text/html; charset=utf-8',
-          body: getVisualizationClaudeHtml(),
-        });
-        return;
-      }
-      if (request.isNavigationRequest() && request.url() === VISUALIZATION_FRAME_URL) {
-        void request.respond({
-          status: 200,
-          contentType: 'text/html; charset=utf-8',
-          body: `<!doctype html>
-            <html><head><style>
-              html,body{margin:0;width:100%;height:100%;background:#16324f;color:white}
-            </style></head><body><h1>Treasury flow chart</h1></body></html>`,
-        });
-        return;
-      }
-      void request.continue();
-    };
-    page.on('request', intercept);
-
-    try {
-      await page.goto(VISUALIZATION_CLAUDE_URL, { waitUntil: 'domcontentloaded' });
-      await page.waitForFunction('window.__visualizationReady === true');
-      await page.waitForSelector('iframe[title]');
-
-      const response = await exportCurrentPage(browser, VISUALIZATION_CLAUDE_URL);
-
-      expect(response.success, response.error).toBe(true);
-      const records = response.data!
-        .split('\n')
-        .filter(Boolean)
-        .map((line) => JSON.parse(line));
-      const assistant = records.find((record) => record.role === 'assistant');
-
-      expect(assistant.content).toMatch(
-        /Before visualization[\s\S]*\[Visualization omitted: Treasury flow\][\s\S]*After visualization/
-      );
-      expect(assistant.content).toContain('[Visualization omitted: Mermaid diagram]');
-      expect(assistant.content).toContain('ASCII fallback');
-      expect(assistant.content).not.toContain('private-icon');
-      expect(assistant.content).not.toContain('data:image/png');
-
-      const repeatedResponse = await exportCurrentPage(browser, VISUALIZATION_CLAUDE_URL);
-      expect(repeatedResponse.success, repeatedResponse.error).toBe(true);
-      expect(repeatedResponse.data).toContain('[Visualization omitted: Treasury flow]');
-      expect(repeatedResponse.data).not.toContain('data:image/png');
+      expect(meta.title).toBe('API Export');
+      expect(meta.warnings).toBeUndefined();
+      expect(messages).toEqual([
+        { role: 'user', content: 'How fast is Arc?', timestamp: '2026-09-24T01:00:00Z' },
+        {
+          role: 'assistant',
+          content:
+            '[Visualization omitted: Treasury flow]\n\n' +
+            'Arc settles in one block. [1][2]\n\n' +
+            '[1]: https://primary.example/report "Primary report"\n' +
+            '[2]: https://second.example/article "Second article"',
+          timestamp: '2026-09-24T01:00:05Z',
+        },
+      ]);
     } finally {
       page.off('request', intercept);
       await page.setRequestInterception(false);

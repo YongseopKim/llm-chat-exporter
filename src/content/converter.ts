@@ -30,65 +30,17 @@ import TurndownService from 'turndown';
  * @param html - Raw HTML string
  * @returns Cleaned HTML with simplified <pre><code> structure
  */
-/**
- * Check whether an SVG element looks like a rendered Mermaid diagram whose
- * original source is unrecoverable (as opposed to a native diagram a
- * platform generates directly, e.g. Claude's inline "visualization" feature).
- *
- * Matches the fingerprints already covered by this project's Mermaid tests:
- * a "mermaid"/"mpr-diagram" id, a "mermaid" class on the svg itself or an
- * ancestor, or a flowchart/sequence aria-roledescription (Grok's native
- * rendering, which has no mpr wrapper).
- */
-function isMermaidRenderedSvg(svg: Element): boolean {
-  const id = svg.getAttribute('id') || '';
-  const className = svg.getAttribute('class') || '';
-  const role = svg.getAttribute('aria-roledescription') || '';
-
-  return (
-    id.startsWith('mermaid') ||
-    id.startsWith('mpr-diagram') ||
-    className.includes('mermaid') ||
-    /flowchart|sequence|mermaid/.test(role) ||
-    svg.closest('.mermaid, .mpr-container, .mpr-rendered') !== null
-  );
-}
-
 function cleanCodeBlockHtml(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
-
-  // Claude may retain only an empty rendered Mermaid container. The source is
-  // unrecoverable, but its position must not disappear from a text export.
-  doc.querySelectorAll<HTMLElement>('[data-mermaid="true"]').forEach((container) => {
-    if ((container.textContent || '').trim() || container.querySelector('pre, code')) {
-      return;
-    }
-    const placeholder = doc.createElement('p');
-    placeholder.setAttribute('data-export-placeholder', '');
-    const title = container.getAttribute('aria-label')?.trim() || 'Mermaid diagram';
-    placeholder.textContent = `[Visualization omitted: ${title}]`;
-    container.replaceWith(placeholder);
-  });
-
-  // Claude puts its copy control beside the code block inside exported prose.
-  doc.querySelectorAll('button[aria-label="Copy to clipboard"]').forEach((button) => {
-    button.remove();
-  });
 
   // Mermaid Preserving Renderer: Remove rendered diagrams and toggle buttons
   // Keep only the original source (.mpr-source)
   doc.querySelectorAll('.mpr-rendered').forEach((el) => el.remove());
   doc.querySelectorAll('.mpr-toggle').forEach((el) => el.remove());
 
-  // Remove SVGs that are rendered Mermaid diagrams with no recoverable
-  // source. Anything else (e.g. a platform's own native SVG diagram) is
-  // left in place and preserved as a fenced code block by the
-  // 'preserveNativeSvg' Turndown rule below.
-  doc.querySelectorAll('svg').forEach((el) => {
-    if (isMermaidRenderedSvg(el)) {
-      el.remove();
-    }
-  });
+  // Remove rendered SVGs (Mermaid renders, icons); a diagram's source
+  // survives in its code block, and SVG markup is not conversation text
+  doc.querySelectorAll('svg').forEach((el) => el.remove());
 
   // Remove standalone style tags (may contain mermaid CSS)
   doc.querySelectorAll('style').forEach((el) => el.remove());
@@ -290,31 +242,14 @@ turndownService.addRule('mathInlineKatex', {
 /**
  * Custom Rule 5: Export Placeholders
  *
- * Parsers emit `[Visualization: ...]` style markers for content that exists
- * in the page but cannot be extracted (e.g. a cross-origin iframe). Turndown
- * would escape the brackets into `\[...\]`, which breaks grepping for the
- * marker, so the text is passed through verbatim.
+ * Parsers emit `[File: ...]` style markers for content that exists in the
+ * page but cannot be extracted (e.g. an attached file). Turndown would escape
+ * the brackets into `\[...\]`, which breaks grepping for the marker, so the
+ * text is passed through verbatim.
  */
 turndownService.addRule('exportPlaceholder', {
   filter: (node) => (node as HTMLElement).hasAttribute?.('data-export-placeholder'),
   replacement: (_content, node) => `\n\n${(node as HTMLElement).textContent || ''}\n\n`
-});
-
-/**
- * Custom Rule 6: Native SVG Preservation
- *
- * Any <svg> that survives cleanCodeBlockHtml() (i.e. wasn't identified as a
- * rendered Mermaid diagram) is a platform's own native diagram — e.g.
- * Claude's inline "visualization" feature. There's no separate source to
- * fall back to, so the raw markup is kept as a fenced code block rather
- * than being silently dropped.
- */
-turndownService.addRule('preserveNativeSvg', {
-  filter: 'svg',
-  replacement: (_content, node) => {
-    const outerHtml = (node as Element).outerHTML;
-    return outerHtml ? `\n\`\`\`svg\n${outerHtml}\n\`\`\`\n` : '';
-  }
 });
 
 /**

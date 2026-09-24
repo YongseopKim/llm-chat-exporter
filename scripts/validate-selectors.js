@@ -108,14 +108,6 @@ function validatePlatform(name, config) {
             errors.push(`Missing 'role.attributes' for attribute strategy in ${name}`);
           }
           break;
-        case 'hybrid':
-          if (!selectors.role.userTestId) {
-            errors.push(`Missing 'role.userTestId' for hybrid strategy in ${name}`);
-          }
-          if (!selectors.role.streamingAttribute) {
-            errors.push(`Missing 'role.streamingAttribute' for hybrid strategy in ${name}`);
-          }
-          break;
         case 'tagname':
           if (!selectors.role.userTag) {
             errors.push(`Missing 'role.userTag' for tagname strategy in ${name}`);
@@ -205,7 +197,8 @@ function validate() {
     }
 
     // Validate required platforms
-    const requiredPlatforms = ['chatgpt', 'claude', 'gemini', 'grok', 'perplexity'];
+    // Claude is not listed: its parser reads the conversation API, not the DOM
+    const requiredPlatforms = ['chatgpt', 'gemini', 'grok', 'perplexity'];
 
     header('Platform Validation');
 

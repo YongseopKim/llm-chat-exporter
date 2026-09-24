@@ -6,7 +6,7 @@ ChatGPT, Claude, Gemini 웹 인터페이스의 대화를 JSONL 형식으로 내�
 
 ## 프로젝트 소개
 
-**LLM Chat Exporter**는 ChatGPT, Claude, Gemini 웹 인터페이스의 대화를 API 없이 DOM 파싱으로 추출하여 JSONL 파일로 저장하는 Chrome 확장 프로그램입니다.
+**LLM Chat Exporter**는 ChatGPT, Claude, Gemini 웹 인터페이스의 대화를 API 키 없이 추출하여 JSONL 파일로 저장하는 Chrome 확장 프로그램입니다. 대부분의 플랫폼은 페이지 DOM을 파싱하고, Claude는 claude.ai 페이지가 스스로 불러오는 대화 API를 기존 로그인 세션으로 읽습니다.
 
 ### 핵심 가치
 
@@ -77,7 +77,7 @@ npm run validate:selectors # 셀렉터 설정 검증
 
 - DOM 구조 변경 시 셀렉터 업데이트 필요
 - 이미지는 URL만 저장 (바이너리 다운로드 없음)
-- Claude Artifacts는 제한적 지원
+- Claude artifact는 마지막 artifact의 최신 버전만 내보냄
 - 단일 대화만 내보내기 가능 (배치/히스토리 내보내기 없음)
 
 ## 라이선스

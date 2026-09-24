@@ -29,31 +29,6 @@
         }
       }
     },
-    "claude": {
-      "hostname": "claude.ai",
-      "selectors": {
-        "messages": {
-          "combined": "[data-testid=\"user-message\"], [data-is-streaming], [data-testid=\"assistant-message\"]"
-        },
-        "content": {
-          "user": ".whitespace-pre-wrap",
-          "assistant": ".standard-markdown, .progressive-markdown",
-          "attachment": "[data-testid=\"file-thumbnail\"]"
-        },
-        "generation": "[data-is-streaming=\"true\"]",
-        "role": {
-          "strategy": "hybrid",
-          "userTestId": "user-message",
-          "assistantTestId": "assistant-message",
-          "streamingAttribute": "data-is-streaming"
-        },
-        "title": {
-          "strategy": "selector",
-          "selector": "div.truncate.font-base-bold",
-          "emojiPattern": "^[\\p{Emoji}\\p{Emoji_Presentation}\\p{Extended_Pictographic}][\\uFE0E\\uFE0F]?\\s*"
-        }
-      }
-    },
     "gemini": {
       "hostname": "gemini.google.com",
       "selectors": {

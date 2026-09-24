@@ -543,28 +543,6 @@ describe('htmlToMarkdown', () => {
       expect(md.trim()).toBe('');
     });
 
-    it('should preserve a native (non-mermaid) SVG diagram as a fenced svg code block', () => {
-      // Claude's inline "visualization" feature renders an interactive SVG
-      // diagram directly in the response (clickable nodes via onclick).
-      // Unlike a rendered mermaid diagram, this SVG is the actual content —
-      // there is no separate source to fall back to, so it must survive.
-      const html = `<div id="vis-container"><svg width="100%" viewBox="0 0 680 620" role="img" xmlns="http://www.w3.org/2000/svg">
-<title>발전소에서 GPU 칩까지의 전압 사다리</title>
-<desc>발전소에서 만든 전기가 승압 송전, 변전, 구내 배전, 랙 버스바를 거쳐 GPU 칩까지 단계적으로 강압되는 흐름</desc>
-<g class="node c-teal" onclick="sendPrompt('발전소에서 전기가 만들어지는 원리를 더 자세히 설명해줘')">
-  <rect x="210" y="40" width="260" height="56" rx="8"></rect>
-  <text class="th" x="340" y="58">발전소</text>
-  <text class="ts" x="340" y="78">약 11–25kV로 생산</text>
-</g>
-</svg></div>`;
-      const md = htmlToMarkdown(html);
-
-      expect(md).toContain('```svg');
-      expect(md).toContain('발전소에서 GPU 칩까지의 전압 사다리');
-      expect(md).toContain('발전소');
-      expect(md).toContain('약 11–25kV로 생산');
-    });
-
     it('should still drop a mermaid-rendered SVG even without the mpr wrapper (no regression)', () => {
       const html = `<div class="mermaid">
         <svg id="mermaid-svg-99" width="100%" xmlns="http://www.w3.org/2000/svg">
@@ -651,39 +629,6 @@ describe('htmlToMarkdown', () => {
       const md = htmlToMarkdown(html);
       // Should have exactly one block math, not nested
       expect(md.match(/\$\$/g)?.length).toBe(2); // Opening and closing $$
-    });
-  });
-
-  describe('Claude visualization and code UI cleanup', () => {
-    it('should preserve an omission marker for an empty Mermaid container', () => {
-      const html = `
-        <p>Before Mermaid</p>
-        <div data-not-prose><div data-mermaid="true" role="img" aria-label="Mermaid diagram"></div></div>
-        <p>After Mermaid</p>`;
-
-      const markdown = htmlToMarkdown(html);
-
-      expect(markdown).toContain('[Visualization omitted: Mermaid diagram]');
-      expect(markdown.indexOf('Before Mermaid')).toBeLessThan(
-        markdown.indexOf('[Visualization omitted: Mermaid diagram]')
-      );
-      expect(markdown.indexOf('[Visualization omitted: Mermaid diagram]')).toBeLessThan(
-        markdown.indexOf('After Mermaid')
-      );
-    });
-
-    it('should remove Claude copy-button UI without removing its code block', () => {
-      const html = `
-        <div role="group" aria-label="Code">
-          <button aria-label="Copy to clipboard"><span aria-hidden="true">private-icon</span></button>
-          <pre><code>exported code</code></pre>
-        </div>`;
-
-      const markdown = htmlToMarkdown(html);
-
-      expect(markdown).toContain('exported code');
-      expect(markdown).not.toContain('private-icon');
-      expect(markdown).not.toContain('Copy to clipboard');
     });
   });
 

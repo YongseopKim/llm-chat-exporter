@@ -1,9 +1,9 @@
 /**
  * BaseParser - Abstract Base Class for Platform Parsers
  *
- * Provides common implementation for all platform parsers using
- * configuration-driven selectors. Each concrete parser (ChatGPT, Claude, Gemini)
- * extends this class and benefits from shared logic.
+ * Provides common implementation for the DOM-parsing platform parsers using
+ * configuration-driven selectors. Each concrete parser (ChatGPT, Gemini, Grok,
+ * Perplexity) extends this class and benefits from shared logic.
  *
  * Design Pattern: Template Method Pattern
  * - Common methods implemented here (getMessageNodes, parseNode, etc.)
@@ -11,10 +11,46 @@
  * - Override points available for custom behavior if needed
  */
 
-import type { ChatParser, ParsedMessage } from './interface';
+import type { ChatParser, Conversation, ParsedMessage, ProjectInfo } from './interface';
 import type { PlatformSelectors, PlatformKey, TitleConfig } from './config-types';
 import { ConfigLoader } from './config-loader';
 import { scrollToLoadAll, type ScrollOptions } from '../scroller';
+
+/** Messages shorter than this are too small to judge by length */
+const MIN_CHECKED_LENGTH = 200;
+
+/** Below this share of the element's text, an export counts as short */
+const MIN_EXPORTED_SHARE = 0.5;
+
+function visibleLength(text: string | null | undefined): number {
+  return (text || '').replace(/\s+/g, '').length;
+}
+
+/**
+ * Warn about messages whose exported HTML holds much less text than the
+ * message element itself
+ */
+function findShortExports(nodes: HTMLElement[], messages: ParsedMessage[]): string[] {
+  const warnings: string[] = [];
+
+  nodes.forEach((node, index) => {
+    const shown = visibleLength(node.textContent);
+    if (shown < MIN_CHECKED_LENGTH) {
+      return;
+    }
+
+    const html = messages[index].contentHtml ?? '';
+    const exported = visibleLength(new DOMParser().parseFromString(html, 'text/html').body.textContent);
+    if (exported < shown * MIN_EXPORTED_SHARE) {
+      warnings.push(
+        `Message ${index + 1} (${messages[index].role}) exported ${exported} of the ` +
+          `${shown} characters on the page.`
+      );
+    }
+  });
+
+  return warnings;
+}
 
 /**
  * Abstract base class for all platform parsers
@@ -23,7 +59,7 @@ import { scrollToLoadAll, type ScrollOptions } from '../scroller';
  * Concrete parsers need only extend and call super('platformKey').
  */
 export abstract class BaseParser implements ChatParser {
-  /** Platform identifier (chatgpt, claude, gemini) */
+  /** Platform identifier (chatgpt, gemini, grok, perplexity) */
   protected readonly platformKey: PlatformKey;
 
   /** Platform display name for error messages */
@@ -38,7 +74,7 @@ export abstract class BaseParser implements ChatParser {
   /**
    * Create a new parser instance
    *
-   * @param platformKey - Platform identifier (chatgpt, claude, gemini)
+   * @param platformKey - Platform identifier (chatgpt, gemini, grok, perplexity)
    */
   constructor(platformKey: PlatformKey) {
     this.platformKey = platformKey;
@@ -70,6 +106,37 @@ export abstract class BaseParser implements ChatParser {
     }
     const normalizedHostname = hostname.toLowerCase();
     return normalizedHostname.includes(this.hostname);
+  }
+
+  /**
+   * Read the conversation from the page
+   *
+   * Scrolls every message into the DOM, parses each one, and flags messages
+   * whose export came out much shorter than their element's text - the
+   * signature of a selector that stopped matching the message body, which
+   * otherwise exports silently as an empty or truncated message.
+   */
+  async readConversation(): Promise<Conversation> {
+    await this.loadAllMessages();
+
+    const nodes = this.getMessageNodes();
+    const messages = nodes.map((node) => this.parseNode(node));
+
+    return {
+      messages,
+      title: this.getTitle(),
+      project: this.getProjectInfo(),
+      warnings: findShortExports(nodes, messages),
+    };
+  }
+
+  /**
+   * Get project info for the current conversation
+   *
+   * @returns ProjectInfo if this conversation belongs to a project, null otherwise
+   */
+  getProjectInfo(): ProjectInfo | null {
+    return null;
   }
 
   /**
@@ -161,7 +228,7 @@ export abstract class BaseParser implements ChatParser {
   protected getNodesWithFallback(): HTMLElement[] {
     const { messages } = this.selectors;
 
-    // Use combined selector if available (Claude, Gemini)
+    // Use combined selector if available (Gemini, Perplexity)
     if (messages.combined) {
       const nodes = document.querySelectorAll(messages.combined);
       return Array.from(nodes) as HTMLElement[];
@@ -202,8 +269,6 @@ export abstract class BaseParser implements ChatParser {
     switch (role.strategy) {
       case 'attribute':
         return this.extractRoleByAttribute(node);
-      case 'hybrid':
-        return this.extractRoleByHybrid(node);
       case 'tagname':
         return this.extractRoleByTagName(node);
       case 'combined-selector':
@@ -244,53 +309,6 @@ export abstract class BaseParser implements ChatParser {
       `${this.platformName}: Cannot determine message role. ` +
         `Expected attribute ${attributes.join(' or ')} with value 'user' or 'assistant'. ` +
         `Found attributes: ${availableAttrs || 'none'}`
-    );
-  }
-
-  /**
-   * Extract role using hybrid strategy (Claude)
-   *
-   * Checks data-testid first, then streaming attribute presence.
-   *
-   * @private
-   * @param node - Message HTMLElement
-   * @returns 'user' or 'assistant'
-   * @throws Error if role cannot be determined
-   */
-  private extractRoleByHybrid(node: HTMLElement): 'user' | 'assistant' {
-    const { userTestId, assistantTestId, streamingAttribute } = this.selectors.role;
-    const testId = node.getAttribute('data-testid');
-
-    // Priority 1: Check user testid
-    if (testId === userTestId) {
-      return 'user';
-    }
-
-    // Priority 2: Check assistant testid (legacy/fallback)
-    if (testId === assistantTestId) {
-      return 'assistant';
-    }
-
-    // Priority 3: Check streaming attribute presence
-    if (streamingAttribute && node.hasAttribute(streamingAttribute)) {
-      return 'assistant';
-    }
-
-    // Provide detailed error for debugging
-    const nodeInfo = {
-      testId: testId || 'none',
-      hasStreaming: streamingAttribute ? node.hasAttribute(streamingAttribute) : false,
-      id: node.id || 'none',
-      classes: node.className || 'none',
-      innerHTML: node.innerHTML.substring(0, 100) + '...',
-    };
-
-    throw new Error(
-      `${this.platformName}: Cannot determine message role. ` +
-        `Expected data-testid='${userTestId}'/'${assistantTestId}' or ${streamingAttribute} attribute. ` +
-        `Found: data-testid='${nodeInfo.testId}', ${streamingAttribute}=${nodeInfo.hasStreaming}, ` +
-        `id='${nodeInfo.id}', classes='${nodeInfo.classes}'. ` +
-        `Content preview: ${nodeInfo.innerHTML}`
     );
   }
 
@@ -380,12 +398,10 @@ export abstract class BaseParser implements ChatParser {
   /**
    * Build the marker that stands in for a file attached to a message
    *
-   * A prompt pasted at length is turned into an attachment by both ChatGPT
-   * and Claude, and neither puts the file's text in the DOM - ChatGPT shows
-   * only a name and a download button, Claude a preview truncated at a few
-   * hundred characters. The export therefore records that a file was sent and
-   * what it was called, rather than dropping the turn or inventing a body
-   * from a preview.
+   * A prompt pasted at length is turned into an attachment, and the file's
+   * text is not in the DOM - ChatGPT shows only a name and a download button.
+   * The export therefore records that a file was sent and what it was
+   * called, rather than dropping the turn.
    *
    * @protected
    * @param label - The attachment's name as the page presents it

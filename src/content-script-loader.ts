@@ -2,6 +2,10 @@ export interface ExportResponse {
   success: boolean;
   data?: string;
   error?: string;
+  /** Messages in the export, excluding metadata and artifact lines */
+  messageCount?: number;
+  /** Signs that the export may not match the page */
+  warnings?: string[];
 }
 
 interface ContentScriptLoaderDependencies {

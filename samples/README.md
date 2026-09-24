@@ -2,10 +2,11 @@
 
 This directory contains sample HTML snapshots from each platform (ChatGPT, Claude, Gemini), each representing **one user question and one assistant response**. These samples are used for DOM selector validation during Phase 1 development.
 
+> **2026-09-24**: The Claude samples were removed. Claude is no longer parsed from the DOM - its parser reads the conversation API - so the Claude sections below are historical.
+
 ## Files
 
 - `chatgpt.html`: ChatGPT conversation sample (59KB)
-- `claude.html`: Claude conversation sample (61KB)
 - `gemini.html`: Gemini conversation sample (57KB)
 
 ## Token-Efficient Analysis Methodology

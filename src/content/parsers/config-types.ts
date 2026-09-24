@@ -8,17 +8,16 @@
 /**
  * Role extraction strategy types
  * - attribute: Read role from data attributes (ChatGPT)
- * - hybrid: Check multiple attributes with priority (Claude)
  * - tagname: Determine role from element tag name (Gemini)
  * - sibling-button: Determine role from sibling button aria-label (Grok)
  * - combined-selector: Match node against user/assistant CSS selectors (Perplexity)
  */
-export type RoleStrategy = 'attribute' | 'hybrid' | 'tagname' | 'sibling-button' | 'combined-selector';
+export type RoleStrategy = 'attribute' | 'tagname' | 'sibling-button' | 'combined-selector';
 
 /**
  * Title extraction strategy types
  * - document-title: Extract from document.title with pattern cleaning (ChatGPT, Grok)
- * - selector: Extract from DOM element using CSS selector (Claude, Gemini)
+ * - selector: Extract from DOM element using CSS selector (Gemini)
  */
 export type TitleStrategy = 'document-title' | 'selector';
 
@@ -37,7 +36,7 @@ export interface TitleConfig {
   /** Regex pattern to remove leading emoji */
   emojiPattern?: string;
 
-  // For 'selector' strategy (Claude/Gemini)
+  // For 'selector' strategy (Gemini)
   /** CSS selector to find title element */
   selector?: string;
 }
@@ -81,14 +80,6 @@ export interface RoleConfig {
   // For 'attribute' strategy (ChatGPT)
   /** Attribute names to check for role value */
   attributes?: string[];
-
-  // For 'hybrid' strategy (Claude)
-  /** data-testid value indicating user message */
-  userTestId?: string;
-  /** data-testid value indicating assistant message */
-  assistantTestId?: string;
-  /** Attribute whose presence indicates assistant message */
-  streamingAttribute?: string;
 
   // For 'tagname' strategy (Gemini)
   /** Tag name for user messages */
@@ -146,7 +137,6 @@ export interface SelectorConfig {
   /** Platform configurations */
   platforms: {
     chatgpt: PlatformConfig;
-    claude: PlatformConfig;
     gemini: PlatformConfig;
     grok: PlatformConfig;
     perplexity: PlatformConfig;
@@ -154,6 +144,8 @@ export interface SelectorConfig {
 }
 
 /**
- * Platform key type
+ * Platforms parsed from the DOM through this configuration
+ *
+ * Claude is absent: its parser reads the conversation API instead.
  */
-export type PlatformKey = 'chatgpt' | 'claude' | 'gemini' | 'grok' | 'perplexity';
+export type PlatformKey = 'chatgpt' | 'gemini' | 'grok' | 'perplexity';

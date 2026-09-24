@@ -83,7 +83,7 @@ export class ConfigLoader {
    * Validate configuration on load
    */
   private validateConfig(): void {
-    const requiredPlatforms: PlatformKey[] = ['chatgpt', 'claude', 'gemini', 'grok', 'perplexity'];
+    const requiredPlatforms: PlatformKey[] = ['chatgpt', 'gemini', 'grok', 'perplexity'];
 
     for (const platform of requiredPlatforms) {
       const config = this.config.platforms[platform];
@@ -145,14 +145,6 @@ export class ConfigLoader {
         if (!role.attributes || role.attributes.length === 0) {
           throw new Error(
             `ConfigLoader: Missing attributes for 'attribute' strategy in '${platform}'`
-          );
-        }
-        break;
-
-      case 'hybrid':
-        if (!role.userTestId || !role.streamingAttribute) {
-          throw new Error(
-            `ConfigLoader: Missing userTestId or streamingAttribute for 'hybrid' strategy in '${platform}'`
           );
         }
         break;
