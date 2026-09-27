@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-08-26",
+  "lastUpdated": "2026-09-28",
   "platforms": {
     "chatgpt": {
       "hostname": "chatgpt.com",
@@ -8,13 +8,14 @@
         "messages": {
           "primary": "[data-turn]",
           "fallbacks": [
+            "[data-content-search-unit-key]",
             "[data-message-author-role]",
             "article[data-testid^=\"conversation\"]"
           ]
         },
         "content": {
           "user": ".whitespace-pre-wrap, .markdown",
-          "assistant": ".markdown",
+          "assistant": ".markdown, [data-markdown-text-style=\"assistant-message\"]",
           "attachment": "[data-testid=\"library-file-icon\"]"
         },
         "generation": "button[aria-label*=\"Stop\"]",

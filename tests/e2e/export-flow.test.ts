@@ -15,6 +15,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const VIRTUALIZED_CHATGPT_URL = 'https://chatgpt.com/c/e2e-virtualized-regression';
+const CURRENT_CHATGPT_DOM_URL = 'https://chatgpt.com/c/e2e-current-dom-regression';
 const CLAUDE_CONVERSATION_ID = 'e2e00000-0000-4000-8000-000000000001';
 const CLAUDE_URL = `https://claude.ai/chat/${CLAUDE_CONVERSATION_ID}`;
 const CLAUDE_API_PATH =
@@ -82,6 +83,33 @@ function getVirtualizedChatGptHtml(): string {
         </script>
       </body>
     </html>`;
+}
+
+/** Reduced from the currently observed ChatGPT message structure. */
+function getCurrentChatGptHtml(): string {
+  return `<!doctype html><html><head><title>Current DOM - ChatGPT</title></head><body>
+    <main>
+      <div data-turn-key="stable-a">
+        <div data-content-search-unit-key="fallback-turn-0:0:user">
+          <div data-user-message-bubble="true"><div class="whitespace-pre-wrap">First prompt</div></div>
+        </div>
+        <div data-content-search-unit-key="fallback-turn-0:2:assistant">
+          <h4 class="sr-only" data-conversation-role="assistant">ChatGPT answer:</h4>
+          <div data-markdown-text-style="assistant-message"><p>First answer</p></div>
+        </div>
+      </div>
+      <div data-turn-key="stable-b">
+        <div data-content-search-unit-key="fallback-turn-1:0:user">
+          <div data-user-message-bubble="true"><div class="whitespace-pre-wrap">Second prompt</div></div>
+        </div>
+        <div data-content-search-unit-key="fallback-turn-1:2:assistant">
+          <h4 class="sr-only" data-conversation-role="assistant">ChatGPT answer:</h4>
+          <div data-markdown-text-style="assistant-message"><p>Second answer</p><pre><code>code</code></pre></div>
+        </div>
+      </div>
+    </main>
+    <script>window.__currentChatReady = true;</script>
+  </body></html>`;
 }
 
 /**
@@ -281,6 +309,45 @@ describe('E2E: Export Flow', () => {
       );
       expect(messages[10].content).toContain('Rich pasted user turn 11');
       expect(messages.every((message) => message.content.length > 0)).toBe(true);
+    } finally {
+      page.off('request', intercept);
+      await page.setRequestInterception(false);
+    }
+  }, 30000);
+
+  it('should export the current ChatGPT DOM through the loaded extension', async () => {
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.isNavigationRequest() && request.url() === CURRENT_CHATGPT_DOM_URL) {
+        void request.respond({
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+          body: getCurrentChatGptHtml(),
+        });
+        return;
+      }
+      void request.continue();
+    };
+    page.on('request', intercept);
+
+    try {
+      await page.goto(CURRENT_CHATGPT_DOM_URL, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction('window.__currentChatReady === true');
+
+      const response = await exportCurrentPage(browser, CURRENT_CHATGPT_DOM_URL);
+      expect(response.success, response.error).toBe(true);
+      const messages = response.data!
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => JSON.parse(line))
+        .slice(1);
+
+      expect(messages.map((message) => [message.role, message.content])).toEqual([
+        ['user', 'First prompt'],
+        ['assistant', 'First answer'],
+        ['user', 'Second prompt'],
+        ['assistant', 'Second answer\n\n```\ncode\n```'],
+      ]);
     } finally {
       page.off('request', intercept);
       await page.setRequestInterception(false);

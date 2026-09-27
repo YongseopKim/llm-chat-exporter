@@ -118,7 +118,9 @@ describe('ConfigLoader', () => {
       const perplexity = ConfigLoader.getInstance().getSelectors('perplexity');
 
       expect(chatgpt.content.user).toBe('.whitespace-pre-wrap, .markdown');
-      expect(chatgpt.content.assistant).toBe('.markdown');
+      expect(chatgpt.content.assistant).toBe(
+        '.markdown, [data-markdown-text-style="assistant-message"]'
+      );
 
       expect(gemini.content.user).toBe('.query-text');
       expect(gemini.content.assistant).toBe('.response-container-content');

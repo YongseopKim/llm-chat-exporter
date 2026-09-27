@@ -4,13 +4,14 @@
  * Implements ChatParser interface for chatgpt.com platform.
  * Extends BaseParser with configuration-driven selectors.
  *
- * DOM Structure (from samples/README.md):
- * - Messages: [data-message-author-role] or [data-turn]
+ * DOM Structure (legacy samples and current page):
+ * - Messages: [data-turn], [data-message-author-role], or
+ *   [data-content-search-unit-key] inside [data-turn-key]
  * - User content: .whitespace-pre-wrap, or .markdown for rich pasted content
- * - Assistant content: .markdown
+ * - Assistant content: .markdown or [data-markdown-text-style="assistant-message"]
  * - Generating: button[aria-label*="Stop"]
  *
- * Role Strategy: attribute (data-message-author-role, data-turn)
+ * Role Strategy: attributes or the data-content-search-unit-key suffix
  *
  * @see config/selectors.json for current selectors
  * @see samples/README.md for validated selectors and DOM analysis
@@ -108,6 +109,27 @@ export class ChatGPTParser extends BaseParser {
 
   constructor() {
     super('chatgpt');
+  }
+
+  /** Use the selector that the current page actually renders while scrolling. */
+  protected override getMessageSelector(): string | undefined {
+    const { primary, fallbacks = [] } = this.selectors.messages;
+    return (
+      [primary, ...fallbacks].find((selector) => selector && document.querySelector(selector)) ||
+      primary
+    );
+  }
+
+  /** The current DOM stores each message's role at the end of its unit key. */
+  protected override extractRole(node: HTMLElement): 'user' | 'assistant' {
+    const unitKey = node.getAttribute('data-content-search-unit-key');
+    if (unitKey) {
+      const role = unitKey.match(/:(user|assistant)$/)?.[1];
+      if (role === 'user' || role === 'assistant') {
+        return role;
+      }
+    }
+    return super.extractRole(node);
   }
 
   /**
@@ -224,14 +246,24 @@ export class ChatGPTParser extends BaseParser {
    * conversation-turn-1 - keying snapshots on the number stored that message
    * twice and dropped whatever the old key had held.
    *
-   * `data-turn-id` is a per-turn identifier that does not move, so it is
-   * preferred. The position is kept only as a fallback for DOM shapes that
-   * carry no id, where it behaves exactly as before.
+   * Older DOMs carry a stable `data-turn-id`. The current DOM wraps a user
+   * and assistant message in one stable `data-turn-key`, so the unit's index
+   * and role must be included to keep both messages. The old numeric turn
+   * position remains a fallback when neither stable marker exists.
    *
    * @private
-   * @returns A stable key, or null when the node carries neither marker
+   * @returns A key, or null when the node cannot be identified
    */
   private getTurnKey(node: HTMLElement): string | null {
+    const unitKey = node.getAttribute('data-content-search-unit-key');
+    if (unitKey) {
+      // One data-turn-key now wraps both messages. The unit's position and
+      // role distinguish them without relying on its renumberable turn index.
+      const turnKey = node.closest('[data-turn-key]')?.getAttribute('data-turn-key')?.trim();
+      const unit = unitKey.match(/:(\d+):(user|assistant)$/)?.[0];
+      return turnKey && unit ? `turn:${turnKey}:unit:${unit}` : null;
+    }
+
     const id = node.closest('[data-turn-id]')?.getAttribute('data-turn-id')?.trim();
     if (id) {
       return `id:${id}`;

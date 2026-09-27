@@ -122,7 +122,7 @@ describe('BaseParser', () => {
       const nodes = parser.getMessageNodes();
       expect(nodes).toHaveLength(1);
       expect(mockDoc.querySelectorAll).toHaveBeenCalledTimes(2);
-      expect(mockDoc.querySelectorAll).toHaveBeenNthCalledWith(2, '[data-message-author-role]');
+      expect(mockDoc.querySelectorAll).toHaveBeenNthCalledWith(2, '[data-content-search-unit-key]');
     });
   });
 
@@ -546,7 +546,9 @@ describe('BaseParser', () => {
       } as any;
 
       parser.parseNode(mockNode);
-      expect(mockNode.querySelector).toHaveBeenCalledWith('.markdown');
+      expect(mockNode.querySelector).toHaveBeenCalledWith(
+        '.markdown, [data-markdown-text-style="assistant-message"]'
+      );
     });
 
     it('should return empty string when content element not found', () => {
