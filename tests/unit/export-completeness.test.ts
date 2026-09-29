@@ -7,6 +7,7 @@ import { htmlToMarkdown } from '../../src/content/converter';
 afterEach(() => {
   document.body.innerHTML = '';
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 it('walks negative scroll positions in a column-reverse conversation and restores the bottom', async () => {
@@ -128,7 +129,76 @@ it('reports a source tooltip failure in export metadata and preserves the visibl
   document.body.innerHTML = '<section data-turn="assistant" data-turn-id="missing-tooltip"><div class="markdown"><p>Answer <a data-testid="chatgpt-citation" aria-label="Example: Report, https://example.com/report, 추가 출처 1개" href="https://example.com/report">Example+1</a></p></div></section>';
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   const parser = new ChatGPTParser();
-  const conversation = await parser.readConversation();
+  vi.useFakeTimers();
+  const conversationPromise = parser.readConversation();
+  await vi.runAllTimersAsync();
+  const conversation = await conversationPromise;
+  vi.useRealTimers();
   expect(conversation.warnings).toEqual([expect.stringContaining('Could not collect every source')]);
   expect(conversation.messages[0].contentHtml).toContain('https://example.com/report');
+});
+
+it.each([1, 3])('recovers after %i unavailable popup openings without caching incomplete sources', async (unavailable) => {
+  vi.useFakeTimers();
+  try {
+    const primary = 'https://www.sec.gov/Archives/edgar/data/1876042/000187604226000248/crcl-20260630.htm?utm_source=chatgpt.com';
+    const secondary = 'https://www.sec.gov/Archives/edgar/data/1876042/000187604226000248/R9.htm?utm_source=chatgpt.com';
+    document.body.innerHTML = `<section data-turn="assistant" data-turn-id="sec-retry"><div class="markdown"><p>ARC reserve evidence <a data-testid="chatgpt-citation" aria-label="SEC: crcl-20260630, ${primary}, 추가 출처 1개" href="${primary}">SEC+1</a></p></div></section>`;
+    const citation = document.querySelector('a')!;
+    let openings = 0;
+    citation.addEventListener('mouseover', () => {
+      if (++openings <= unavailable) return;
+      const tip = document.createElement('div');
+      tip.setAttribute('role', 'tooltip');
+      tip.innerHTML = `<span>1/2</span><button aria-label="다음 출처"></button><a href="${primary}">Quarterly report</a>`;
+      tip.querySelector('button')!.onclick = () => {
+        tip.querySelector('span')!.textContent = '2/2';
+        tip.querySelector('a')!.href = secondary;
+        tip.querySelector('a')!.textContent = 'Reserve note';
+      };
+      document.body.append(tip);
+    });
+    citation.addEventListener('mouseout', () => document.querySelector('[role="tooltip"]')?.remove());
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const conversationPromise = new ChatGPTParser().readConversation();
+    await vi.runAllTimersAsync();
+    const conversation = await conversationPromise;
+    const md = htmlToMarkdown(conversation.messages[0].contentHtml!);
+    expect(md).toContain(secondary);
+    expect(md).not.toContain('SEC+1');
+    expect(conversation.warnings).toEqual([]);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('reads the new tooltip DOM when a source page replaces the previous popup', async () => {
+  vi.useFakeTimers();
+  try {
+    document.body.innerHTML = '<section data-turn="assistant" data-turn-id="replaced-tooltip"><div class="markdown"><p>Evidence <a data-testid="chatgpt-citation" aria-label="Example: Primary, https://example.com/primary, 추가 출처 1개" href="https://example.com/primary">Example+1</a></p></div></section>';
+    const citation = document.querySelector('a')!;
+    citation.addEventListener('mouseover', () => {
+      const tip = document.createElement('div');
+      tip.id = 'source-tooltip';
+      tip.setAttribute('role', 'tooltip');
+      tip.innerHTML = '<span>1/2</span><button aria-label="다음 출처"></button><a href="https://example.com/primary">Primary</a>';
+      tip.querySelector('button')!.onclick = () => {
+        const next = tip.cloneNode(true) as HTMLElement;
+        next.querySelector('span')!.textContent = '2/2';
+        next.querySelector('a')!.href = 'https://example.com/secondary';
+        next.querySelector('a')!.textContent = 'Secondary';
+        tip.replaceWith(next);
+      };
+      document.body.append(tip);
+    });
+    citation.addEventListener('mouseout', () => document.querySelector('[role="tooltip"]')?.remove());
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const conversationPromise = new ChatGPTParser().readConversation();
+    await vi.runAllTimersAsync();
+    const conversation = await conversationPromise;
+    expect(htmlToMarkdown(conversation.messages[0].contentHtml!)).toContain('https://example.com/secondary');
+    expect(conversation.warnings).toEqual([]);
+  } finally {
+    vi.useRealTimers();
+  }
 });

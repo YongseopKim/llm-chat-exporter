@@ -17,7 +17,7 @@ function sourceOf(link: HTMLAnchorElement): CitationSource {
  * remaining sources through the Previous/Next source buttons. Read these
  * before taking a detached snapshot; no page requests or message edits occur.
  */
-export async function readCitationSources(citation: HTMLAnchorElement): Promise<CitationSource[]> {
+async function readCitationSourcesOnce(citation: HTMLAnchorElement): Promise<CitationSource[]> {
   const extra = Number(citation.getAttribute('aria-label')?.match(/(?:추가 출처\s*(\d+)개|(?:and\s+)?(\d+)\s+(?:more|additional)\s+sources?)/i)?.slice(1).find(Boolean) || 0);
   if (!extra) return [sourceOf(citation)];
 
@@ -28,7 +28,7 @@ export async function readCitationSources(citation: HTMLAnchorElement): Promise<
     // The current page opens citations on pointer hover, not keyboard focus.
     citation.dispatchEvent(new (doc.defaultView?.PointerEvent || MouseEvent)('pointerover', { bubbles: true, pointerType: 'mouse' }));
     citation.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-    const tooltip = await waitForDom(() => {
+    let tooltip = await waitForDom(() => {
       const node = doc.querySelector<HTMLElement>('[role="tooltip"]');
       const link = node?.querySelector<HTMLAnchorElement>('a[href]');
       return link?.href === citation.href ? node : null;
@@ -38,11 +38,17 @@ export async function readCitationSources(citation: HTMLAnchorElement): Promise<
       const next = tooltip.querySelector<HTMLButtonElement>('button[aria-label="다음 출처"], button[aria-label="Next source"]');
       if (!next) throw new Error('The citation has no next-source control.');
       next.click();
-      const link = await waitForDom(() => {
-        if (!tooltip.textContent?.trimStart().startsWith(`${index}/${extra + 1}`)) return null;
-        return tooltip.querySelector<HTMLAnchorElement>('a[href]');
+      const page = await waitForDom(() => {
+        // React can replace the popup while changing source pages. A detached
+        // reference never updates, even though the live popup is ready.
+        const current = (tooltip.id && doc.getElementById(tooltip.id))
+          || doc.querySelector<HTMLElement>('[role="tooltip"]');
+        if (!current?.textContent?.trimStart().startsWith(`${index}/${extra + 1}`)) return null;
+        const link = current.querySelector<HTMLAnchorElement>('a[href]');
+        return link ? { tooltip: current, link } : null;
       });
-      sources.push(sourceOf(link));
+      tooltip = page.tooltip;
+      sources.push(sourceOf(page.link));
     }
     return sources;
   } finally {
@@ -51,6 +57,22 @@ export async function readCitationSources(citation: HTMLAnchorElement): Promise<
     citation.blur();
     if (previousFocus?.isConnected && previousFocus !== doc.body) previousFocus.focus({ preventScroll: true });
   }
+}
+
+/** Reopen a transiently unavailable tooltip instead of caching an empty result. */
+export async function readCitationSources(citation: HTMLAnchorElement): Promise<CitationSource[]> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await readCitationSourcesOnce(citation);
+    } catch (error) {
+      lastError = error;
+      if (!citation.isConnected) break;
+      // React's tooltip close and subsequent open are separate DOM updates.
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+  throw lastError;
 }
 
 /** Replace a snapshot's source badge with readable links at the cited span. */

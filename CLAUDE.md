@@ -375,7 +375,7 @@ ChatGPT's current conversation scroller uses `flex-direction: column-reverse`: t
 
 Both ChatGPT and Grok must snapshot mounted messages at each scroll stop, before virtualization removes them. Merge Grok windows by response ID or `data-plane-row`, never by body text: repeated messages are distinct turns.
 
-ChatGPT's `+N` citation badge exposes additional URLs only in its hover tooltip. Collect each tooltip page while the original message is mounted, then write readable source links into its detached snapshot. Grok's collapsed source drawer exposes search-result links; append them under "Search sources" without exporting thinking. Source UI failures must produce metadata warnings while preserving the visible body and links. Markdown table cells must convert their inner HTML, because `textContent` discards source URLs.
+ChatGPT's `+N` citation badge exposes additional URLs only in its hover tooltip. Collect each tooltip page while the original message is mounted, then write readable source links into its detached snapshot. Grok's collapsed source drawer exposes search-result links; append them under "Search sources" without exporting thinking. Retry transient ChatGPT tooltip failures and read the current popup DOM after each page change. Cache only complete citation groups; a failed group gets a bounded retry in a later mounted window, and metadata warnings include only groups still unresolved after the walk. Persistent source UI failures must produce metadata warnings while preserving the visible body and links. Markdown table cells must convert their inner HTML, because `textContent` discards source URLs.
 
 ### Configuration-Driven Architecture (Phase 7)
 **Decision**: Externalize all DOM selectors to JSON configuration

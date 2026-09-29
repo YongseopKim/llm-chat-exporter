@@ -122,15 +122,19 @@ function getReverseChatGptHtml(): string {
   <script>
     const chat = document.getElementById('chat');
     const history = document.getElementById('history');
+    const unavailable = new Set();
     function mount() {
       const first = Math.min(4, Math.max(0, Math.floor((2500 + chat.scrollTop) / 500)));
       history.innerHTML = [first, first+1].map(i => '<section style="top:'+i*500+'px" data-turn="assistant" data-turn-id="stable-'+i+'"><div class="markdown"><p>Answer '+i+' <a data-testid="chatgpt-citation" href="https://example.com/primary" aria-label="Example: Primary, https://example.com/primary, 추가 출처 1개">Example+1</a></p></div></section>').join('');
       history.querySelectorAll('a').forEach(a => {
         a.addEventListener('mouseover', () => {
+          const key = a.closest('section').getAttribute('data-turn-id');
+          if (!unavailable.has(key)) { unavailable.add(key); return; }
           if (document.querySelector('[role="tooltip"]')) return;
           const tip = document.createElement('div'); tip.setAttribute('role','tooltip');
           tip.innerHTML = '<span>1/2</span><button aria-label="다음 출처"></button><a href="https://example.com/primary">Primary</a>';
-          tip.querySelector('button').onclick = () => { tip.querySelector('span').textContent='2/2'; tip.querySelector('a').href='https://example.com/secondary'; tip.querySelector('a').textContent='Secondary'; };
+          tip.id = 'fixture-source-tooltip';
+          tip.querySelector('button').onclick = () => { const next = tip.cloneNode(true); next.querySelector('span').textContent='2/2'; next.querySelector('a').href='https://example.com/secondary'; next.querySelector('a').textContent='Secondary'; tip.replaceWith(next); };
           document.body.append(tip);
         });
         a.addEventListener('mouseout', () => document.querySelector('[role="tooltip"]')?.remove());

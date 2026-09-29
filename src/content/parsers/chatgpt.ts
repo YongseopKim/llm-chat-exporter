@@ -59,6 +59,7 @@ export class ChatGPTParser extends BaseParser {
   private order: string[] = [];
 
   private readonly citationSources = new Map<string, CitationSource[]>();
+  private readonly citationFailures = new Map<string, { attempts: number; warning: string }>();
 
   constructor() {
     super('chatgpt');
@@ -92,6 +93,7 @@ export class ChatGPTParser extends BaseParser {
     this.collected.clear();
     this.order = [];
     this.citationSources.clear();
+    this.citationFailures.clear();
 
     await super.loadAllMessages({
       ...options,
@@ -102,6 +104,9 @@ export class ChatGPTParser extends BaseParser {
         await options.onStep?.();
       },
     });
+    // A later mounted window can recover a source popup that was unavailable
+    // earlier. Report only failures still unresolved after the complete walk.
+    this.loadingWarnings.push(...Array.from(this.citationFailures.values(), failure => failure.warning));
   }
 
   /**
@@ -189,16 +194,21 @@ export class ChatGPTParser extends BaseParser {
       const clonedCitations = Array.from(snapshot.querySelectorAll<HTMLAnchorElement>('[data-testid="chatgpt-citation"]'));
       for (const [index, citation] of citations.entries()) {
         const cacheKey = `${key}:citation:${index}:${citation.href}:${citation.getAttribute('aria-label')}`;
-        if (!this.citationSources.has(cacheKey)) {
+        const failure = this.citationFailures.get(cacheKey);
+        // Keep successful results only. Allow another mounted-window attempt,
+        // but bound persistent failures so a long scroll cannot retry forever.
+        if (!this.citationSources.has(cacheKey) && (failure?.attempts || 0) < 2) {
           try {
             this.citationSources.set(cacheKey, await readCitationSources(citation));
+            this.citationFailures.delete(cacheKey);
           } catch (error) {
-            this.loadingWarnings.push(`ChatGPT: Could not collect every source for ${citation.href}: ${(error as Error).message}`);
-            // Preserve the visible URL and warn instead of silently losing +N.
-            this.citationSources.set(cacheKey, []);
+            this.citationFailures.set(cacheKey, {
+              attempts: (failure?.attempts || 0) + 1,
+              warning: `ChatGPT: Could not collect every source for ${citation.href}: ${(error as Error).message}`,
+            });
           }
         }
-        const sources = this.citationSources.get(cacheKey)!;
+        const sources = this.citationSources.get(cacheKey) || [];
         if (sources.length) writeCitationSources(clonedCitations[index], sources);
       }
       this.collected.set(key, snapshot);
