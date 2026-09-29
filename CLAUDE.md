@@ -28,13 +28,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Version Up
 
-When the user says "version up" (버전 업), bump the **patch** version by default unless they name minor/major:
-1. `npm version patch --no-git-tag-version` (updates `package.json` + `package-lock.json`)
-2. Bump the patch number of `"version"` in `manifest.json` (the version Chrome shows)
+Automatically bump versions when a task makes a clear bug fix, adds a feature, or makes a major structural change. Do not wait for a separate version-up request:
+
+- Bug fix: **patch**
+- New feature: **minor**
+- Major structural or architectural change: **major**
+
+When a task includes more than one category, use the highest level and bump once for that task. An explicit version or level requested by the user takes precedence. A standalone "version up" (버전 업) request defaults to patch.
+
+1. `npm version <patch|minor|major> --no-git-tag-version` (updates `package.json` + `package-lock.json`)
+2. Bump `"version"` in `manifest.json` by the same level (the version Chrome shows)
 3. `npm install && npm run build && npm test`
 4. Tell the user to reload the extension at `chrome://extensions/`
 
-Note: `manifest.json` (0.x) and `package.json` (1.x) have separate version lines; bump each by one patch. When the user names a version (e.g. 0.2.0), it is the `manifest.json` version; bump `package.json` by the same level (minor → 1.1.0).
+Note: `manifest.json` (0.x) and `package.json` (1.x) have separate version lines; bump each by the selected level. When the user names a version (e.g. 0.2.0), it is the `manifest.json` version; bump `package.json` by the same level (minor -> 1.1.0).
 
 ## Development Commands
 
