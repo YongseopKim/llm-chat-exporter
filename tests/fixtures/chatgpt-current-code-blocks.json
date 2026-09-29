@@ -1,0 +1,932 @@
+[
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 0,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl min-w-max\"><span><span>2013~2017</span>\n<span>소비자 Bitcoin / 송금</span>\n<span>Circle Pay</span>\n<span>Circle Trade</span>\n<span>      │</span>\n<span>      ▼</span>\n<span>2018~2019</span>\n<span>종합 Crypto 금융</span>\n<span>Pay / Invest / Trade / Poloniex / SeedInvest / USDC</span>\n<span>      │</span>\n<span>      │  대규모 사업 정리</span>\n<span>      ▼</span>\n<span>2020~2024</span>\n<span>USDC 중심</span>\n<span>Stablecoin + B2B Infrastructure</span>\n<span>      │</span>\n<span>      ▼</span>\n<span>2025~2026</span>\n<span>Full-stack Internet Financial Platform</span>\n<span></span>\n<span>Stablecoin</span>\n<span>+ Crosschain</span>\n<span>+ Payments</span>\n<span>+ FX</span>\n<span>+ L1</span>\n<span>+ Tokenized Assets</span>\n<span>+ AI Agent</span></span></code></div></div>",
+    "code": "2013~2017\n소비자 Bitcoin / 송금\nCircle Pay\nCircle Trade\n      │\n      ▼\n2018~2019\n종합 Crypto 금융\nPay / Invest / Trade / Poloniex / SeedInvest / USDC\n      │\n      │  대규모 사업 정리\n      ▼\n2020~2024\nUSDC 중심\nStablecoin + B2B Infrastructure\n      │\n      ▼\n2025~2026\nFull-stack Internet Financial Platform\n\nStablecoin\n+ Crosschain\n+ Payments\n+ FX\n+ L1\n+ Tokenized Assets\n+ AI Agent"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 1,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>B2C 금융서비스 회사\n        ↓\n여러 Crypto 금융사업을 직접 운영\n        ↓\nUSDC에 집중\n        ↓\nB2B 금융 인프라\n        ↓\n풀스택 금융 플랫폼</span></code></div></div>",
+    "code": "B2C 금융서비스 회사\n        ↓\n여러 Crypto 금융사업을 직접 운영\n        ↓\nUSDC에 집중\n        ↓\nB2B 금융 인프라\n        ↓\n풀스택 금융 플랫폼"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 2,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Mint\nFiat ↔ USDC\n\nCCTP\nChain A ↔ Chain B\n\nGateway\n여러 체인의 USDC → Unified balance\n\nxReserve\nUSDC → 다른 체인의 USDC-backed stablecoin\n\nArc\n그 모든 것이 실행될 수 있는 자체 L1</span></code></div></div>",
+    "code": "Mint\nFiat ↔ USDC\n\nCCTP\nChain A ↔ Chain B\n\nGateway\n여러 체인의 USDC → Unified balance\n\nxReserve\nUSDC → 다른 체인의 USDC-backed stablecoin\n\nArc\n그 모든 것이 실행될 수 있는 자체 L1"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 3,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC 유통 증가\n     ↓\nReserve 증가\n     ↓\nReserve income 증가\n     ↓\nInfrastructure 투자\n     ↓\nUSDC utility 증가\n     ↓\nUSDC 유통 증가</span></code></div></div>",
+    "code": "USDC 유통 증가\n     ↓\nReserve 증가\n     ↓\nReserve income 증가\n     ↓\nInfrastructure 투자\n     ↓\nUSDC utility 증가\n     ↓\nUSDC 유통 증가"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 4,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle-issued / Circle-controlled assets\n\nUSDC     USD stablecoin\nEURC     EUR stablecoin\nUSYC     Tokenized money-market fund\ncirBTC   Wrapped BTC\nARC      Arc coordination token</span></code></div></div>",
+    "code": "Circle-issued / Circle-controlled assets\n\nUSDC     USD stablecoin\nEURC     EUR stablecoin\nUSYC     Tokenized money-market fund\ncirBTC   Wrapped BTC\nARC      Arc coordination token"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 5,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle 과거\n\n개발자가 Wallet + Mint + Compliance 등을 조립\n\n\n현재 추가 방향\n\n                Circle\n                  │\n        Digital Asset Accounts\n                  │\n       ┌──────────┼──────────┐\n    Custody     Mint/Burn    AML\n       │          │           │\n       └──────────┼───────────┘\n                  ▼\n             Fintech App\n                  ▼\n              End User</span></code></div></div>",
+    "code": "Circle 과거\n\n개발자가 Wallet + Mint + Compliance 등을 조립\n\n\n현재 추가 방향\n\n                Circle\n                  │\n        Digital Asset Accounts\n                  │\n       ┌──────────┼──────────┐\n    Custody     Mint/Burn    AML\n       │          │           │\n       └──────────┼───────────┘\n                  ▼\n             Fintech App\n                  ▼\n              End User"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 6,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                   ARC\n\n       ┌──────── Blockchain ────────┐\n       │                            │\n Consensus / Execution          Network sectors\n       │                            │\n       │                  ┌─────────┼────────┐\n       │               Payment   Privacy   Agent\n       │\n Developer Layer\n       │\n ┌─────┼────────┐\nStudio App Kits Portal\n\n       +\nUSDC / EURC / USYC / cirBTC\n       +\nCCTP / Gateway</span></code></div></div>",
+    "code": "                   ARC\n\n       ┌──────── Blockchain ────────┐\n       │                            │\n Consensus / Execution          Network sectors\n       │                            │\n       │                  ┌─────────┼────────┐\n       │               Payment   Privacy   Agent\n       │\n Developer Layer\n       │\n ┌─────┼────────┐\nStudio App Kits Portal\n\n       +\nUSDC / EURC / USYC / cirBTC\n       +\nCCTP / Gateway"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 7,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>ARC\n\nInitial supply\n10B genesis minted\n\n그중 일부\ninstitutional presale 계약 존재\n\n하지만\n\nPublic token launch\n≠ 아직 확정</span></code></div></div>",
+    "code": "ARC\n\nInitial supply\n10B genesis minted\n\n그중 일부\ninstitutional presale 계약 존재\n\n하지만\n\nPublic token launch\n≠ 아직 확정"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 8,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>BTC\n │\n custody\n │\n ▼\nCircle\n │\n1:1\n ▼\ncirBTC\n │\n ├─ Ethereum\n └─ Arc</span></code></div></div>",
+    "code": "BTC\n │\n custody\n │\n ▼\nCircle\n │\n1:1\n ▼\ncirBTC\n │\n ├─ Ethereum\n └─ Arc"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 9,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>현재\nNational Trust → Custody\n\n향후\nNational Trust → USDC Reserve Management 가능성</span></code></div></div>",
+    "code": "현재\nNational Trust → Custody\n\n향후\nNational Trust → USDC Reserve Management 가능성"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 10,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>기존 Circle\n\nUSDC\n  ↓\nCPN\n  ↓\nBlockchain settlement\n\n\nTazapay 추가\n\nUSDC\n  ↓\nCPN\n  ↓\nStablecoin settlement\n  ↓\nTazapay\n  ↓\nLocal banking / payout rails\n  ↓\n100+ markets</span></code></div></div>",
+    "code": "기존 Circle\n\nUSDC\n  ↓\nCPN\n  ↓\nBlockchain settlement\n\n\nTazapay 추가\n\nUSDC\n  ↓\nCPN\n  ↓\nStablecoin settlement\n  ↓\nTazapay\n  ↓\nLocal banking / payout rails\n  ↓\n100+ markets"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 11,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC를 만들 수 있나?\n        X\n\nUSDC를 얼마나 많이\n보유 / 유통 / 결제하게 만드나?\n        O</span></code></div></div>",
+    "code": "USDC를 만들 수 있나?\n        X\n\nUSDC를 얼마나 많이\n보유 / 유통 / 결제하게 만드나?\n        O"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 12,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                         CIRCLE\n                            │\n       ┌────────────────────┼────────────────────┐\n       │                    │                    │\n   INFRASTRUCTURE       DIGITAL ASSETS       APPLICATIONS\n       │                  &amp; SERVICES              │\n       │                    │                    │\n      Arc                  USDC                  CPN\n       │                   EURC                StableFX\n       │                   USYC\n       │                  cirBTC\n       │\n       ├─ CCTP             Circle Mint\n       ├─ Gateway          xReserve\n       ├─ Wallets          Partner Stablecoins\n       ├─ Contracts\n       ├─ Paymaster\n       │\n       ├─ Arc Studio\n       ├─ Arc App Kits\n       └─ Arc Portal\n\n                            │\n                    MANAGED / EMBEDDED\n                            │\n                 Digital Asset Accounts\n                 CPN Managed Payments\n\n                            │\n                     AGENT ECONOMY\n                            │\n                       Agent Stack\n                            │\n          Wallet / Marketplace / CLI /\n          Nanopayments / Skills\n\n                            │\n                     REGULATED RAILS\n                            │\n                Circle National Trust\n                Circle New York Trust\n\n                            │\n                  DISTRIBUTION / LAST MILE\n                            │\n             Coinbase / Binance / Partners\n                            │\n                 Tazapay (acquisition pending)</span></code></div></div>",
+    "code": "                         CIRCLE\n                            │\n       ┌────────────────────┼────────────────────┐\n       │                    │                    │\n   INFRASTRUCTURE       DIGITAL ASSETS       APPLICATIONS\n       │                  & SERVICES              │\n       │                    │                    │\n      Arc                  USDC                  CPN\n       │                   EURC                StableFX\n       │                   USYC\n       │                  cirBTC\n       │\n       ├─ CCTP             Circle Mint\n       ├─ Gateway          xReserve\n       ├─ Wallets          Partner Stablecoins\n       ├─ Contracts\n       ├─ Paymaster\n       │\n       ├─ Arc Studio\n       ├─ Arc App Kits\n       └─ Arc Portal\n\n                            │\n                    MANAGED / EMBEDDED\n                            │\n                 Digital Asset Accounts\n                 CPN Managed Payments\n\n                            │\n                     AGENT ECONOMY\n                            │\n                       Agent Stack\n                            │\n          Wallet / Marketplace / CLI /\n          Nanopayments / Skills\n\n                            │\n                     REGULATED RAILS\n                            │\n                Circle National Trust\n                Circle New York Trust\n\n                            │\n                  DISTRIBUTION / LAST MILE\n                            │\n             Coinbase / Binance / Partners\n                            │\n                 Tazapay (acquisition pending)"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 13,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                         ARC\n                          │\n             ┌────────────┼─────────────┐\n             │            │             │\n          Network       Developer      Token\n             │            │             │\n          EVM L1       Arc Studio       ARC\n                       App Kits          │\n                       Portal        10B genesis\n             │                          │\n       ┌─────┴──────┐               future PoS\n       │            │\n     USDC gas    &lt;1s finality\n\nFuture Network Sectors\n       │\n ┌─────┼─────────┐\nPayment Privacy Agent</span></code></div></div>",
+    "code": "                         ARC\n                          │\n             ┌────────────┼─────────────┐\n             │            │             │\n          Network       Developer      Token\n             │            │             │\n          EVM L1       Arc Studio       ARC\n                       App Kits          │\n                       Portal        10B genesis\n             │                          │\n       ┌─────┴──────┐               future PoS\n       │            │\n     USDC gas    <1s finality\n\nFuture Network Sectors\n       │\n ┌─────┼─────────┐\nPayment Privacy Agent"
+  },
+  {
+    "message_id": "2a5e77e2-9017-49a4-b80e-75562ac9f5e9",
+    "index": 14,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>현재 돈을 버는 Circle\n────────────────────\nUSDC\n  ↓\nReserve\n  ↓\nInterest income\n\n\nCircle이 구축 중인 회사\n────────────────────\n        Assets\nUSDC / EURC / USYC / cirBTC\n          │\n          ▼\n      Liquidity\nMint / xReserve\n          │\n          ▼\n    Interoperability\n CCTP / Gateway\n          │\n          ▼\n      Blockchain\n          Arc\n          │\n    ┌─────┴──────┐\n    ▼            ▼\n StableFX        CPN\n    │            │\n    └──────┬─────┘\n           ▼\n Digital Asset Accounts\n Managed Payments\n           │\n           ▼\n Banks / Fintech / PSP /\n Exchanges / AI Agents\n           │\n           ▼\n       End Users</span></code></div></div>",
+    "code": "현재 돈을 버는 Circle\n────────────────────\nUSDC\n  ↓\nReserve\n  ↓\nInterest income\n\n\nCircle이 구축 중인 회사\n────────────────────\n        Assets\nUSDC / EURC / USYC / cirBTC\n          │\n          ▼\n      Liquidity\nMint / xReserve\n          │\n          ▼\n    Interoperability\n CCTP / Gateway\n          │\n          ▼\n      Blockchain\n          Arc\n          │\n    ┌─────┴──────┐\n    ▼            ▼\n StableFX        CPN\n    │            │\n    └──────┬─────┘\n           ▼\n Digital Asset Accounts\n Managed Payments\n           │\n           ▼\n Banks / Fintech / PSP /\n Exchanges / AI Agents\n           │\n           ▼\n       End Users"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 0,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2013 Circle의 문제의식\n\n인터넷\n정보 이동\n━━━━━━━━━━━━━━\n즉시 / 글로벌 / 개방형\n\n하지만\n\n금융\n돈 이동\n━━━━━━━━━━━━━━\n느림 / 국가별 / 은행별 / 폐쇄형\n\n\n        ↓\n\n\"돈도 인터넷처럼 움직일 수 없나?\"\n\n        ↓\n\n당시 가장 유력한 답\n       Bitcoin</span></code></div></div>",
+    "code": "2013 Circle의 문제의식\n\n인터넷\n정보 이동\n━━━━━━━━━━━━━━\n즉시 / 글로벌 / 개방형\n\n하지만\n\n금융\n돈 이동\n━━━━━━━━━━━━━━\n느림 / 국가별 / 은행별 / 폐쇄형\n\n\n        ↓\n\n\"돈도 인터넷처럼 움직일 수 없나?\"\n\n        ↓\n\n당시 가장 유력한 답\n       Bitcoin"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 1,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Bitcoin을 돈으로 쓴다\n        ↓\n문제:\n가격 변동성\nUX\n규제\n회계\n사용자의 BTC 보유 필요\n        ↓\nBitcoin은 \"돈\"보다는\nsettlement network / crypto asset에 가까움\n        ↓\n그렇다면\n\n달러 자체를\n블록체인 위에 올리면?</span></code></div></div>",
+    "code": "Bitcoin을 돈으로 쓴다\n        ↓\n문제:\n가격 변동성\nUX\n규제\n회계\n사용자의 BTC 보유 필요\n        ↓\nBitcoin은 \"돈\"보다는\nsettlement network / crypto asset에 가까움\n        ↓\n그렇다면\n\n달러 자체를\n블록체인 위에 올리면?"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 2,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2013\n우리가 원하는 것\n\"인터넷 위의 돈\"\n\n       │\n       │ 처음 고른 구현\n       ▼\n\nBitcoin\n\n       │\n       │ 시행착오\n       ▼\n\nFiat + Bitcoin rails\n\n       │\n       │ Ethereum / tokenization\n       ▼\n\nCENTRE\n\n       │\n       ▼\n\nUSDC</span></code></div></div>",
+    "code": "2013\n우리가 원하는 것\n\"인터넷 위의 돈\"\n\n       │\n       │ 처음 고른 구현\n       ▼\n\nBitcoin\n\n       │\n       │ 시행착오\n       ▼\n\nFiat + Bitcoin rails\n\n       │\n       │ Ethereum / tokenization\n       ▼\n\nCENTRE\n\n       │\n       ▼\n\nUSDC"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 3,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle Pay\n\nAlice\n  │\nBank/Card\n  │\n  ▼\nCircle ledger\n  │\n은행망 / 카드망 / FX / settlement\n  │\n  ▼\nBob\n\nCircle이 모든 복잡성을 떠안음</span></code></div></div>",
+    "code": "Circle Pay\n\nAlice\n  │\nBank/Card\n  │\n  ▼\nCircle ledger\n  │\n은행망 / 카드망 / FX / settlement\n  │\n  ▼\nBob\n\nCircle이 모든 복잡성을 떠안음"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 4,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                USDC\n                  │\n        ┌─────────┼─────────┐\n        ▼         ▼         ▼\n     Coinbase   Wallet     DeFi\n        ▼         ▼         ▼\n    Exchange    Fintech   Payment\n        │         │         │\n        └─────────┼─────────┘\n                  │\n           Public Blockchain</span></code></div></div>",
+    "code": "                USDC\n                  │\n        ┌─────────┼─────────┐\n        ▼         ▼         ▼\n     Coinbase   Wallet     DeFi\n        ▼         ▼         ▼\n    Exchange    Fintech   Payment\n        │         │         │\n        └─────────┼─────────┘\n                  │\n           Public Blockchain"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 5,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle이 고객 한 명씩 확보해야 함</span></code></div></div>",
+    "code": "Circle이 고객 한 명씩 확보해야 함"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 6,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Coinbase가 고객 확보\nKraken이 고객 확보\nWallet이 고객 확보\nDeFi가 고객 확보\nFintech가 고객 확보\n\n          ↓\n\n모두 USDC 사용 가능\n          ↓\n\nCircle은 underlying money layer</span></code></div></div>",
+    "code": "Coinbase가 고객 확보\nKraken이 고객 확보\nWallet이 고객 확보\nDeFi가 고객 확보\nFintech가 고객 확보\n\n          ↓\n\n모두 USDC 사용 가능\n          ↓\n\nCircle은 underlying money layer"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 7,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>과거\n\nCircle Pay ─┐\nInvest ─────┤\nTrade ──────┼─ 각 사업에서\nPoloniex ───┤  인프라 사용\n             │\n             ▼\n   custody / compliance /\n   banking / blockchain\n\n\n피벗 후\n\n   custody / compliance /\n   banking / blockchain\n             │\n             ▼\n        USDC Platform\n             │\n    ┌────────┼────────┐\n    ▼        ▼        ▼\n Company A Company B Company C</span></code></div></div>",
+    "code": "과거\n\nCircle Pay ─┐\nInvest ─────┤\nTrade ──────┼─ 각 사업에서\nPoloniex ───┤  인프라 사용\n             │\n             ▼\n   custody / compliance /\n   banking / blockchain\n\n\n피벗 후\n\n   custody / compliance /\n   banking / blockchain\n             │\n             ▼\n        USDC Platform\n             │\n    ┌────────┼────────┐\n    ▼        ▼        ▼\n Company A Company B Company C"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 8,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC 수십~수백억 달러\n×\n고금리\n=\n수십억 달러 수익</span></code></div></div>",
+    "code": "USDC 수십~수백억 달러\n×\n고금리\n=\n수십억 달러 수익"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 9,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Cash                  $33.15M\nContingent             15.00M\n                      ───────\n약                     $48.15M\n\nNet assets sold       $204.9M\n\n처분 손실             $156.8M</span></code></div></div>",
+    "code": "Cash                  $33.15M\nContingent             15.00M\n                      ───────\n약                     $48.15M\n\nNet assets sold       $204.9M\n\n처분 손실             $156.8M"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 10,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>$204.9M의 현금성 자산을\n$48M에 넘겨버린 것</span></code></div></div>",
+    "code": "$204.9M의 현금성 자산을\n$48M에 넘겨버린 것"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 11,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>예전에 Poloniex를 비싸게 샀을 때\n장부에 잡아 놓았던 goodwill\n\n        ↓\n\n매각하면서 가치가 없어진 것</span></code></div></div>",
+    "code": "예전에 Poloniex를 비싸게 샀을 때\n장부에 잡아 놓았던 goodwill\n\n        ↓\n\n매각하면서 가치가 없어진 것"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 12,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Poloniex\n\nExchange\n  │\n  ├─ 매우 경쟁적\n  ├─ 상당한 운영인력\n  ├─ listing 규제\n  ├─ securities 규제\n  ├─ sanctions / AML\n  ├─ custody risk\n  ├─ market / margin risk\n  └─ 국가별 규제\n          │\n          ▼\nCircle의 자본과 경영진 집중력 소모</span></code></div></div>",
+    "code": "Poloniex\n\nExchange\n  │\n  ├─ 매우 경쟁적\n  ├─ 상당한 운영인력\n  ├─ listing 규제\n  ├─ securities 규제\n  ├─ sanctions / AML\n  ├─ custody risk\n  ├─ market / margin risk\n  └─ 국가별 규제\n          │\n          ▼\nCircle의 자본과 경영진 집중력 소모"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 13,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>① 전략\nUSDC가 원래 비전에 더 가까움\n\n② 경제성\n여러 B2C/Trading 사업보다\nplatform/network가 scale하기 좋음\n\n③ 현실\n2019 회사가 너무 복잡했고\n현금도 태우고 있었으며\nPoloniex 규제·운영 부담도 큼</span></code></div></div>",
+    "code": "① 전략\nUSDC가 원래 비전에 더 가까움\n\n② 경제성\n여러 B2C/Trading 사업보다\nplatform/network가 scale하기 좋음\n\n③ 현실\n2019 회사가 너무 복잡했고\n현금도 태우고 있었으며\nPoloniex 규제·운영 부담도 큼"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 14,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Jeremy Allaire   founder   2013~\nSean Neville     founder   2013~\nRajeev Date      director  2013~\nMichele Burns    director  2013~</span></code></div></div>",
+    "code": "Jeremy Allaire   founder   2013~\nSean Neville     founder   2013~\nRajeev Date      director  2013~\nMichele Burns    director  2013~"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 15,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2026-06-12\nRajeev Date\n초기 이사 + Lead Independent Director\n             ↓\n           사임\n\n2026-09-25\nSean Neville\n공동창업자 + Director\n             ↓\n           사임</span></code></div></div>",
+    "code": "2026-06-12\nRajeev Date\n초기 이사 + Lead Independent Director\n             ↓\n           사임\n\n2026-09-25\nSean Neville\n공동창업자 + Director\n             ↓\n           사임"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 16,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Sean Neville\n\n2013 ───────────── 2019 ───────────── 2026\n │                   │                   │\nFounder            경영진 종료          Board 종료\nCTO/President         │\nCo-CEO                └─ 비상근 이사</span></code></div></div>",
+    "code": "Sean Neville\n\n2013 ───────────── 2019 ───────────── 2026\n │                   │                   │\nFounder            경영진 종료          Board 종료\nCTO/President         │\nCo-CEO                └─ 비상근 이사"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 17,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Board에서 나감\n≠\nCircle 경제적 지분을 전부 정리</span></code></div></div>",
+    "code": "Board에서 나감\n≠\nCircle 경제적 지분을 전부 정리"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 18,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2026-09-25\n사임 의사 통보\n       │\n       ▼\n계속 CFO로 근무\n       │\n       ▼\n후임 찾기\n       │\n       ▼\n늦어도 2026-12-31 퇴사</span></code></div></div>",
+    "code": "2026-09-25\n사임 의사 통보\n       │\n       ▼\n계속 CFO로 근무\n       │\n       ▼\n후임 찾기\n       │\n       ▼\n늦어도 2026-12-31 퇴사"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 19,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2026-06\n13년 이사 Raj Date 퇴임\n\n       ↓\n\n2026-09-25\n공동창업자 Sean Neville 이사 사임\n+\nCFO Jeremy Fox-Geen 퇴임 발표</span></code></div></div>",
+    "code": "2026-06\n13년 이사 Raj Date 퇴임\n\n       ↓\n\n2026-09-25\n공동창업자 Sean Neville 이사 사임\n+\nCFO Jeremy Fox-Geen 퇴임 발표"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 20,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Private startup\n      ↓\nCrypto startup\n      ↓\nRegulated fintech\n      ↓\nGlobal financial infrastructure\n      ↓\nNYSE public company</span></code></div></div>",
+    "code": "Private startup\n      ↓\nCrypto startup\n      ↓\nRegulated fintech\n      ↓\nGlobal financial infrastructure\n      ↓\nNYSE public company"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 21,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Sean Neville   co-CEO → 퇴임\nNaeem Ishaq    CFO    → 퇴임\nGus Coldebella CLO    → 퇴임</span></code></div></div>",
+    "code": "Sean Neville   co-CEO → 퇴임\nNaeem Ishaq    CFO    → 퇴임\nGus Coldebella CLO    → 퇴임"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 22,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>위험도\n\nSean Neville board exit\n██░░░░░░░░\n낮음~중간\n\n이유:\n이미 7년 전 management에서 퇴임\n별도 회사 운영 중\n여전히 상당한 Class B 지분 보유\n\n\nRaj Date board exit\n███░░░░░░░\n중간 이하\n\n이유:\n13년 근무\nboard refresh로 설명 가능\n후임 lead director 즉시 임명\n\n\nCFO Fox-Geen exit\n█████░░░░░\n중간\n\n이유:\n현직 핵심 임원\nIPO 후 15개월\nArc/CPN 등 대규모 확장 시점\n아직 후임 없음\n\n\n세 사건을 합쳐서\n█████░░░░░\n\"yellow flag\"</span></code></div></div>",
+    "code": "위험도\n\nSean Neville board exit\n██░░░░░░░░\n낮음~중간\n\n이유:\n이미 7년 전 management에서 퇴임\n별도 회사 운영 중\n여전히 상당한 Class B 지분 보유\n\n\nRaj Date board exit\n███░░░░░░░\n중간 이하\n\n이유:\n13년 근무\nboard refresh로 설명 가능\n후임 lead director 즉시 임명\n\n\nCFO Fox-Geen exit\n█████░░░░░\n중간\n\n이유:\n현직 핵심 임원\nIPO 후 15개월\nArc/CPN 등 대규모 확장 시점\n아직 후임 없음\n\n\n세 사건을 합쳐서\n█████░░░░░\n\"yellow flag\""
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 23,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle 2013\n   │\n   │\nJeremy Allaire\nFounder / CEO\n   │\n   ├─ Bitcoin\n   ├─ Circle Pay\n   ├─ Poloniex\n   ├─ USDC\n   ├─ Stablecoin pivot\n   ├─ SPAC attempt\n   ├─ IPO\n   ├─ CPN\n   └─ Arc\n   │\n   ▼\nCircle 2026\nCEO / Chairman</span></code></div></div>",
+    "code": "Circle 2013\n   │\n   │\nJeremy Allaire\nFounder / CEO\n   │\n   ├─ Bitcoin\n   ├─ Circle Pay\n   ├─ Poloniex\n   ├─ USDC\n   ├─ Stablecoin pivot\n   ├─ SPAC attempt\n   ├─ IPO\n   ├─ CPN\n   └─ Arc\n   │\n   ▼\nCircle 2026\nCEO / Chairman"
+  },
+  {
+    "message_id": "71eb8d51-f78e-4f11-918f-295475ae38bc",
+    "index": 24,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                2013 Circle의 원래 질문\n\n        \"돈을 인터넷처럼 만들 수 있을까?\"\n                     │\n                     ▼\n                  Bitcoin\n                     │\n         ┌───────────┴───────────┐\n         │                       │\n  Consumer App               Trading\n  Circle Pay             Trade / Poloniex\n         │                       │\n         └───────────┬───────────┘\n                     │\n             직접 해보니 알게 됨\n                     │\n     ┌───────────────┼────────────────┐\n     │               │                │\nBTC 변동성       Legacy rails     규제/운영 복잡도\n     │               │                │\n     └───────────────┼────────────────┘\n                     ▼\n\n       \"앱이나 거래소가 핵심이 아니구나\"\n\n                     │\n                     ▼\n\n                Digital Dollar\n                    USDC\n                     │\n           ┌─────────┴─────────┐\n           │                   │\n       Open standard       Infrastructure\n           │                   │\n   누구나 distribution       API/platform\n           │                   │\n           └─────────┬─────────┘\n                     ▼\n\n               Network effect\n                     │\n                     ▼\n\n           현재의 Circle 전략\n Arc / CCTP / CPN / StableFX / ...</span></code></div></div>",
+    "code": "                2013 Circle의 원래 질문\n\n        \"돈을 인터넷처럼 만들 수 있을까?\"\n                     │\n                     ▼\n                  Bitcoin\n                     │\n         ┌───────────┴───────────┐\n         │                       │\n  Consumer App               Trading\n  Circle Pay             Trade / Poloniex\n         │                       │\n         └───────────┬───────────┘\n                     │\n             직접 해보니 알게 됨\n                     │\n     ┌───────────────┼────────────────┐\n     │               │                │\nBTC 변동성       Legacy rails     규제/운영 복잡도\n     │               │                │\n     └───────────────┼────────────────┘\n                     ▼\n\n       \"앱이나 거래소가 핵심이 아니구나\"\n\n                     │\n                     ▼\n\n                Digital Dollar\n                    USDC\n                     │\n           ┌─────────┴─────────┐\n           │                   │\n       Open standard       Infrastructure\n           │                   │\n   누구나 distribution       API/platform\n           │                   │\n           └─────────┬─────────┘\n                     ▼\n\n               Network effect\n                     │\n                     ▼\n\n           현재의 Circle 전략\n Arc / CCTP / CPN / StableFX / ..."
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 0,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>원래 비전\n\"인터넷 위에서 돈을 움직인다\"\n        │\n        +\n2018년까지 과도한 사업 확장\n        │\n        +\n2019 Crypto Winter\n        │\n        +\nPoloniex / 규제 문제\n        │\n        +\n기존 수익사업 악화\n        │\n        +\n자금조달 난항\n        │\n        ▼\n      생존 위기\n        │\n        │ 그런데\n        ▼\nUSDC에서 초기 PMF 확인\n        │\n        ▼\n\"여기에 회사 전체를 건다\"</span></code></div></div>",
+    "code": "원래 비전\n\"인터넷 위에서 돈을 움직인다\"\n        │\n        +\n2018년까지 과도한 사업 확장\n        │\n        +\n2019 Crypto Winter\n        │\n        +\nPoloniex / 규제 문제\n        │\n        +\n기존 수익사업 악화\n        │\n        +\n자금조달 난항\n        │\n        ▼\n      생존 위기\n        │\n        │ 그런데\n        ▼\nUSDC에서 초기 PMF 확인\n        │\n        ▼\n\"여기에 회사 전체를 건다\""
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 1,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>\"2019년에 망할 것 같아서\n갑자기 stablecoin을 생각했다\"</span></code></div></div>",
+    "code": "\"2019년에 망할 것 같아서\n갑자기 stablecoin을 생각했다\""
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 2,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2013\nDigital money / HTTP for Money라는 장기 비전\n       │\n       ▼\nBitcoin / Circle Pay 등으로 여러 구현 실험\n       │\n       ▼\n2018\nUSDC 출시\n       │\n       ▼\n2019\n기존 사업과 회사가 생존 위기\n       │\n       │ 동시에 USDC에서 PMF 관찰\n       ▼\n원래 비전에 가장 가까운 사업 하나에\n모든 것을 집중</span></code></div></div>",
+    "code": "2013\nDigital money / HTTP for Money라는 장기 비전\n       │\n       ▼\nBitcoin / Circle Pay 등으로 여러 구현 실험\n       │\n       ▼\n2018\nUSDC 출시\n       │\n       ▼\n2019\n기존 사업과 회사가 생존 위기\n       │\n       │ 동시에 USDC에서 PMF 관찰\n       ▼\n원래 비전에 가장 가까운 사업 하나에\n모든 것을 집중"
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 3,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>연간 수백억 달러 거래 사업\n        ↓\n겨우 $1.9M 받고 넘김\n        ↓\n극단적인 fire sale</span></code></div></div>",
+    "code": "연간 수백억 달러 거래 사업\n        ↓\n겨우 $1.9M 받고 넘김\n        ↓\n극단적인 fire sale"
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 4,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Crypto winter\n+\n규제 압박\n+\n자금 조달 어려움\n+\n제품군 과다</span></code></div></div>",
+    "code": "Crypto winter\n+\n규제 압박\n+\n자금 조달 어려움\n+\n제품군 과다"
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 5,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Spark 존재\n→ open-source\n→ multi-currency transfer 지향\n→ Circle이 Bitcoin 자체보다 fiat value 이동을 중시하던 시기</span></code></div></div>",
+    "code": "Spark 존재\n→ open-source\n→ multi-currency transfer 지향\n→ Circle이 Bitcoin 자체보다 fiat value 이동을 중시하던 시기"
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 6,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>\"Ethereum을 본 직후 만든\ninternal fiat-token protocol codename Spark\"</span></code></div></div>",
+    "code": "\"Ethereum을 본 직후 만든\ninternal fiat-token protocol codename Spark\""
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 7,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2016\nElisabeth Carpenter\nChief People Officer\n       │\n       ▼\nCOO\n약 9년\n       │\n       ▼\n2025~\nChief Strategic Engagement Officer\n       │\n       ▼\n2026 현재 Circle leadership</span></code></div></div>",
+    "code": "2016\nElisabeth Carpenter\nChief People Officer\n       │\n       ▼\nCOO\n약 9년\n       │\n       ▼\n2025~\nChief Strategic Engagement Officer\n       │\n       ▼\n2026 현재 Circle leadership"
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 8,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2013 founder\nJeremy Allaire            현재 CEO / Chairman\n\n2013 Board\nMichele Burns             현재 Director\n\n2016 executive\nElisabeth Carpenter       현재 leadership\n\n2013 founder\nSean Neville              2019 경영 종료\n                          2026 Board 종료\n\n2013 Board\nRaj Date                  2026 Board 종료</span></code></div></div>",
+    "code": "2013 founder\nJeremy Allaire            현재 CEO / Chairman\n\n2013 Board\nMichele Burns             현재 Director\n\n2016 executive\nElisabeth Carpenter       현재 leadership\n\n2013 founder\nSean Neville              2019 경영 종료\n                          2026 Board 종료\n\n2013 Board\nRaj Date                  2026 Board 종료"
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 9,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2019 = 실질적인 경영 이탈\n2026 = 남아 있던 governance 연결까지 종료</span></code></div></div>",
+    "code": "2019 = 실질적인 경영 이탈\n2026 = 남아 있던 governance 연결까지 종료"
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 10,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Vision\n+\nUSDC 초기 PMF\n+\nCrypto winter\n+\n기존 사업의 현금소진\n+\n규제 압박\n+\n추가 자금조달 실패\n=\nUSDC에 회사 전체 베팅</span></code></div></div>",
+    "code": "Vision\n+\nUSDC 초기 PMF\n+\nCrypto winter\n+\n기존 사업의 현금소진\n+\n규제 압박\n+\n추가 자금조달 실패\n=\nUSDC에 회사 전체 베팅"
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 11,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Poloniex\n→ 인수 실패에 가까움\n→ 시장점유율 하락\n→ 규제/법률 리스크\n→ 큰 손실 감수하고 철수\n\nCircle Trade\n→ 성공하던 사업\n→ 망해서 판 것 아님\n→ 생존자금 + 집중을 위해 매각\n\nCircle Invest\n→ 작은 사업\n→ 전략적 중요성 낮음\n\nCircle Pay\n→ 직접 종료\n→ underlying tech는 platform으로 재사용\n\nSeedInvest\n→ 즉시 철수 아님\n→ 몇 년 뒤 별도 매각</span></code></div></div>",
+    "code": "Poloniex\n→ 인수 실패에 가까움\n→ 시장점유율 하락\n→ 규제/법률 리스크\n→ 큰 손실 감수하고 철수\n\nCircle Trade\n→ 성공하던 사업\n→ 망해서 판 것 아님\n→ 생존자금 + 집중을 위해 매각\n\nCircle Invest\n→ 작은 사업\n→ 전략적 중요성 낮음\n\nCircle Pay\n→ 직접 종료\n→ underlying tech는 platform으로 재사용\n\nSeedInvest\n→ 즉시 철수 아님\n→ 몇 년 뒤 별도 매각"
+  },
+  {
+    "message_id": "13102e3c-1e42-4063-9087-677529f4c05b",
+    "index": 12,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Founder\nJeremy Allaire ──────────────── 현재 CEO/Chairman\n\nFounder\nSean Neville ── 2019 운영 종료 ── 2026 Board 종료\n\nEarly Board\nMichele Burns ──────────────── 현재\n\nEarly Board\nRaj Date ──────────────────── 2026 종료\n\n2016 Executive\nElisabeth Carpenter ───────── 현재 leadership\n\n2021 CFO\nJeremy Fox-Geen ───────────── 2026년 말 종료 예정</span></code></div></div>",
+    "code": "Founder\nJeremy Allaire ──────────────── 현재 CEO/Chairman\n\nFounder\nSean Neville ── 2019 운영 종료 ── 2026 Board 종료\n\nEarly Board\nMichele Burns ──────────────── 현재\n\nEarly Board\nRaj Date ──────────────────── 2026 종료\n\n2016 Executive\nElisabeth Carpenter ───────── 현재 leadership\n\n2021 CFO\nJeremy Fox-Geen ───────────── 2026년 말 종료 예정"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 0,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>ARC presale\n\n740.0M ARC\n +67.5M ARC\n────────────\n807.5M ARC\n\n× $0.30\n────────────\n$242.25M</span></code></div></div>",
+    "code": "ARC presale\n\n740.0M ARC\n +67.5M ARC\n────────────\n807.5M ARC\n\n× $0.30\n────────────\n$242.25M"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 1,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>기존\n$150M ~ $170M\n\n       ↓\n\n수정\n$310M ~ $330M\n\n그 증가분의 대부분\n≈ ARC presale revenue $180M</span></code></div></div>",
+    "code": "기존\n$150M ~ $170M\n\n       ↓\n\n수정\n$310M ~ $330M\n\n그 증가분의 대부분\n≈ ARC presale revenue $180M"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 2,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2026 Other Revenue 성장\n\n┌─────────────────────────┐\n│ 기존 제품들              │\n│ Mint / CPN / services... │\n│ 약 $130~150M 예상        │\n├─────────────────────────┤\n│ ARC token presale        │\n│ 약 $180M 예상            │\n└─────────────────────────┘</span></code></div></div>",
+    "code": "2026 Other Revenue 성장\n\n┌─────────────────────────┐\n│ 기존 제품들              │\n│ Mint / CPN / services... │\n│ 약 $130~150M 예상        │\n├─────────────────────────┤\n│ ARC token presale        │\n│ 약 $180M 예상            │\n└─────────────────────────┘"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 3,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>ARC presale\n       │\n       ▼\n$242.2M deferred revenue\n       │\nperformance milestones\n       ▼\n2026 예상 $180M revenue recognition\n\n\n동시에\n\nFox-Geen\n       │\n2026-09-25 사임 의사 통보\n       │\n       ▼\n후임 또는 12/31까지 CFO</span></code></div></div>",
+    "code": "ARC presale\n       │\n       ▼\n$242.2M deferred revenue\n       │\nperformance milestones\n       ▼\n2026 예상 $180M revenue recognition\n\n\n동시에\n\nFox-Geen\n       │\n2026-09-25 사임 의사 통보\n       │\n       ▼\n후임 또는 12/31까지 CFO"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 4,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>CFO가 ARC 회계 때문에 떠난다</span></code></div></div>",
+    "code": "CFO가 ARC 회계 때문에 떠난다"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 5,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Cash                     $1.9M\n\n+ 조건부 Payward 주식\n  earnout\n  retention\n  referral 조건\n\n+ 신규 OTC 고객 거래액의\n  0.1% referral payment</span></code></div></div>",
+    "code": "Cash                     $1.9M\n\n+ 조건부 Payward 주식\n  earnout\n  retention\n  referral 조건\n\n+ 신규 OTC 고객 거래액의\n  0.1% referral payment"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 6,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>잘못된 이해\n\nCircle Trade라는\n연 $24B 거래 사업 전체\n        ↓\n$1.9M에 매각</span></code></div></div>",
+    "code": "잘못된 이해\n\nCircle Trade라는\n연 $24B 거래 사업 전체\n        ↓\n$1.9M에 매각"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 7,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle Trade\n\n고객관계 / 브랜드 /\n운영관련 intangible\n        │\n        └──→ Kraken\n\nCash / crypto working capital\n        │\n        └──→ Circle에 잔류</span></code></div></div>",
+    "code": "Circle Trade\n\n고객관계 / 브랜드 /\n운영관련 intangible\n        │\n        └──→ Kraken\n\nCash / crypto working capital\n        │\n        └──→ Circle에 잔류"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 8,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>장부가액      $0\n매각 현금     $1.9M\n────────────────\n회계상 gain   $1.9M</span></code></div></div>",
+    "code": "장부가액      $0\n매각 현금     $1.9M\n────────────────\n회계상 gain   $1.9M"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 9,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>매각 대가\n\nCash                 $33.150M\nContingent            15.000M\n─────────────────────────────\n                     $48.150M\n\n\n넘긴 순자산 장부가\n\nOther intangibles    $19.360M\nGoodwill             185.555M\nDigital assets         0.059M\n─────────────────────────────\n약                  $204.9M\n\n\n처분손실\n                  -$156.824M</span></code></div></div>",
+    "code": "매각 대가\n\nCash                 $33.150M\nContingent            15.000M\n─────────────────────────────\n                     $48.150M\n\n\n넘긴 순자산 장부가\n\nOther intangibles    $19.360M\nGoodwill             185.555M\nDigital assets         0.059M\n─────────────────────────────\n약                  $204.9M\n\n\n처분손실\n                  -$156.824M"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 10,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2018\nPoloniex의 미래 가치에\n높은 acquisition premium을 인정\n         │\n         ▼\nGoodwill 대량 발생\n         │\n         ▼\n사업 기대치 붕괴\n         │\n         ▼\n2019 매각\n         │\n         ▼\nGoodwill 대부분 소멸</span></code></div></div>",
+    "code": "2018\nPoloniex의 미래 가치에\n높은 acquisition premium을 인정\n         │\n         ▼\nGoodwill 대량 발생\n         │\n         ▼\n사업 기대치 붕괴\n         │\n         ▼\n2019 매각\n         │\n         ▼\nGoodwill 대부분 소멸"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 11,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Spark\n  │\n  ▼\nCENTRE</span></code></div></div>",
+    "code": "Spark\n  │\n  ▼\nCENTRE"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 12,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Ethereum 발견\n  ↓\nSpark\n  ↓\nEthereum fiat token</span></code></div></div>",
+    "code": "Ethereum 발견\n  ↓\nSpark\n  ↓\nEthereum fiat token"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 13,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2013\nBitcoin 기반 value transfer\n       │\n       ▼\n2016\nSpark → CENTRE\n       │\nBitcoin을 settlement network로 사용\nfiat-denominated money 이동\n       │\n       ▼\nEthereum / tokenization 발전\n       │\n       ▼\n2018\nCENTRE + USDC\n       │\nEthereum ERC-20 stablecoin</span></code></div></div>",
+    "code": "2013\nBitcoin 기반 value transfer\n       │\n       ▼\n2016\nSpark → CENTRE\n       │\nBitcoin을 settlement network로 사용\nfiat-denominated money 이동\n       │\n       ▼\nEthereum / tokenization 발전\n       │\n       ▼\n2018\nCENTRE + USDC\n       │\nEthereum ERC-20 stablecoin"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 14,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC interest        $6.232M\nUSDC sharing/cost   -$4.908M\n\nOperating expenses  $87.724M\nOperating loss     -$83.209M</span></code></div></div>",
+    "code": "USDC interest        $6.232M\nUSDC sharing/cost   -$4.908M\n\nOperating expenses  $87.724M\nOperating loss     -$83.209M"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 15,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Allaire의 Class B 보유량\n초기의 50% 미만\n          OR\nAllaire가 CEO도 아니고 Chairman도 아님\n          OR\nEffective Time 후 5년\n          OR\n기타 정관상 conversion event</span></code></div></div>",
+    "code": "Allaire의 Class B 보유량\n초기의 50% 미만\n          OR\nAllaire가 CEO도 아니고 Chairman도 아님\n          OR\nEffective Time 후 5년\n          OR\n기타 정관상 conversion event"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 16,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Jeremy founder control\n      │\n      ├─ 5 votes / share\n      │\n      ├─ 하지만 B 전체 voting power ≤ 30%\n      │\n      ├─ Allaire 보유량 조건\n      │\n      ├─ CEO/Chair 조건\n      │\n      └─ 5년 sunset</span></code></div></div>",
+    "code": "Jeremy founder control\n      │\n      ├─ 5 votes / share\n      │\n      ├─ 하지만 B 전체 voting power ≤ 30%\n      │\n      ├─ Allaire 보유량 조건\n      │\n      ├─ CEO/Chair 조건\n      │\n      └─ 5년 sunset"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 17,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>\"도망갔다\"\n→ 과장\n\n왜?\n3M+ Class B 계속 보유\n\n\n\"전혀 지분을 줄이고 있지 않다\"\n→ 이것도 틀림\n\n왜?\n10b5-1에 따라 지속 매도</span></code></div></div>",
+    "code": "\"도망갔다\"\n→ 과장\n\n왜?\n3M+ Class B 계속 보유\n\n\n\"전혀 지분을 줄이고 있지 않다\"\n→ 이것도 틀림\n\n왜?\n10b5-1에 따라 지속 매도"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 18,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2013────────────────────────2026\n\nRaj Date\nBoard ────────────────────── X  Jun\n\nSean Neville\nFounder\nManagement ─── X 2019\nBoard ───────────────────────── X Sep\n\nFox-Geen\n             CFO ───────────────→ X Dec 예정</span></code></div></div>",
+    "code": "2013────────────────────────2026\n\nRaj Date\nBoard ────────────────────── X  Jun\n\nSean Neville\nFounder\nManagement ─── X 2019\nBoard ───────────────────────── X Sep\n\nFox-Geen\n             CFO ───────────────→ X Dec 예정"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 19,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>낮은 중요도\nSean Neville Board exit\n        │\n        ▼\nRaj Date Board exit\n        │\n        ▼\nFox-Geen CFO transition\n        │\n        ▼\n새 CFO\n        │\n        ▼\nARC $242M deferred revenue\nperformance milestone 판단\n        │\n        ▼\n$180M 2026 revenue recognition\n        │\n        ▼\n2026 Other Revenue / margin</span></code></div></div>",
+    "code": "낮은 중요도\nSean Neville Board exit\n        │\n        ▼\nRaj Date Board exit\n        │\n        ▼\nFox-Geen CFO transition\n        │\n        ▼\n새 CFO\n        │\n        ▼\nARC $242M deferred revenue\nperformance milestone 판단\n        │\n        ▼\n$180M 2026 revenue recognition\n        │\n        ▼\n2026 Other Revenue / margin"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 20,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2013\n\"HTTP for Money\"\n인터넷 네이티브 금융이라는 문제의식\n        │\n        ▼\nBitcoin\n        │\n        ▼\nCircle Pay / Trade\n        │\n        ▼\n2016\nSpark → CENTRE\nBitcoin settlement 위의\nmulti-currency / fiat movement 실험\n        │\n        ▼\n2018\nUSDC\nEthereum 위 digital dollar\n        │\n        ├───────────────┐\n        │               │\n     초기 PMF       Circle은 동시에\n                    Poloniex / Invest /\n                    Trade / SeedInvest\n                    과도하게 확장\n        │               │\n        └───────┬───────┘\n                ▼\n              2019\n      Crypto winter / 규제\n      자금소진 / 조달난\n      Poloniex 실패\n                │\n                ▼\n         bankruptcy threat\n                │\n                ▼\n       \"USDC에 회사를 건다\"\n                │\n        ┌───────┴───────┐\n        ▼               ▼\n  자산 매각/종료      직원 대폭 축소\n        │               │\n        └───────┬───────┘\n                ▼\n         Stablecoin platform\n                │\n                ▼\n       2020~현재 Circle</span></code></div></div>",
+    "code": "2013\n\"HTTP for Money\"\n인터넷 네이티브 금융이라는 문제의식\n        │\n        ▼\nBitcoin\n        │\n        ▼\nCircle Pay / Trade\n        │\n        ▼\n2016\nSpark → CENTRE\nBitcoin settlement 위의\nmulti-currency / fiat movement 실험\n        │\n        ▼\n2018\nUSDC\nEthereum 위 digital dollar\n        │\n        ├───────────────┐\n        │               │\n     초기 PMF       Circle은 동시에\n                    Poloniex / Invest /\n                    Trade / SeedInvest\n                    과도하게 확장\n        │               │\n        └───────┬───────┘\n                ▼\n              2019\n      Crypto winter / 규제\n      자금소진 / 조달난\n      Poloniex 실패\n                │\n                ▼\n         bankruptcy threat\n                │\n                ▼\n       \"USDC에 회사를 건다\"\n                │\n        ┌───────┴───────┐\n        ▼               ▼\n  자산 매각/종료      직원 대폭 축소\n        │               │\n        └───────┬───────┘\n                ▼\n         Stablecoin platform\n                │\n                ▼\n       2020~현재 Circle"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 21,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC issuer\n    │\n    ├── CCTP / Gateway\n    ├── CPN\n    ├── StableFX\n    │\n    └── Arc\n          │\n          ▼\n       ARC Token\n          │\n      $242.2M presale\n          │\n          ▼\n Circle이 처음으로\n자체 network asset을 통한\n대규모 매출까지 갖게 됨</span></code></div></div>",
+    "code": "USDC issuer\n    │\n    ├── CCTP / Gateway\n    ├── CPN\n    ├── StableFX\n    │\n    └── Arc\n          │\n          ▼\n       ARC Token\n          │\n      $242.2M presale\n          │\n          ▼\n Circle이 처음으로\n자체 network asset을 통한\n대규모 매출까지 갖게 됨"
+  },
+  {
+    "message_id": "4742317b-41ba-4cf7-b9b9-9d59cac7f2e4",
+    "index": 22,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Other Revenue\n    │\n    ├─ recurring / operational\n    │   CPN\n    │   Mint\n    │   services\n    │   subscriptions\n    │   transaction fees\n    │\n    └─ token-related\n        ARC presale\n        milestone revenue</span></code></div></div>",
+    "code": "Other Revenue\n    │\n    ├─ recurring / operational\n    │   CPN\n    │   Mint\n    │   services\n    │   subscriptions\n    │   transaction fees\n    │\n    └─ token-related\n        ARC presale\n        milestone revenue"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 0,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2013\nBitcoin을 일반인이 쉽게 쓰게 만드는 회사\n       │\n       ▼\n2014~2017\nConsumer Bitcoin / Payment 회사\nCircle App / Circle Pay\nCircle Trade\n       │\n       ▼\n2018\n\"종합 Crypto Financial Company\"\n────────────────────────────\nCircle Pay       개인 송금\nCircle Invest    개인 투자\nCircle Trade     기관 OTC\nPoloniex         거래소\nSeedInvest       증권 / Crowdfunding\nUSDC             Stablecoin\n────────────────────────────\n       │\n       │  2019~2020 대규모 사업정리\n       ▼\n2020~2023\n\"USDC Platform Company\"\nUSDC\nCircle APIs\nCircle Account / Mint\nCrosschain\n       │\n       ▼\n2023~2025\n\"Stablecoin Infrastructure Company\"\nUSDC / EURC\nCCTP\nWallets\nContracts\nPaymaster\nGateway\n       │\n       ▼\n2025~2026\n\"Internet Financial System\"\n────────────────────────────\n         Applications\n     CPN ───── StableFX\n           │\n Digital Assets &amp; Services\n USDC / EURC / USYC / Mint\n xReserve / Partner Stablecoins\n           │\n     Infrastructure\n Arc / CCTP / Gateway\n Wallets / Contracts / Paymaster\n           │\n       Agent Stack\n────────────────────────────</span></code></div></div>",
+    "code": "2013\nBitcoin을 일반인이 쉽게 쓰게 만드는 회사\n       │\n       ▼\n2014~2017\nConsumer Bitcoin / Payment 회사\nCircle App / Circle Pay\nCircle Trade\n       │\n       ▼\n2018\n\"종합 Crypto Financial Company\"\n────────────────────────────\nCircle Pay       개인 송금\nCircle Invest    개인 투자\nCircle Trade     기관 OTC\nPoloniex         거래소\nSeedInvest       증권 / Crowdfunding\nUSDC             Stablecoin\n────────────────────────────\n       │\n       │  2019~2020 대규모 사업정리\n       ▼\n2020~2023\n\"USDC Platform Company\"\nUSDC\nCircle APIs\nCircle Account / Mint\nCrosschain\n       │\n       ▼\n2023~2025\n\"Stablecoin Infrastructure Company\"\nUSDC / EURC\nCCTP\nWallets\nContracts\nPaymaster\nGateway\n       │\n       ▼\n2025~2026\n\"Internet Financial System\"\n────────────────────────────\n         Applications\n     CPN ───── StableFX\n           │\n Digital Assets & Services\n USDC / EURC / USYC / Mint\n xReserve / Partner Stablecoins\n           │\n     Infrastructure\n Arc / CCTP / Gateway\n Wallets / Contracts / Paymaster\n           │\n       Agent Stack\n────────────────────────────"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 1,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>사용자\n   │\nUSD / EUR / GBP\n   │\nCircle\n   │\nBitcoin / blockchain infrastructure\n   │\nCircle\n   │\nUSD / EUR / GBP\n   ▼\n상대방</span></code></div></div>",
+    "code": "사용자\n   │\nUSD / EUR / GBP\n   │\nCircle\n   │\nBitcoin / blockchain infrastructure\n   │\nCircle\n   │\nUSD / EUR / GBP\n   ▼\n상대방"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 2,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle Pay      → Payments\nCircle Trade    → Institutional liquidity\nCircle Invest   → Retail investment\nPoloniex        → Exchange\nSeedInvest      → Securities\nUSDC            → Money</span></code></div></div>",
+    "code": "Circle Pay      → Payments\nCircle Trade    → Institutional liquidity\nCircle Invest   → Retail investment\nPoloniex        → Exchange\nSeedInvest      → Securities\nUSDC            → Money"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 3,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Crypto Exchange A\n       │\n      USDC\n       ▼\nCrypto Exchange B\n\n→ 거래소 사이 달러 가치 이동\n→ Crypto hedge\n→ arbitrage\n→ trading collateral</span></code></div></div>",
+    "code": "Crypto Exchange A\n       │\n      USDC\n       ▼\nCrypto Exchange B\n\n→ 거래소 사이 달러 가치 이동\n→ Crypto hedge\n→ arbitrage\n→ trading collateral"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 4,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                  2018             2020 이후\n\nCircle Pay          O   ───────→     X\nCircle Invest       O   ───────→     X\nCircle Trade        O   ───────→     X\nPoloniex            O   ───────→     X\nSeedInvest          O   ───────→   이후 X\n\nUSDC                O   ─────────────→ OOOOO</span></code></div></div>",
+    "code": "                  2018             2020 이후\n\nCircle Pay          O   ───────→     X\nCircle Invest       O   ───────→     X\nCircle Trade        O   ───────→     X\nPoloniex            O   ───────→     X\nSeedInvest          O   ───────→   이후 X\n\nUSDC                O   ─────────────→ OOOOO"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 5,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>고객이 $1 입금\n      │\n      ▼\nCircle\n      │\n      ├──── USDC 1개 발행\n      │\n      ▼\n$1 준비금\n      │\n      ├─ Cash\n      ├─ US Treasury\n      └─ Money Market Fund\n              │\n              ▼\n          이자 수익\n              │\n              ▼\n            Circle</span></code></div></div>",
+    "code": "고객이 $1 입금\n      │\n      ▼\nCircle\n      │\n      ├──── USDC 1개 발행\n      │\n      ▼\n$1 준비금\n      │\n      ├─ Cash\n      ├─ US Treasury\n      └─ Money Market Fund\n              │\n              ▼\n          이자 수익\n              │\n              ▼\n            Circle"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 6,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC $100B\n ×\n준비금 수익률 4%\n≈\n연 $4B gross reserve income</span></code></div></div>",
+    "code": "USDC $100B\n ×\n준비금 수익률 4%\n≈\n연 $4B gross reserve income"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 7,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle ─┐\n        ├── CENTRE ── USDC\nCoinbase┘</span></code></div></div>",
+    "code": "Circle ─┐\n        ├── CENTRE ── USDC\nCoinbase┘"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 8,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle\n  │\n  └── USDC</span></code></div></div>",
+    "code": "Circle\n  │\n  └── USDC"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 9,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>┌──────────────────────────────────────────────┐\n│ APPLICATIONS                                 │\n│                                              │\n│ CPN                 StableFX                 │\n│ Global Payments     Stablecoin FX            │\n│                                              │\n│ Agent Stack                                  │\n└──────────────────────────────────────────────┘\n                       ▲\n┌──────────────────────────────────────────────┐\n│ DIGITAL ASSETS &amp; LIQUIDITY                   │\n│                                              │\n│ USDC     EURC     USYC                       │\n│ Circle Mint                                  │\n│ xReserve                                     │\n│ Partner Stablecoins                          │\n└──────────────────────────────────────────────┘\n                       ▲\n┌──────────────────────────────────────────────┐\n│ INTEROPERABILITY / DEVELOPER INFRA           │\n│                                              │\n│ CCTP       Gateway                           │\n│ Wallets     Contracts                        │\n│ Paymaster   App Kits                         │\n└──────────────────────────────────────────────┘\n                       ▲\n┌──────────────────────────────────────────────┐\n│ BLOCKCHAIN                                   │\n│                                              │\n│                     ARC                      │\n└──────────────────────────────────────────────┘</span></code></div></div>",
+    "code": "┌──────────────────────────────────────────────┐\n│ APPLICATIONS                                 │\n│                                              │\n│ CPN                 StableFX                 │\n│ Global Payments     Stablecoin FX            │\n│                                              │\n│ Agent Stack                                  │\n└──────────────────────────────────────────────┘\n                       ▲\n┌──────────────────────────────────────────────┐\n│ DIGITAL ASSETS & LIQUIDITY                   │\n│                                              │\n│ USDC     EURC     USYC                       │\n│ Circle Mint                                  │\n│ xReserve                                     │\n│ Partner Stablecoins                          │\n└──────────────────────────────────────────────┘\n                       ▲\n┌──────────────────────────────────────────────┐\n│ INTEROPERABILITY / DEVELOPER INFRA           │\n│                                              │\n│ CCTP       Gateway                           │\n│ Wallets     Contracts                        │\n│ Paymaster   App Kits                         │\n└──────────────────────────────────────────────┘\n                       ▲\n┌──────────────────────────────────────────────┐\n│ BLOCKCHAIN                                   │\n│                                              │\n│                     ARC                      │\n└──────────────────────────────────────────────┘"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 10,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Ethereum / Solana / Base ...\n        +\n       ARC\n\n      ↓\n\nCircle이 사용할 수 있는\n자체 settlement / execution layer</span></code></div></div>",
+    "code": "Ethereum / Solana / Base ...\n        +\n       ARC\n\n      ↓\n\nCircle이 사용할 수 있는\n자체 settlement / execution layer"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 11,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC\n=\nDigital Cash\n\nUSYC\n=\nTokenized Yield-bearing Money Market Fund</span></code></div></div>",
+    "code": "USDC\n=\nDigital Cash\n\nUSYC\n=\nTokenized Yield-bearing Money Market Fund"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 12,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Bank Account\n     │\n    USD\n     ▼\nCircle Mint\n     │\n     ▼\n    USDC\n\n또는\n\nUSDC\n │\n ▼\nCircle Mint\n │\n ▼\nUSD Bank Account</span></code></div></div>",
+    "code": "Bank Account\n     │\n    USD\n     ▼\nCircle Mint\n     │\n     ▼\n    USDC\n\n또는\n\nUSDC\n │\n ▼\nCircle Mint\n │\n ▼\nUSD Bank Account"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 13,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Mint\nFiat ↔ USDC\n\nCCTP\nUSDC(chain A) ↔ USDC(chain B)</span></code></div></div>",
+    "code": "Mint\nFiat ↔ USDC\n\nCCTP\nUSDC(chain A) ↔ USDC(chain B)"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 14,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Ethereum\n100 USDC\n   │\n  burn\n   │\nCircle attestation\n   │\n  mint\n   ▼\nSolana\n100 USDC</span></code></div></div>",
+    "code": "Ethereum\n100 USDC\n   │\n  burn\n   │\nCircle attestation\n   │\n  mint\n   ▼\nSolana\n100 USDC"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 15,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Ethereum USDC\n       ↓\n    Transfer\n       ↓\nBase USDC</span></code></div></div>",
+    "code": "Ethereum USDC\n       ↓\n    Transfer\n       ↓\nBase USDC"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 16,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Ethereum ──┐\nBase ──────┤\nSolana ────┼─→ Unified USDC Balance\nArc ───────┤\n           │\n           └→ 필요한 체인에서 즉시 사용</span></code></div></div>",
+    "code": "Ethereum ──┐\nBase ──────┤\nSolana ────┼─→ Unified USDC Balance\nArc ───────┤\n           │\n           └→ 필요한 체인에서 즉시 사용"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 17,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>               USDC\n                 │\n                 ▼\n          Circle xReserve\n          [100M USDC]\n                 │\n       1:1 reserve backing\n                 │\n                 ▼\n         Partner Blockchain\n              XYZUSD</span></code></div></div>",
+    "code": "               USDC\n                 │\n                 ▼\n          Circle xReserve\n          [100M USDC]\n                 │\n       1:1 reserve backing\n                 │\n                 ▼\n         Partner Blockchain\n              XYZUSD"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 18,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>다른 체인의 stablecoin 성장\n           ↓\nUSDC가 그 stablecoin의 reserve asset\n           ↓\nUSDC 수요 증가</span></code></div></div>",
+    "code": "다른 체인의 stablecoin 성장\n           ↓\nUSDC가 그 stablecoin의 reserve asset\n           ↓\nUSDC 수요 증가"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 19,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>우리 앱\n │\n └─ Circle Wallets\n       ├─ User-controlled\n       ├─ Developer-controlled\n       ├─ EOA\n       └─ Smart Contract Account</span></code></div></div>",
+    "code": "우리 앱\n │\n └─ Circle Wallets\n       ├─ User-controlled\n       ├─ Developer-controlled\n       ├─ EOA\n       └─ Smart Contract Account"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 20,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Create\nDeploy\nManage\nMonitor\n\nSmart Contract</span></code></div></div>",
+    "code": "Create\nDeploy\nManage\nMonitor\n\nSmart Contract"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 21,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>기존\n\nUSDC 결제하고 싶음\n   +\nETH도 필요함\n   ↓\nUX 문제\n\n\nPaymaster\n\nUSDC만 보유\n   ↓\nUSDC로 gas\n   ↓\ntransaction</span></code></div></div>",
+    "code": "기존\n\nUSDC 결제하고 싶음\n   +\nETH도 필요함\n   ↓\nUX 문제\n\n\nPaymaster\n\nUSDC만 보유\n   ↓\nUSDC로 gas\n   ↓\ntransaction"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 22,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Bank A\nFintech A\nPSP A\n   │\n   │\n   ├────────────┐\n   │            │\n   ▼            ▼\n       CPN\n   routing / compliance\n   settlement coordination\n        │\n    stablecoins\n        │\n        ▼\nBank B / PSP B / Fintech B</span></code></div></div>",
+    "code": "Bank A\nFintech A\nPSP A\n   │\n   │\n   ├────────────┐\n   │            │\n   ▼            ▼\n       CPN\n   routing / compliance\n   settlement coordination\n        │\n    stablecoins\n        │\n        ▼\nBank B / PSP B / Fintech B"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 23,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>고객\n  │\n fiat\n  ▼\nCircle\n │\n ├─ mint USDC\n ├─ blockchain transfer\n ├─ compliance\n ├─ routing\n ├─ burn USDC\n ▼\nfiat</span></code></div></div>",
+    "code": "고객\n  │\n fiat\n  ▼\nCircle\n │\n ├─ mint USDC\n ├─ blockchain transfer\n ├─ compliance\n ├─ routing\n ├─ burn USDC\n ▼\nfiat"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 24,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC\n │\n │ USD/KRW\n ▼\nKRW1\n\nUSDC\n │\n │ USD/EUR\n ▼\nEURC</span></code></div></div>",
+    "code": "USDC\n │\n │ USD/KRW\n ▼\nKRW1\n\nUSDC\n │\n │ USD/EUR\n ▼\nEURC"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 25,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Local Stablecoin issuers\n AUD / BRL / KRW / MXN ...\n          │\n          ▼\nPartner Stablecoins\n          │\n          ▼\n      StableFX\n          │\n          ▼\n    Global FX Network</span></code></div></div>",
+    "code": "Local Stablecoin issuers\n AUD / BRL / KRW / MXN ...\n          │\n          ▼\nPartner Stablecoins\n          │\n          ▼\n      StableFX\n          │\n          ▼\n    Global FX Network"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 26,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>AI Agent\n   │\n   ├─ wallet 보유\n   │\n   ├─ service 발견\n   │\n   ├─ API 호출\n   │\n   ├─ USDC 결제\n   │\n   └─ crosschain settlement</span></code></div></div>",
+    "code": "AI Agent\n   │\n   ├─ wallet 보유\n   │\n   ├─ service 발견\n   │\n   ├─ API 호출\n   │\n   ├─ USDC 결제\n   │\n   └─ crosschain settlement"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 27,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                     CIRCLE\n                       │\n        ┌──────────────┼──────────────┐\n        │              │              │\n    Money Layer   Infrastructure   Application\n        │              │              │\n        │              │              │\n     USDC             Arc             CPN\n     EURC             CCTP          StableFX\n     USYC           Gateway        Agent Stack\n        │              │\n        │          Paymaster\n        │          Wallets\n        │          Contracts\n        │          App Kits\n        │\n   Circle Mint\n   xReserve\n   Partner Stablecoins</span></code></div></div>",
+    "code": "                     CIRCLE\n                       │\n        ┌──────────────┼──────────────┐\n        │              │              │\n    Money Layer   Infrastructure   Application\n        │              │              │\n        │              │              │\n     USDC             Arc             CPN\n     EURC             CCTP          StableFX\n     USYC           Gateway        Agent Stack\n        │              │\n        │          Paymaster\n        │          Wallets\n        │          Contracts\n        │          App Kits\n        │\n   Circle Mint\n   xReserve\n   Partner Stablecoins"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 28,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle이 원하는 것\n\n1. 돈을 만든다.\n   USDC / EURC / USYC\n\n2. 돈을 은행과 연결한다.\n   Circle Mint\n\n3. 돈을 여러 체인에서 움직인다.\n   CCTP / Gateway\n\n4. 다른 stablecoin까지 자기 생태계로 끌어들인다.\n   xReserve / Partner Stablecoins\n\n5. 돈이 실행되는 blockchain도 만든다.\n   Arc\n\n6. 그 위에서 환전한다.\n   StableFX\n\n7. 그 위에서 국제 송금한다.\n   CPN\n\n8. 개발자가 금융 앱을 만든다.\n   Wallets / Contracts / Paymaster\n\n9. 사람이 아니라 AI도 경제활동한다.\n   Agent Stack</span></code></div></div>",
+    "code": "Circle이 원하는 것\n\n1. 돈을 만든다.\n   USDC / EURC / USYC\n\n2. 돈을 은행과 연결한다.\n   Circle Mint\n\n3. 돈을 여러 체인에서 움직인다.\n   CCTP / Gateway\n\n4. 다른 stablecoin까지 자기 생태계로 끌어들인다.\n   xReserve / Partner Stablecoins\n\n5. 돈이 실행되는 blockchain도 만든다.\n   Arc\n\n6. 그 위에서 환전한다.\n   StableFX\n\n7. 그 위에서 국제 송금한다.\n   CPN\n\n8. 개발자가 금융 앱을 만든다.\n   Wallets / Contracts / Paymaster\n\n9. 사람이 아니라 AI도 경제활동한다.\n   Agent Stack"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 29,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Internet\n   +\nBitcoin\n   ↓\n돈을 인터넷 데이터처럼 이동</span></code></div></div>",
+    "code": "Internet\n   +\nBitcoin\n   ↓\n돈을 인터넷 데이터처럼 이동"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 30,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Internet\n   +\nStablecoin\n   +\nBlockchain\n   ↓\n돈과 금융을 인터넷 데이터처럼 이동</span></code></div></div>",
+    "code": "Internet\n   +\nStablecoin\n   +\nBlockchain\n   ↓\n돈과 금융을 인터넷 데이터처럼 이동"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 31,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle이 직접\n\nWallet\nExchange\nInvestment App\nPayment App\nOTC Desk</span></code></div></div>",
+    "code": "Circle이 직접\n\nWallet\nExchange\nInvestment App\nPayment App\nOTC Desk"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 32,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle\n\nUSDC\nArc\nCCTP\nGateway\nCPN\nStableFX\n\n        ↓\n\nBank\nExchange\nFintech\nPSP\nWallet\nDeveloper\nAI Agent\n\n        ↓\n\n최종 사용자</span></code></div></div>",
+    "code": "Circle\n\nUSDC\nArc\nCCTP\nGateway\nCPN\nStableFX\n\n        ↓\n\nBank\nExchange\nFintech\nPSP\nWallet\nDeveloper\nAI Agent\n\n        ↓\n\n최종 사용자"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 33,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                     미래 Circle\n             Arc / CPN / StableFX\n            Gateway / Agent Stack\n                    ▲\n                    │\n                    │ 성장시키는 중\n                    │\n──────────────────────────────────\n                    │\n                 USDC\n                    │\n          Reserve interest\n                    │\n                    ▼\n              현재의 수익</span></code></div></div>",
+    "code": "                     미래 Circle\n             Arc / CPN / StableFX\n            Gateway / Agent Stack\n                    ▲\n                    │\n                    │ 성장시키는 중\n                    │\n──────────────────────────────────\n                    │\n                 USDC\n                    │\n          Reserve interest\n                    │\n                    ▼\n              현재의 수익"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 34,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>              USDC 발행량 증가\n                    │\n                    ▼\n             Reserve 증가\n                    │\n                    ▼\n             이자수익 증가\n                    │\n                    ▼\n        Infrastructure 투자\n   Arc / CCTP / Gateway / CPN\n                    │\n                    ▼\n       USDC 사용처 증가\n                    │\n                    ▼\n            USDC 수요 증가\n                    │\n                    └───────────↺</span></code></div></div>",
+    "code": "              USDC 발행량 증가\n                    │\n                    ▼\n             Reserve 증가\n                    │\n                    ▼\n             이자수익 증가\n                    │\n                    ▼\n        Infrastructure 투자\n   Arc / CCTP / Gateway / CPN\n                    │\n                    ▼\n       USDC 사용처 증가\n                    │\n                    ▼\n            USDC 수요 증가\n                    │\n                    └───────────↺"
+  },
+  {
+    "message_id": "dfbbcb5e-c208-4568-84a5-6a48c03ad7c6",
+    "index": 35,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>현재의 Circle\n=\nUSDC issuer\n+\nreserve-income business\n\n\nCircle이 만들려는 미래\n=\nMoney        USDC / EURC / USYC\n   +\nLiquidity    Mint / xReserve\n   +\nInterop      CCTP / Gateway\n   +\nBlockchain   Arc\n   +\nFX           StableFX\n   +\nPayments     CPN\n   +\nDevelopers   Wallets / Contracts / Paymaster\n   +\nAI           Agent Stack\n\n= Internet Financial System</span></code></div></div>",
+    "code": "현재의 Circle\n=\nUSDC issuer\n+\nreserve-income business\n\n\nCircle이 만들려는 미래\n=\nMoney        USDC / EURC / USYC\n   +\nLiquidity    Mint / xReserve\n   +\nInterop      CCTP / Gateway\n   +\nBlockchain   Arc\n   +\nFX           StableFX\n   +\nPayments     CPN\n   +\nDevelopers   Wallets / Contracts / Paymaster\n   +\nAI           Agent Stack\n\n= Internet Financial System"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 0,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle 회사 주식\n→ NYSE : CRCL\n\nUSDC\n→ Coinbase / Binance / Kraken 등\n  각종 crypto exchange에서 거래\n\nARC\n→ Arc의 network token\n  기관 대상 presale은 있었지만\n  public launch와는 별개</span></code></div></div>",
+    "code": "Circle 회사 주식\n→ NYSE : CRCL\n\nUSDC\n→ Coinbase / Binance / Kraken 등\n  각종 crypto exchange에서 거래\n\nARC\n→ Arc의 network token\n  기관 대상 presale은 있었지만\n  public launch와는 별개"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 1,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2013\n┌─────────────────────────────────┐\n│ \"돈을 인터넷의 정보처럼        │\n│  움직일 수 없을까?\"             │\n└─────────────────────────────────┘\n                 │\n                 ▼\n             Bitcoin\n                 │\n        ┌────────┴────────┐\n        ▼                 ▼\n Circle Pay          Circle Trade\n 소비자 송금          기관 OTC\n        │\n        ▼\n2016\nSpark → CENTRE\n\"Bitcoin을 사게 하는 것이 아니라\n fiat value를 blockchain으로 이동\"\n        │\n        ▼\n2018\n──────────────────────────────────\n Circle Pay       소비자 송금\n Circle Invest    암호화폐 투자\n Circle Trade     기관 OTC\n Poloniex         거래소\n SeedInvest       증권 crowdfunding\n USDC             디지털 달러\n──────────────────────────────────\n        │\n        │  과도한 확장\n        ▼\n2019\ncrypto winter + 규제 + 적자 + 자금압박\n        │\n        ├── Poloniex 매각\n        ├── Circle Trade 매각\n        ├── Circle Pay 종료\n        ├── Circle Invest 매각\n        │\n        ▼\n       USDC\n        │\n        │ 회사 전체를 집중\n        ▼\n2020~2024\nStablecoin Platform\nUSDC / EURC\nMint / APIs / CCTP / Wallets\n        │\n        ▼\n2025~2026\nFull-stack Internet Financial Platform\n\n Assets\n    +\nInteroperability\n    +\nBlockchain\n    +\nFX\n    +\nPayments\n    +\nDeveloper Infra\n    +\nAI Agents</span></code></div></div>",
+    "code": "2013\n┌─────────────────────────────────┐\n│ \"돈을 인터넷의 정보처럼        │\n│  움직일 수 없을까?\"             │\n└─────────────────────────────────┘\n                 │\n                 ▼\n             Bitcoin\n                 │\n        ┌────────┴────────┐\n        ▼                 ▼\n Circle Pay          Circle Trade\n 소비자 송금          기관 OTC\n        │\n        ▼\n2016\nSpark → CENTRE\n\"Bitcoin을 사게 하는 것이 아니라\n fiat value를 blockchain으로 이동\"\n        │\n        ▼\n2018\n──────────────────────────────────\n Circle Pay       소비자 송금\n Circle Invest    암호화폐 투자\n Circle Trade     기관 OTC\n Poloniex         거래소\n SeedInvest       증권 crowdfunding\n USDC             디지털 달러\n──────────────────────────────────\n        │\n        │  과도한 확장\n        ▼\n2019\ncrypto winter + 규제 + 적자 + 자금압박\n        │\n        ├── Poloniex 매각\n        ├── Circle Trade 매각\n        ├── Circle Pay 종료\n        ├── Circle Invest 매각\n        │\n        ▼\n       USDC\n        │\n        │ 회사 전체를 집중\n        ▼\n2020~2024\nStablecoin Platform\nUSDC / EURC\nMint / APIs / CCTP / Wallets\n        │\n        ▼\n2025~2026\nFull-stack Internet Financial Platform\n\n Assets\n    +\nInteroperability\n    +\nBlockchain\n    +\nFX\n    +\nPayments\n    +\nDeveloper Infra\n    +\nAI Agents"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 2,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>사용자 A\n   │\nUSD / GBP / EUR\n   ▼\n Circle\n   │\nBitcoin / blockchain\nbackground rail\n   │\n   ▼\n Circle\n   │\nUSD / GBP / EUR\n   ▼\n사용자 B</span></code></div></div>",
+    "code": "사용자 A\n   │\nUSD / GBP / EUR\n   ▼\n Circle\n   │\nBitcoin / blockchain\nbackground rail\n   │\n   ▼\n Circle\n   │\nUSD / GBP / EUR\n   ▼\n사용자 B"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 3,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>PayPal\n+\nCoinbase\n+\nRobinhood\n+\nOTC desk\n+\ncrowdfunding platform\n+\nstablecoin issuer</span></code></div></div>",
+    "code": "PayPal\n+\nCoinbase\n+\nRobinhood\n+\nOTC desk\n+\ncrowdfunding platform\n+\nstablecoin issuer"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 4,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Poloniex\n2019.11 매각\n\nCircle Trade\n2019.12 Kraken에 자산 매각\n\nCircle Invest\n2020.03 Voyager에 매각\n\nCircle Pay\n2019 종료\n\nSeedInvest\n조금 더 유지\n→ 2023 StartEngine에 매각</span></code></div></div>",
+    "code": "Poloniex\n2019.11 매각\n\nCircle Trade\n2019.12 Kraken에 자산 매각\n\nCircle Invest\n2020.03 Voyager에 매각\n\nCircle Pay\n2019 종료\n\nSeedInvest\n조금 더 유지\n→ 2023 StartEngine에 매각"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 5,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>원래의 \"인터넷 화폐\" 비전\n            +\nUSDC에서 초기 PMF 관찰\n            +\nCrypto winter\n            +\n기존 사업들의 악화\n            +\nPoloniex 규제 문제\n            +\n현금 소진 / 자금조달 압박\n            │\n            ▼\n     \"나머지를 정리하고\n       USDC에 건다\"</span></code></div></div>",
+    "code": "원래의 \"인터넷 화폐\" 비전\n            +\nUSDC에서 초기 PMF 관찰\n            +\nCrypto winter\n            +\n기존 사업들의 악화\n            +\nPoloniex 규제 문제\n            +\n현금 소진 / 자금조달 압박\n            │\n            ▼\n     \"나머지를 정리하고\n       USDC에 건다\""
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 6,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>잘못된 해석\n\n$24B OTC business\n      ↓\n고작 $1.9M에 매각</span></code></div></div>",
+    "code": "잘못된 해석\n\n$24B OTC business\n      ↓\n고작 $1.9M에 매각"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 7,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle Trade\n\n영업 관련 intangible / 고객관계 등\n          └────→ Kraken\n\nFiat / crypto working capital\n          └────→ Circle에 남음</span></code></div></div>",
+    "code": "Circle Trade\n\n영업 관련 intangible / 고객관계 등\n          └────→ Kraken\n\nFiat / crypto working capital\n          └────→ Circle에 남음"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 8,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle\n │\n ├─ 사용자를 직접 확보\n ├─ wallet 운영\n ├─ bank integration\n ├─ FX\n ├─ compliance\n └─ payment UX</span></code></div></div>",
+    "code": "Circle\n │\n ├─ 사용자를 직접 확보\n ├─ wallet 운영\n ├─ bank integration\n ├─ FX\n ├─ compliance\n └─ payment UX"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 9,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                    USDC\n                      │\n       ┌──────────────┼──────────────┐\n       ▼              ▼              ▼\n   Coinbase         Binance        Wallet\n       │              │              │\n       ▼              ▼              ▼\n   고객 확보         고객 확보       고객 확보\n\n       └──────────────┬──────────────┘\n                      │\n                      ▼\n                  Circle\n               underlying money</span></code></div></div>",
+    "code": "                    USDC\n                      │\n       ┌──────────────┼──────────────┐\n       ▼              ▼              ▼\n   Coinbase         Binance        Wallet\n       │              │              │\n       ▼              ▼              ▼\n   고객 확보         고객 확보       고객 확보\n\n       └──────────────┬──────────────┘\n                      │\n                      ▼\n                  Circle\n               underlying money"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 10,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>┌────────────────────────────────────────────┐\n│  APPLICATIONS                              │\n│                                            │\n│  CPN                    StableFX           │\n└────────────────────────────────────────────┘\n                     ▲\n                     │\n┌────────────────────────────────────────────┐\n│  DIGITAL ASSETS &amp; SERVICES                 │\n│                                            │\n│ USDC   EURC   USYC   cirBTC                │\n│ Circle Mint                                │\n│ xReserve / Partner Stablecoins             │\n└────────────────────────────────────────────┘\n                     ▲\n                     │\n┌────────────────────────────────────────────┐\n│  ARC + DEVELOPER INFRASTRUCTURE            │\n│                                            │\n│ Arc     CCTP      Gateway                  │\n│ Wallets Contracts Paymaster App Kits       │\n└────────────────────────────────────────────┘</span></code></div></div>",
+    "code": "┌────────────────────────────────────────────┐\n│  APPLICATIONS                              │\n│                                            │\n│  CPN                    StableFX           │\n└────────────────────────────────────────────┘\n                     ▲\n                     │\n┌────────────────────────────────────────────┐\n│  DIGITAL ASSETS & SERVICES                 │\n│                                            │\n│ USDC   EURC   USYC   cirBTC                │\n│ Circle Mint                                │\n│ xReserve / Partner Stablecoins             │\n└────────────────────────────────────────────┘\n                     ▲\n                     │\n┌────────────────────────────────────────────┐\n│  ARC + DEVELOPER INFRASTRUCTURE            │\n│                                            │\n│ Arc     CCTP      Gateway                  │\n│ Wallets Contracts Paymaster App Kits       │\n└────────────────────────────────────────────┘"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 11,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC 유통\n   │\n   ▼\n준비금\nCash / T-Bills / Money Market Fund\n   │\n   ▼\n이자\n   │\n   ▼\nCircle reserve income</span></code></div></div>",
+    "code": "USDC 유통\n   │\n   ▼\n준비금\nCash / T-Bills / Money Market Fund\n   │\n   ▼\n이자\n   │\n   ▼\nCircle reserve income"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 12,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC → USD\nEURC → EUR</span></code></div></div>",
+    "code": "USDC → USD\nEURC → EUR"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 13,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC\n= 현금에 가까운 stablecoin\n\nUSYC\n= yield-bearing tokenized\n  money market fund</span></code></div></div>",
+    "code": "USDC\n= 현금에 가까운 stablecoin\n\nUSYC\n= yield-bearing tokenized\n  money market fund"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 14,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC    Dollar\nEURC    Euro\nUSYC    Yield-bearing RWA\ncirBTC  Bitcoin liquidity</span></code></div></div>",
+    "code": "USDC    Dollar\nEURC    Euro\nUSYC    Yield-bearing RWA\ncirBTC  Bitcoin liquidity"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 15,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Bank\n │\nUSD/EUR/BTC\n │\n ▼\nCircle Mint\n │\n ├── USDC\n ├── EURC\n └── cirBTC</span></code></div></div>",
+    "code": "Bank\n │\nUSD/EUR/BTC\n │\n ▼\nCircle Mint\n │\n ├── USDC\n ├── EURC\n └── cirBTC"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 16,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Ethereum\n100 USDC\n   │\n  burn\n   │\n   ▼\nCircle attestation\n   │\n   ▼\nSolana\n100 native USDC\n  mint</span></code></div></div>",
+    "code": "Ethereum\n100 USDC\n   │\n  burn\n   │\n   ▼\nCircle attestation\n   │\n   ▼\nSolana\n100 native USDC\n  mint"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 17,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Chain A\nUSDC\n ↓\n실제로 이동\n ↓\nChain B</span></code></div></div>",
+    "code": "Chain A\nUSDC\n ↓\n실제로 이동\n ↓\nChain B"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 18,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Ethereum ─┐\nBase ─────┤\nArc ──────┼── Unified USDC Balance\nSolana ───┘\n                │\n                ▼\n필요한 체인에서 즉시 사용</span></code></div></div>",
+    "code": "Ethereum ─┐\nBase ─────┤\nArc ──────┼── Unified USDC Balance\nSolana ───┘\n                │\n                ▼\n필요한 체인에서 즉시 사용"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 19,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>          USDC\n            │\n            ▼\n       xReserve\n            │\n      1:1 backing\n            │\n            ▼\n Partner Blockchain\n            │\n            ▼\n      Local Stablecoin</span></code></div></div>",
+    "code": "          USDC\n            │\n            ▼\n       xReserve\n            │\n      1:1 backing\n            │\n            ▼\n Partner Blockchain\n            │\n            ▼\n      Local Stablecoin"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 20,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>다른 stablecoin 성장\n       ↓\n그 stablecoin을 backing하는\nUSDC 수요 증가\n       ↓\nCircle에게도 이익</span></code></div></div>",
+    "code": "다른 stablecoin 성장\n       ↓\n그 stablecoin을 backing하는\nUSDC 수요 증가\n       ↓\nCircle에게도 이익"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 21,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>BRL issuer ─┐\nJPY issuer ─┤\nAUD issuer ─┼─ Partner Stablecoins\nKRW issuer ─┤\nEUR issuer ─┘\n              │\n              ├─ StableFX\n              ├─ CPN\n              └─ USDC liquidity</span></code></div></div>",
+    "code": "BRL issuer ─┐\nJPY issuer ─┤\nAUD issuer ─┼─ Partner Stablecoins\nKRW issuer ─┤\nEUR issuer ─┘\n              │\n              ├─ StableFX\n              ├─ CPN\n              └─ USDC liquidity"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 22,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC\n │\n │ USD/BRL\n ▼\nBRLA\n\nUSDC\n │\n │ USD/EUR\n ▼\nEUR stablecoin</span></code></div></div>",
+    "code": "USDC\n │\n │ USD/BRL\n ▼\nBRLA\n\nUSDC\n │\n │ USD/EUR\n ▼\nEUR stablecoin"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 23,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Partner Stablecoins\n       │\n       ▼\n   StableFX\n       │\n       ▼\nOnchain FX Market</span></code></div></div>",
+    "code": "Partner Stablecoins\n       │\n       ▼\n   StableFX\n       │\n       ▼\nOnchain FX Market"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 24,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Bank / PSP / Fintech\n         │\n         ▼\n         CPN\n ┌───────┼────────┐\n routing          compliance\n orchestration    liquidity\n         │\n      stablecoin\n         │\n         ▼\nBank / PSP / Fintech</span></code></div></div>",
+    "code": "Bank / PSP / Fintech\n         │\n         ▼\n         CPN\n ┌───────┼────────┐\n routing          compliance\n orchestration    liquidity\n         │\n      stablecoin\n         │\n         ▼\nBank / PSP / Fintech"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 25,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>고객\n │\nfiat\n │\n ▼\nCircle\n │\n ├─ USDC mint\n ├─ wallet\n ├─ blockchain\n ├─ compliance\n ├─ routing\n ├─ burn\n │\n ▼\nfiat\n │\n ▼\n수취인</span></code></div></div>",
+    "code": "고객\n │\nfiat\n │\n ▼\nCircle\n │\n ├─ USDC mint\n ├─ wallet\n ├─ blockchain\n ├─ compliance\n ├─ routing\n ├─ burn\n │\n ▼\nfiat\n │\n ▼\n수취인"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 26,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>              Circle\n\n               USDC\n                │\n                ▼\n          Financial Assets\n                │\n                ▼\n              Arc\n        Financial Blockchain\n                │\n       ┌────────┼────────┐\n       ▼        ▼        ▼\n      CPN    StableFX   Agents</span></code></div></div>",
+    "code": "              Circle\n\n               USDC\n                │\n                ▼\n          Financial Assets\n                │\n                ▼\n              Arc\n        Financial Blockchain\n                │\n       ┌────────┼────────┐\n       ▼        ▼        ▼\n      CPN    StableFX   Agents"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 27,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>              Developer App\n                    │\n     ┌──────────────┼──────────────┐\n     ▼              ▼              ▼\n  Wallets        Contracts      App Kits\n     │              │              │\n     └───────┬──────┴──────────────┘\n             ▼\n         Paymaster\n             │\n         USDC gas\n             │\n             ▼\n       CCTP / Gateway\n             │\n             ▼\n             Arc</span></code></div></div>",
+    "code": "              Developer App\n                    │\n     ┌──────────────┼──────────────┐\n     ▼              ▼              ▼\n  Wallets        Contracts      App Kits\n     │              │              │\n     └───────┬──────┴──────────────┘\n             ▼\n         Paymaster\n             │\n         USDC gas\n             │\n             ▼\n       CCTP / Gateway\n             │\n             ▼\n             Arc"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 28,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Wallet = 누가 transaction에 sign하는가\nContracts = 무엇을 실행하는가</span></code></div></div>",
+    "code": "Wallet = 누가 transaction에 sign하는가\nContracts = 무엇을 실행하는가"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 29,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>기존\n\nUSDC 사용\n+\nETH 필요\n\n\nPaymaster\n\nUSDC 사용\n+\ngas도 USDC</span></code></div></div>",
+    "code": "기존\n\nUSDC 사용\n+\nETH 필요\n\n\nPaymaster\n\nUSDC 사용\n+\ngas도 USDC"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 30,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>          Fintech Brand\n               │\n               ▼\n     Digital Asset Accounts\n               │\n   ┌───────────┼───────────┐\n   ▼           ▼           ▼\nCustody      Fiat→USDC    AML/KYC\n   │           │           │\n   ├── Send / Receive ─────┤\n   ├── Crosschain ─────────┤\n   └── Gas abstraction ────┘</span></code></div></div>",
+    "code": "          Fintech Brand\n               │\n               ▼\n     Digital Asset Accounts\n               │\n   ┌───────────┼───────────┐\n   ▼           ▼           ▼\nCustody      Fiat→USDC    AML/KYC\n   │           │           │\n   ├── Send / Receive ─────┤\n   ├── Crosschain ─────────┤\n   └── Gas abstraction ────┘"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 31,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>AI Agent\n   │\n   ├─ USDC 보유\n   ├─ 서비스 발견\n   ├─ API 구매\n   ├─ micropayment\n   ├─ crosschain\n   └─ programmable financial action</span></code></div></div>",
+    "code": "AI Agent\n   │\n   ├─ USDC 보유\n   ├─ 서비스 발견\n   ├─ API 구매\n   ├─ micropayment\n   ├─ crosschain\n   └─ programmable financial action"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 32,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Arc\n │\n ├─ L1 network\n ├─ ARC token\n ├─ Validators\n ├─ Arc Studio\n ├─ App Kits\n ├─ Portal\n │\n └─ 향후\n     ├─ Payment Sector\n     ├─ Privacy Sector\n     └─ Agent Sector</span></code></div></div>",
+    "code": "Arc\n │\n ├─ L1 network\n ├─ ARC token\n ├─ Validators\n ├─ Arc Studio\n ├─ App Kits\n ├─ Portal\n │\n └─ 향후\n     ├─ Payment Sector\n     ├─ Privacy Sector\n     └─ Agent Sector"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 33,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle Technology\n         +\nCircle Assets\n         +\nCircle Network\n         +\nRegulatory Infrastructure</span></code></div></div>",
+    "code": "Circle Technology\n         +\nCircle Assets\n         +\nCircle Network\n         +\nRegulatory Infrastructure"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 34,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Binance\n→ USDC distribution 확대\n\n\nTazapay\n→ banking / payout / fiat last-mile 확대</span></code></div></div>",
+    "code": "Binance\n→ USDC distribution 확대\n\n\nTazapay\n→ banking / payout / fiat last-mile 확대"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 35,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Arc       → Blockchain\nCCTP      → Interoperability\nStableFX  → FX\nCPN       → Payments</span></code></div></div>",
+    "code": "Arc       → Blockchain\nCCTP      → Interoperability\nStableFX  → FX\nCPN       → Payments"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 36,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                       CIRCLE\n                         │\n                         │\n             ┌───────────┴───────────┐\n             │     MONEY / ASSETS    │\n             │                       │\n             │ USDC  EURC  USYC      │\n             │        cirBTC         │\n             └───────────┬───────────┘\n                         │\n             ┌───────────▼───────────┐\n             │ ISSUANCE / LIQUIDITY  │\n             │                       │\n             │ Mint      xReserve    │\n             │ Partner Stablecoins   │\n             └───────────┬───────────┘\n                         │\n             ┌───────────▼───────────┐\n             │   INTEROPERABILITY    │\n             │                       │\n             │  CCTP      Gateway    │\n             └───────────┬───────────┘\n                         │\n             ┌───────────▼───────────┐\n             │         ARC           │\n             │                       │\n             │ EVM L1 / ARC token    │\n             │ Studio / App Kits     │\n             │ Portal                │\n             └──────┬─────────┬──────┘\n                    │         │\n            ┌───────▼───┐ ┌──▼─────────┐\n            │ StableFX  │ │    CPN     │\n            │    FX     │ │  Payments  │\n            └───────┬───┘ └──┬─────────┘\n                    │         │\n                    └────┬────┘\n                         ▼\n              ┌────────────────────┐\n              │ Enterprise Products│\n              │                    │\n              │ Digital Asset Acct │\n              │ Managed Payments   │\n              └─────────┬──────────┘\n                        │\n                  ┌─────▼─────┐\n                  │ AI Agents │\n                  │Agent Stack│\n                  └─────┬─────┘\n                        │\n                        ▼\n          Banks / Fintechs / Exchanges\n          PSPs / Enterprises / Agents\n                        │\n                        ▼\n                    End Users</span></code></div></div>",
+    "code": "                       CIRCLE\n                         │\n                         │\n             ┌───────────┴───────────┐\n             │     MONEY / ASSETS    │\n             │                       │\n             │ USDC  EURC  USYC      │\n             │        cirBTC         │\n             └───────────┬───────────┘\n                         │\n             ┌───────────▼───────────┐\n             │ ISSUANCE / LIQUIDITY  │\n             │                       │\n             │ Mint      xReserve    │\n             │ Partner Stablecoins   │\n             └───────────┬───────────┘\n                         │\n             ┌───────────▼───────────┐\n             │   INTEROPERABILITY    │\n             │                       │\n             │  CCTP      Gateway    │\n             └───────────┬───────────┘\n                         │\n             ┌───────────▼───────────┐\n             │         ARC           │\n             │                       │\n             │ EVM L1 / ARC token    │\n             │ Studio / App Kits     │\n             │ Portal                │\n             └──────┬─────────┬──────┘\n                    │         │\n            ┌───────▼───┐ ┌──▼─────────┐\n            │ StableFX  │ │    CPN     │\n            │    FX     │ │  Payments  │\n            └───────┬───┘ └──┬─────────┘\n                    │         │\n                    └────┬────┘\n                         ▼\n              ┌────────────────────┐\n              │ Enterprise Products│\n              │                    │\n              │ Digital Asset Acct │\n              │ Managed Payments   │\n              └─────────┬──────────┘\n                        │\n                  ┌─────▼─────┐\n                  │ AI Agents │\n                  │Agent Stack│\n                  └─────┬─────┘\n                        │\n                        ▼\n          Banks / Fintechs / Exchanges\n          PSPs / Enterprises / Agents\n                        │\n                        ▼\n                    End Users"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 37,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>                    USDC\n                      │\n                      ▼\n                   Reserve\n                      │\n                      ▼\n              Reserve Interest\n                      │\n                      ▼\n              현재 Circle 수익</span></code></div></div>",
+    "code": "                    USDC\n                      │\n                      ▼\n                   Reserve\n                      │\n                      ▼\n              Reserve Interest\n                      │\n                      ▼\n              현재 Circle 수익"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 38,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Reserve income       $668M\nOther revenue         $34M\n──────────────────────────\nTotal                $701M</span></code></div></div>",
+    "code": "Reserve income       $668M\nOther revenue         $34M\n──────────────────────────\nTotal                $701M"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 39,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>USDC circulation\n×\nreserve yield\n-\ndistribution costs</span></code></div></div>",
+    "code": "USDC circulation\n×\nreserve yield\n-\ndistribution costs"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 40,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle Revenue\n\n1. Reserve Income\n   └─ USDC/EURC\n\n2. Operational Revenue\n   ├─ subscriptions\n   ├─ transaction fees\n   ├─ services\n   ├─ CPN etc.\n   └─ developer products\n\n3. Network / Token Revenue\n   └─ ARC</span></code></div></div>",
+    "code": "Circle Revenue\n\n1. Reserve Income\n   └─ USDC/EURC\n\n2. Operational Revenue\n   ├─ subscriptions\n   ├─ transaction fees\n   ├─ services\n   ├─ CPN etc.\n   └─ developer products\n\n3. Network / Token Revenue\n   └─ ARC"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 41,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>Circle의 과거 질문\n\n\"돈을 인터넷처럼 움직일 수 없나?\"\n              │\n              ▼\n            USDC\n              │\n              ▼\n\"그 돈을 어디서든 움직이게 하자\"\n         CCTP / Gateway\n              │\n              ▼\n\"그 돈이 돌아갈 체인도 만들자\"\n             Arc\n              │\n       ┌──────┴──────┐\n       ▼             ▼\n      FX           Payments\n   StableFX          CPN\n       │             │\n       └──────┬──────┘\n              ▼\n   기업이 blockchain을 몰라도\n        금융서비스 사용\n              │\n Digital Asset Accounts\n Managed Payments\n              │\n              ▼\n\"사람뿐 아니라 AI도\n 경제주체가 되게 하자\"\n              │\n         Agent Stack</span></code></div></div>",
+    "code": "Circle의 과거 질문\n\n\"돈을 인터넷처럼 움직일 수 없나?\"\n              │\n              ▼\n            USDC\n              │\n              ▼\n\"그 돈을 어디서든 움직이게 하자\"\n         CCTP / Gateway\n              │\n              ▼\n\"그 돈이 돌아갈 체인도 만들자\"\n             Arc\n              │\n       ┌──────┴──────┐\n       ▼             ▼\n      FX           Payments\n   StableFX          CPN\n       │             │\n       └──────┬──────┘\n              ▼\n   기업이 blockchain을 몰라도\n        금융서비스 사용\n              │\n Digital Asset Accounts\n Managed Payments\n              │\n              ▼\n\"사람뿐 아니라 AI도\n 경제주체가 되게 하자\"\n              │\n         Agent Stack"
+  },
+  {
+    "message_id": "24c3d69a-f2fa-4795-b665-f1ca7cdcf076",
+    "index": 42,
+    "html": "<div data-markdown-copy=\"code-block\"><div data-markdown-copy=\"exclude\"><div>일반 텍스트</div><div><div><span><button></button></span><span><button></button></span></div></div></div><div><code class=\"whitespace-pre! block text-size-code CodeContent-ybJ8Tl\"><span>2013~2016\nBitcoin / Consumer Payment Company\n\n2016~2018\nHybrid Digital Money 실험\nSpark → CENTRE\n\n2018~2019\nCrypto Financial Conglomerate\nPay / Invest / Trade / Poloniex /\nSeedInvest / USDC\n\n2019~2020\n생존위기 + 대규모 구조조정\n→ USDC에 회사 전체 집중\n\n2020~2024\nStablecoin Infrastructure Company\n\n2025\n상장 + USYC + CPN + Arc /\nGateway / StableFX 확대\n\n2026\nFull-stack Internet Financial Platform\n+\nArc L1\n+\nARC network economy\n+\nAI Agent infrastructure</span></code></div></div>",
+    "code": "2013~2016\nBitcoin / Consumer Payment Company\n\n2016~2018\nHybrid Digital Money 실험\nSpark → CENTRE\n\n2018~2019\nCrypto Financial Conglomerate\nPay / Invest / Trade / Poloniex /\nSeedInvest / USDC\n\n2019~2020\n생존위기 + 대규모 구조조정\n→ USDC에 회사 전체 집중\n\n2020~2024\nStablecoin Infrastructure Company\n\n2025\n상장 + USYC + CPN + Arc /\nGateway / StableFX 확대\n\n2026\nFull-stack Internet Financial Platform\n+\nArc L1\n+\nARC network economy\n+\nAI Agent infrastructure"
+  }
+]

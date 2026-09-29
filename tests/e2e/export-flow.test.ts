@@ -10,6 +10,7 @@ import { Browser, HTTPRequest, Page } from 'puppeteer';
 import { setupBrowser, createPage, closeBrowser } from './setup';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import capturedCodeBlocks from '../fixtures/chatgpt-current-code-blocks.json';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -397,6 +398,37 @@ describe('E2E: Export Flow', () => {
         ['user', 'Second prompt'],
         ['assistant', 'Second answer\n\n```\ncode\n```'],
       ]);
+    } finally {
+      page.off('request', intercept);
+      await page.setRequestInterception(false);
+    }
+  }, 30000);
+
+  it('preserves every captured ChatGPT code block through the loaded extension', async () => {
+    const url = 'https://chatgpt.com/c/e2e-current-code-blocks';
+    const fixture = getCurrentChatGptHtml().replace(
+      '<pre><code>code</code></pre>',
+      capturedCodeBlocks.map(block => block.html).join(''),
+    );
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.isNavigationRequest() && request.url() === url) {
+        void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: fixture });
+      } else {
+        void request.continue();
+      }
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      const response = await exportCurrentPage(browser, url);
+      expect(response.success, response.error).toBe(true);
+      const [meta, ...messages] = response.data!.split('\n').map(line => JSON.parse(line));
+      expect(meta.warnings).toBeUndefined();
+      const answer = messages[3].content;
+      const blocks = Array.from(answer.matchAll(/^```\n([\s\S]*?)\n```$/gm), match => match[1]);
+      expect(blocks).toEqual(capturedCodeBlocks.map(block => block.code));
+      expect(answer).not.toContain('일반 텍스트');
     } finally {
       page.off('request', intercept);
       await page.setRequestInterception(false);

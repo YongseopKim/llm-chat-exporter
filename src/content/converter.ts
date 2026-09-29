@@ -45,6 +45,19 @@ function cleanCodeBlockHtml(html: string): string {
   // Remove standalone style tags (may contain mermaid CSS)
   doc.querySelectorAll('style').forEach((el) => el.remove());
 
+  // Current ChatGPT uses a div wrapper instead of pre. Normalize the marked
+  // block before Turndown treats its code as inline and collapses whitespace.
+  doc.querySelectorAll('[data-markdown-copy="code-block"]').forEach((block) => {
+    const codeEl = block.querySelector('code');
+    if (!codeEl) return;
+    const cleanPre = doc.createElement('pre');
+    const cleanCode = doc.createElement('code');
+    cleanCode.className = codeEl.className;
+    cleanCode.textContent = codeEl.textContent || '';
+    cleanPre.appendChild(cleanCode);
+    block.replaceWith(cleanPre);
+  });
+
   // ChatGPT: <pre> contains divs with language label, copy button, and code
   // Structure: <pre><div>...<code class="language-X">content</code>...</div></pre>
   doc.querySelectorAll('pre').forEach((pre) => {
@@ -119,15 +132,20 @@ const turndownService = new TurndownService({
  */
 turndownService.addRule('codeBlock', {
   filter: (node) => {
-    return node.nodeName === 'CODE' && node.parentNode?.nodeName === 'PRE';
+    return node.nodeName === 'PRE' && (node as HTMLElement).querySelector('code') !== null;
   },
-  replacement: (content, node) => {
-    const codeNode = node as HTMLElement;
+  replacement: (_content, node) => {
+    const codeNode = (node as HTMLElement).querySelector('code')!;
     // Extract language from class (e.g., "language-python" -> "python")
     const className = codeNode.className || '';
     const language = className.match(/language-(\w+)/)?.[1] || '';
 
-    return `\n\`\`\`${language}\n${content}\n\`\`\`\n`;
+    // The child conversion can escape Markdown or trim code whitespace.
+    // Use the original text, and a longer fence if the code contains one.
+    const code = codeNode.textContent || '';
+    const embeddedFences = code.match(/`{3,}/g) || [];
+    const fence = '`'.repeat(Math.max(3, ...embeddedFences.map(run => run.length + 1)));
+    return `\n\n${fence}${language}\n${code}\n${fence}\n\n`;
   }
 });
 
