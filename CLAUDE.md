@@ -362,6 +362,14 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 
 **Unverified against a live conversation** (no example available on 2026-09-24): the `artifacts` tool input (`id`, `command`, `title`, `content`, `old_str`, `new_str`), the `visualize` tool name and its `title` input, and attachment `file_name` for pasted text. Check these first if an artifact, visualization or attachment exports wrongly.
 
+### ChatGPT and Grok Preserve History and Sources (2026-09-29)
+
+ChatGPT's current conversation scroller uses `flex-direction: column-reverse`: the bottom is `scrollTop = 0`, and older history is at negative positions. Wait for the "Loading earlier messages" status to finish before declaring the beginning reached. A history request that exceeds the timeout fails the export; reaching the scroll-step limit produces a metadata warning.
+
+Both ChatGPT and Grok must snapshot mounted messages at each scroll stop, before virtualization removes them. Merge Grok windows by response ID or `data-plane-row`, never by body text: repeated messages are distinct turns.
+
+ChatGPT's `+N` citation badge exposes additional URLs only in its hover tooltip. Collect each tooltip page while the original message is mounted, then write readable source links into its detached snapshot. Grok's collapsed source drawer exposes search-result links; append them under "Search sources" without exporting thinking. Source UI failures must produce metadata warnings while preserving the visible body and links. Markdown table cells must convert their inner HTML, because `textContent` discards source URLs.
+
 ### Configuration-Driven Architecture (Phase 7)
 **Decision**: Externalize all DOM selectors to JSON configuration
 **Benefits**:

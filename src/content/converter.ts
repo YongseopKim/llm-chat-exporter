@@ -152,8 +152,13 @@ turndownService.addRule('table', {
         const cells: string[] = [];
         const tdElements = tr.querySelectorAll('th, td');
         tdElements.forEach((td) => {
-          // Clean cell content (strip HTML tags)
-          const cellContent = td.textContent?.trim() || '';
+          // Converting textContent discards citation URLs and formatting.
+          // Convert the cell's children, then escape table delimiters and
+          // keep line breaks inside the cell rather than creating new rows.
+          const cellContent = turndownService.turndown(td.innerHTML)
+            .trim()
+            .replace(/(?<!\\)\|/g, '\\|')
+            .replace(/\n+/g, '<br>');
           cells.push(cellContent);
         });
         if (cells.length > 0) {

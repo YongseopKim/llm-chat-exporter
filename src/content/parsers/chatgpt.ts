@@ -18,6 +18,8 @@
  */
 
 import { BaseParser } from './base-parser';
+import { mergeTurnOrder } from './message-order';
+import { readCitationSources, writeCitationSources, type CitationSource } from './chatgpt-citations';
 import type { ScrollOptions } from '../scroller';
 import type { ProjectInfo } from './interface';
 
@@ -35,57 +37,6 @@ const PROJECT_PATH_PATTERN = /^\/g\/(g-p-[0-9a-f]+)(?:-([^/]+))?\//;
  * older history renumbers every turn already on screen (see `getTurnKey`).
  */
 const TURN_TEST_ID_PATTERN = /^conversation-turn-(\d+)$/;
-
-/**
- * Merge a newly observed run of turn keys into the conversation order
- *
- * A virtualized walk never sees the whole conversation at once, and the
- * position markers it does see are not stable, so order has to be recovered
- * from how the mounted windows overlap: consecutive windows share turns, and
- * those shared turns pin the new ones into place. Keys that neither sequence
- * has in common are placed incoming-first, because the walk runs backwards
- * through the conversation and anything genuinely new is therefore older.
- *
- * @param existing - Order recovered so far, oldest first
- * @param incoming - Keys of one mounted window, in DOM order
- * @returns The merged order, with each key appearing once
- */
-function mergeTurnOrder(existing: string[], incoming: string[]): string[] {
-  if (existing.length === 0) {
-    return [...incoming];
-  }
-
-  const known = new Set(existing);
-  const merged: string[] = [];
-  let i = 0;
-  let j = 0;
-
-  while (i < existing.length || j < incoming.length) {
-    if (j >= incoming.length) {
-      merged.push(existing[i]);
-      i += 1;
-    } else if (i >= existing.length || !known.has(incoming[j])) {
-      merged.push(incoming[j]);
-      j += 1;
-    } else if (existing[i] === incoming[j]) {
-      merged.push(existing[i]);
-      i += 1;
-      j += 1;
-    } else {
-      merged.push(existing[i]);
-      i += 1;
-    }
-  }
-
-  const seen = new Set<string>();
-  return merged.filter((key) => {
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
 
 /**
  * ChatGPT platform parser
@@ -106,6 +57,8 @@ export class ChatGPTParser extends BaseParser {
 
   /** Conversation order of every collected key, oldest first */
   private order: string[] = [];
+
+  private readonly citationSources = new Map<string, CitationSource[]>();
 
   constructor() {
     super('chatgpt');
@@ -138,11 +91,14 @@ export class ChatGPTParser extends BaseParser {
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     this.collected.clear();
     this.order = [];
+    this.citationSources.clear();
 
     await super.loadAllMessages({
       ...options,
+      isLoading: options.isLoading || (() => Array.from(document.querySelectorAll('.thread-scroll-container [role="status"]'))
+        .some(node => /이전 메시지 불러오는 중|loading (?:earlier|older|previous) messages/i.test(node.textContent || ''))),
       onStep: async () => {
-        this.snapshotMountedMessages();
+        await this.snapshotMountedMessages();
         await options.onStep?.();
       },
     });
@@ -203,7 +159,7 @@ export class ChatGPTParser extends BaseParser {
         return live;
       }
       liveKeys.push(key);
-      merged.set(key, node);
+      if (!merged.has(key)) merged.set(key, node);
     }
 
     return mergeTurnOrder(this.order, liveKeys)
@@ -217,7 +173,7 @@ export class ChatGPTParser extends BaseParser {
   }
 
   /** Clone newly mounted turns before ChatGPT unmounts them again. */
-  private snapshotMountedMessages(): void {
+  private async snapshotMountedMessages(): Promise<void> {
     const keys: string[] = [];
 
     for (const node of this.getLiveMessageNodes()) {
@@ -228,9 +184,24 @@ export class ChatGPTParser extends BaseParser {
         return;
       }
       keys.push(key);
-      if (!this.collected.has(key)) {
-        this.collected.set(key, node.cloneNode(true) as HTMLElement);
+      const snapshot = node.cloneNode(true) as HTMLElement;
+      const citations = Array.from(node.querySelectorAll<HTMLAnchorElement>('[data-testid="chatgpt-citation"]'));
+      const clonedCitations = Array.from(snapshot.querySelectorAll<HTMLAnchorElement>('[data-testid="chatgpt-citation"]'));
+      for (const [index, citation] of citations.entries()) {
+        const cacheKey = `${key}:citation:${index}:${citation.href}:${citation.getAttribute('aria-label')}`;
+        if (!this.citationSources.has(cacheKey)) {
+          try {
+            this.citationSources.set(cacheKey, await readCitationSources(citation));
+          } catch (error) {
+            this.loadingWarnings.push(`ChatGPT: Could not collect every source for ${citation.href}: ${(error as Error).message}`);
+            // Preserve the visible URL and warn instead of silently losing +N.
+            this.citationSources.set(cacheKey, []);
+          }
+        }
+        const sources = this.citationSources.get(cacheKey)!;
+        if (sources.length) writeCitationSources(clonedCitations[index], sources);
       }
+      this.collected.set(key, snapshot);
     }
 
     this.order = mergeTurnOrder(this.order, keys);

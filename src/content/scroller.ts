@@ -90,6 +90,15 @@ export interface ScrollOptions {
    * scroll container - used to tell it apart from other scrollers on the page.
    */
   contentSelector?: string;
+
+  /** Whether the platform is still fetching older history at the top. */
+  isLoading?: () => boolean;
+
+  /** Maximum wait for an in-flight history request, in ms. Default: 15000. */
+  loadTimeout?: number;
+
+  /** Report an incomplete walk to the export's metadata as well as the console. */
+  onWarning?: (warning: string) => void;
 }
 
 function wait(ms: number): Promise<void> {
@@ -311,6 +320,9 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
     onStep,
     timeout = 1000,
     contentSelector,
+    isLoading,
+    loadTimeout = 15000,
+    onWarning,
   } = options;
 
   const container = findScrollContainer(contentSelector);
@@ -324,6 +336,10 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
   }
 
   const originalTop = container.scrollTop;
+  const reversed =
+    container.ownerDocument.defaultView?.getComputedStyle(container).flexDirection === 'column-reverse';
+  const topBoundary = () => (reversed ? container.clientHeight - container.scrollHeight : 0);
+  const atBeginning = () => container.scrollTop <= topBoundary() + 1;
 
   // Snapshot before moving: the newest messages are mounted right now, and
   // scrolling away can unmount them.
@@ -331,44 +347,60 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
 
   let stable = 0;
   let reachedTop = false;
-  for (let step = 0; step < maxSteps; step++) {
-    const previousTop = container.scrollTop;
-    const previousHeight = container.scrollHeight;
-    const pageSize = container.clientHeight || FALLBACK_STEP_PX;
-    const anchorTop = topmostContentOffset(container, contentSelector);
-    const from = anchorTop === null ? previousTop : Math.min(previousTop, anchorTop);
+  try {
+    for (let step = 0; step < maxSteps; step++) {
+      const previousTop = container.scrollTop;
+      const previousHeight = container.scrollHeight;
+      const pageSize = container.clientHeight || FALLBACK_STEP_PX;
+      const anchorTop = topmostContentOffset(container, contentSelector);
+      const from = anchorTop === null ? previousTop : Math.min(previousTop, anchorTop);
 
-    container.scrollTop = Math.max(0, from - pageSize * STEP_RATIO);
+      container.scrollTop = Math.max(topBoundary(), from - pageSize * STEP_RATIO);
+      await waitForStable(container, quietPeriod, stepDelay, contentSelector);
+      await onStep?.();
+
+      // A quiet DOM is not a completed server request. ChatGPT keeps a loading
+      // status at the top while older turns are still being fetched.
+      if (atBeginning() && isLoading?.()) {
+        const deadline = Date.now() + loadTimeout;
+        while (isLoading()) {
+          if (Date.now() >= deadline) {
+            throw new Error('Older conversation history is still loading. Please wait and export again.');
+          }
+          await wait(Math.min(100, loadTimeout));
+          await onStep?.();
+        }
+      }
+
+      const atTop = atBeginning();
+      const grew = container.scrollHeight > previousHeight;
+
+      // More history can still load while the top keeps receding
+      if (atTop && !grew) {
+        stable += 1;
+        if (stable >= stableSteps) {
+          reachedTop = true;
+          break;
+        }
+      } else {
+        stable = 0;
+      }
+    }
+
+    // maxSteps exists to bound a page that lazily loads forever, but hitting it
+    // is itself a bad sign: a conversation that never settles at the top may
+    // not have finished loading, and the DOM parsers have no advertised list
+    // length to detect that they came up short.
+    if (!reachedTop) {
+      const warning =
+        'scrollToLoadAll: hit the step limit before the conversation settled at the top. ' +
+        'Some earlier messages may not have loaded - scroll to the top manually and export again.';
+      console.warn(warning);
+      onWarning?.(warning);
+    }
+  } finally {
+    container.scrollTop = originalTop;
     await waitForStable(container, quietPeriod, stepDelay, contentSelector);
     await onStep?.();
-
-    const atTop = container.scrollTop <= 0;
-    const grew = container.scrollHeight > previousHeight;
-
-    // More history can still load while the top keeps receding
-    if (atTop && !grew) {
-      stable += 1;
-      if (stable >= stableSteps) {
-        reachedTop = true;
-        break;
-      }
-    } else {
-      stable = 0;
-    }
   }
-
-  // maxSteps exists to bound a page that lazily loads forever, but hitting it
-  // is itself a bad sign: a conversation that never settles at the top may
-  // not have finished loading, and the DOM parsers have no advertised list
-  // length to detect that they came up short.
-  if (!reachedTop) {
-    console.warn(
-      'scrollToLoadAll: hit the step limit before the conversation settled at the top. ' +
-        'Some earlier messages may not have loaded - scroll to the top manually and export again.'
-    );
-  }
-
-  container.scrollTop = originalTop;
-  await waitForStable(container, quietPeriod, stepDelay, contentSelector);
-  await onStep?.();
 }

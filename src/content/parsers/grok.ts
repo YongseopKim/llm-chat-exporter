@@ -18,6 +18,8 @@
 
 import { BaseParser } from './base-parser';
 import type { ScrollOptions } from '../scroller';
+import { mergeTurnOrder } from './message-order';
+import { readGrokSources } from './grok-sources';
 
 /**
  * Grok platform parser
@@ -26,6 +28,9 @@ import type { ScrollOptions } from '../scroller';
  * Overrides role extraction to use sibling-button strategy.
  */
 export class GrokParser extends BaseParser {
+  private readonly collected = new Map<string, HTMLElement>();
+  private readonly sources = new Map<string, string>();
+  private order: string[] = [];
   constructor() {
     super('grok');
   }
@@ -37,6 +42,9 @@ export class GrokParser extends BaseParser {
    * - ASSISTANT: button[aria-label="Regenerate"] or button[aria-label="다시 생성"]
    */
   protected override extractRole(node: HTMLElement): 'user' | 'assistant' {
+    const testId = node.getAttribute('data-testid');
+    if (testId === 'user-message') return 'user';
+    if (testId === 'assistant-message') return 'assistant';
     const parent = node.parentElement;
     if (!parent) return 'user';
 
@@ -75,11 +83,47 @@ export class GrokParser extends BaseParser {
    * This ensures DOM changes from button clicks have time to complete.
    */
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
-    // First, do the normal scroll loading
-    await super.loadAllMessages(options);
+    this.collected.clear();
+    this.sources.clear();
+    this.order = [];
+    await super.loadAllMessages({
+      ...options,
+      onStep: async () => {
+        await this.convertAllMermaidToCodeBlocks();
+        await this.snapshotMountedMessages();
+        await options.onStep?.();
+      },
+    });
+  }
 
-    // Then convert all Mermaid SVGs to code blocks
-    await this.convertAllMermaidToCodeBlocks();
+  override getMessageNodes(): HTMLElement[] {
+    return this.collected.size ? this.order.map(key => this.collected.get(key)!) : super.getMessageNodes();
+  }
+
+  private async snapshotMountedMessages(): Promise<void> {
+    const keys: string[] = [];
+    for (const node of super.getMessageNodes()) {
+      // Both user and assistant rows have stable response-UUID IDs. Never
+      // deduplicate by their text: repeated prompts and answers are real turns.
+      const key = node.parentElement?.id || node.closest('[data-plane-row]')?.getAttribute('data-plane-row');
+      if (!key) continue;
+      keys.push(key);
+      if (!this.sources.has(key)) {
+        try {
+          this.sources.set(key, await readGrokSources(node));
+        } catch (error) {
+          this.loadingWarnings.push(`Grok: Could not collect the source list for ${key}: ${(error as Error).message}`);
+          this.sources.set(key, '');
+        }
+      }
+      // Keep the parent too: legacy Grok roles are marked by sibling buttons.
+      const parent = node.parentElement!.cloneNode(true) as HTMLElement;
+      const snapshot = parent.querySelector<HTMLElement>('.message-bubble')!;
+      snapshot.querySelectorAll('.thinking-container, [role="button"][aria-label$=" sources"], [role="button"][aria-label$=" source"]').forEach(ui => ui.remove());
+      snapshot.insertAdjacentHTML('beforeend', this.sources.get(key)!);
+      this.collected.set(key, snapshot);
+    }
+    this.order = mergeTurnOrder(this.order, keys);
   }
 
   /**

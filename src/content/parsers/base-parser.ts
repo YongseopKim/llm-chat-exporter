@@ -71,6 +71,8 @@ export abstract class BaseParser implements ChatParser {
   /** Selector configuration for this platform */
   protected readonly selectors: PlatformSelectors;
 
+  protected readonly loadingWarnings: string[] = [];
+
   /**
    * Create a new parser instance
    *
@@ -126,7 +128,7 @@ export abstract class BaseParser implements ChatParser {
       messages,
       title: this.getTitle(),
       project: this.getProjectInfo(),
-      warnings: findShortExports(nodes, messages),
+      warnings: [...this.loadingWarnings, ...findShortExports(nodes, messages)],
     };
   }
 
@@ -148,6 +150,7 @@ export abstract class BaseParser implements ChatParser {
    * @param options - Scroll tuning, forwarded to the scroller
    */
   async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
+    this.loadingWarnings.length = 0;
     if (this.isGenerating()) {
       throw new Error(
         `${this.platformName}: Cannot export while response is generating. ` +
@@ -160,6 +163,10 @@ export abstract class BaseParser implements ChatParser {
       // on the page (sidebars, dropdowns) by what it contains
       contentSelector: this.getMessageSelector(),
       ...options,
+      onWarning: (warning) => {
+        this.loadingWarnings.push(warning);
+        options.onWarning?.(warning);
+      },
     });
   }
 

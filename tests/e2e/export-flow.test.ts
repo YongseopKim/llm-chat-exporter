@@ -112,6 +112,51 @@ function getCurrentChatGptHtml(): string {
   </body></html>`;
 }
 
+/** Real layout: ChatGPT's bottom is scrollTop=0; older turns have negative positions. */
+function getReverseChatGptHtml(): string {
+  return `<!doctype html><html><head><title>Reverse history - ChatGPT</title><style>
+    #chat { height:500px; overflow-y:auto; display:flex; flex-direction:column-reverse; }
+    #history { height:3000px; flex-shrink:0; position:relative; }
+    section { position:absolute; height:500px; }
+  </style></head><body><main><div id="chat" class="thread-scroll-container"><div id="history"></div></div></main>
+  <script>
+    const chat = document.getElementById('chat');
+    const history = document.getElementById('history');
+    function mount() {
+      const first = Math.min(4, Math.max(0, Math.floor((2500 + chat.scrollTop) / 500)));
+      history.innerHTML = [first, first+1].map(i => '<section style="top:'+i*500+'px" data-turn="assistant" data-turn-id="stable-'+i+'"><div class="markdown"><p>Answer '+i+' <a data-testid="chatgpt-citation" href="https://example.com/primary" aria-label="Example: Primary, https://example.com/primary, 추가 출처 1개">Example+1</a></p></div></section>').join('');
+      history.querySelectorAll('a').forEach(a => {
+        a.addEventListener('mouseover', () => {
+          if (document.querySelector('[role="tooltip"]')) return;
+          const tip = document.createElement('div'); tip.setAttribute('role','tooltip');
+          tip.innerHTML = '<span>1/2</span><button aria-label="다음 출처"></button><a href="https://example.com/primary">Primary</a>';
+          tip.querySelector('button').onclick = () => { tip.querySelector('span').textContent='2/2'; tip.querySelector('a').href='https://example.com/secondary'; tip.querySelector('a').textContent='Secondary'; };
+          document.body.append(tip);
+        });
+        a.addEventListener('mouseout', () => document.querySelector('[role="tooltip"]')?.remove());
+      });
+    }
+    chat.addEventListener('scroll', mount); mount();
+  </script></body></html>`;
+}
+
+/** Current Grok response IDs in an overlapping virtualized window. */
+function getVirtualizedGrokHtml(): string {
+  return `<!doctype html><html><head><title>Virtualized sources - Grok</title><style>
+    #chat { height:500px; overflow-y:auto; position:relative; }
+    #history { height:3000px; position:relative; }
+    .row { position:absolute; height:500px; }
+  </style></head><body><main><div id="chat"><div id="history"></div></div></main><script>
+    const chat = document.getElementById('chat');
+    const history = document.getElementById('history');
+    function mount() {
+      const first = Math.min(4, Math.floor(chat.scrollTop / 500));
+      history.innerHTML = [first,first+1].map(i=>'<div class="row" style="top:'+i*500+'px" id="response-'+i+'"><div class="message-bubble" data-testid="'+(i%2?'assistant':'user')+'-message"><p>Repeated '+(i%2?'answer':'prompt')+'</p><table><tr><th>Source</th></tr><tr><td><a href="https://example.com/filing-'+i+'.pdf">Filing '+i+'</a></td></tr></table></div><button aria-label="'+(i%2?'Regenerate':'Edit')+'"></button></div>').join('');
+    }
+    chat.addEventListener('scroll', mount); chat.scrollTop=2500; mount();
+  </script></body></html>`;
+}
+
 /**
  * A claude.ai page whose DOM holds no message bodies at all: the export must
  * come from the conversation API, which the content script requests with the
@@ -348,6 +393,37 @@ describe('E2E: Export Flow', () => {
         ['user', 'Second prompt'],
         ['assistant', 'Second answer\n\n```\ncode\n```'],
       ]);
+    } finally {
+      page.off('request', intercept);
+      await page.setRequestInterception(false);
+    }
+  }, 30000);
+
+  it.each([
+    ['https://chatgpt.com/c/e2e-reverse-sources', getReverseChatGptHtml, 'chatgpt'],
+    ['https://grok.com/c/e2e-virtualized-sources', getVirtualizedGrokHtml, 'grok'],
+  ] as const)('should preserve all virtualized bodies and source links on %s', async (url, fixture, platform) => {
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.isNavigationRequest() && request.url() === url) {
+        void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: fixture() });
+      } else {
+        void request.continue();
+      }
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      const response = await exportCurrentPage(browser, url);
+      expect(response.success, response.error).toBe(true);
+      const [meta, ...messages] = response.data!.split('\n').filter(Boolean).map(line => JSON.parse(line));
+      expect(meta.warnings).toBeUndefined();
+      expect(messages).toHaveLength(6);
+      messages.forEach((message, i) => {
+        expect(message.content).toContain(platform === 'chatgpt' ? 'Answer '+i : 'Repeated '+(i%2?'answer':'prompt'));
+        expect(message.content).toContain(platform === 'chatgpt' ? 'https://example.com/secondary' : 'https://example.com/filing-'+i+'.pdf');
+        expect(message.role).toBe(platform === 'chatgpt' || i%2 ? 'assistant' : 'user');
+      });
     } finally {
       page.off('request', intercept);
       await page.setRequestInterception(false);
