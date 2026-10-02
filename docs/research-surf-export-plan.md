@@ -142,7 +142,7 @@ Private outputs and comparisons are in
 `claude-artifact-only.jsonl` is explicitly artifact-only. These files are
 kept outside git because they contain private conversation content.
 
-### Remaining live verification
+### Live verification sequence
 
 At the time of the captured-page checks, the user's installed extension
 still read the main project folder, which contained version `0.2.4`.
@@ -155,8 +155,8 @@ output files so the existing extension can be reloaded in place.
 Chrome's browser-control policy blocks `chrome://extensions/`, so the user
 must perform the extension reload. The subsequently downloaded files were
 checked as recorded below. Claude's corrected live download and Surf's
-first live download remain pending. Surf streaming detection also has not
-been checked during a live generation.
+first live download were subsequently verified in the final check below.
+Surf streaming detection has not been checked during a live generation.
 
 ### Downloaded output check and Claude source correction
 
@@ -201,5 +201,44 @@ API body and version preserved. The repaired replay is
 `/private/tmp/llm-research-export-results/claude-repaired-replay.jsonl`;
 it is not a new live download and the original Downloads file is unchanged.
 The complete suite passed 25 files and 577 tests. The final live check
-requires reloading the corrected build and exporting Claude again, plus
-exporting Surf. These checks remain pending.
+required reloading the corrected build and exporting Claude again, plus
+exporting Surf. Those downloads were verified in the next check.
+
+### Final live download verification
+
+All supplied conversations now have actual downloaded JSONL in
+`/Users/dragon/Downloads/`. Every JSONL line parses, metadata matches the
+supplied conversation, and roles match the captured conversation structure.
+
+```sh
+node /private/tmp/llm-research-export-captures/verify-downloads.cjs
+node /private/tmp/llm-research-export-captures/verify-final-documents.cjs
+```
+
+| Platform | Report body check | Original unique source URLs | Missing URLs |
+| --- | --- | ---: | ---: |
+| ChatGPT | 90 candidates matched | 0 | 0 |
+| Gemini | 103 matched, 24 controls or empty | 151 | 0 |
+| Grok | 178 candidates matched | 78 | 0 |
+| Claude | 548 body candidates matched after excluding rendered citation badges | 98 | 0 |
+| Surf | 435 matched, 2 controls or empty | 17 | 0 |
+
+The downloaded Claude artifact exactly matches the previously verified
+source-repaired artifact, retains version `v1`, and has no warnings.
+Rendered citation badge placement differs from the API body; the source
+URLs are in the appended list. The body and URLs are checked separately,
+rather than treating badge labels as missing report prose.
+
+The downloaded Surf report preserves its attachment filename and all
+9 original tables containing 77 original table rows. Apart from image
+destinations, its Markdown exactly matches the original-capture replay.
+Its 19 inline PNG images decode to nonempty bytes. The report body, table
+cells and 17 original source URLs have no detected omissions, and metadata
+has no warnings. This verifies the supplied completed conversation;
+generation-in-progress behavior is still outside these live checks.
+
+Measured detailed results are recorded in
+`/private/tmp/llm-research-export-results/download-verification.json`,
+`claude-live-download-verification.json`, and
+`surf-live-download-verification.json`. The requested final output checks
+for the supplied completed conversations are complete.
