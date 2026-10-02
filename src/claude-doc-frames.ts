@@ -6,7 +6,13 @@ export function readClaudeDocFrame(artifactId: string, title: string): string | 
     return null;
   }
   const bodies = Array.from(document.querySelectorAll<HTMLElement>('.ProseMirror[role="textbox"]'))
-    .filter(body => body.getAttribute('aria-label') === title && body.textContent?.trim());
+    .filter(body => {
+      // Claude Docs can truncate or retain an old accessible label while its
+      // first heading still carries the complete current document title.
+      const matchesTitle = body.getAttribute('aria-label') === title
+        || body.querySelector('h1')?.textContent?.trim() === title;
+      return matchesTitle && body.textContent?.trim();
+    });
   if (bodies.length !== 1) return null;
   const copy = bodies[0].cloneNode(true) as HTMLElement;
   copy.querySelectorAll('button, svg, script, style, nav, .ProseMirror-separator, .ProseMirror-trailingBreak')

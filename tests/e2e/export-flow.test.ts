@@ -597,21 +597,29 @@ describe('E2E: Export Flow', () => {
     }
   }, 30000);
 
-  it('exports Claude Docs from a cross-origin frame and sandboxed srcdoc editor', async () => {
+  it.each([
+    { title: 'Research report', label: 'Research report', heading: 'Original report' },
+    {
+      title: 'AERO (Aerodrome / Aero) - 프로젝트의 실적과 토큰의 조건부 평가',
+      label: ' Aero) - 프로젝트의 실적과 토큰의 조건부 평가',
+      heading: 'AERO (Aerodrome / Aero) - 프로젝트의 실적과 토큰의 조건부 평가',
+    },
+    { title: 'Renamed report', label: 'Old report title', heading: 'Renamed report' },
+  ])('exports Claude Docs from nested sandboxed frames: $title', async ({ title, label, heading }) => {
     const artifactId = '22222222-2222-4222-8222-222222222222';
     const frameUrl = `https://${artifactId}.frame.claudeusercontent.com/`;
-    const body = '<div class="tiptap ProseMirror" role="textbox" aria-label="Research report" contenteditable="true"><h1>Original report</h1><p>Complete ending.</p><table><tr><th>Source</th></tr><tr><td><a href="https://example.org/report">Evidence</a></td></tr></table></div>';
+    const body = `<div class="tiptap ProseMirror" role="textbox" aria-label="${label}" contenteditable="true"><h1>${heading}</h1><p>Complete ending.</p><table><tr><th>Source</th></tr><tr><td><a href="https://example.org/report">Evidence</a></td></tr></table></div>`;
     await page.setRequestInterception(true);
     const intercept = (request: HTTPRequest) => {
       const url = new URL(request.url());
       if (request.isNavigationRequest() && request.url() === CLAUDE_URL) {
-        void request.respond({ status: 200, contentType: 'text/html', body: getClaudeHtml().replace('</body>', `<button data-testid="frame-card-open" aria-label="View Research report"></button><div role="region" aria-label="Artifact panel: Research report"><iframe title="Research report" src="/code/artifact/${artifactId}"></iframe></div></body>`) });
+        void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: getClaudeHtml().replace('</body>', `<button data-testid="frame-card-open" aria-label="View ${title}"></button><div role="region" aria-label="Artifact panel: ${title}"><iframe title="${title}" src="/code/artifact/${artifactId}"></iframe></div></body>`) });
       } else if (request.isNavigationRequest() && url.pathname === `/code/artifact/${artifactId}`) {
-        void request.respond({ status: 200, contentType: 'text/html', body: `<iframe id="frame-content" src="${frameUrl}"></iframe>` });
+        void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: `<iframe id="frame-content" src="${frameUrl}"></iframe>` });
       } else if (request.isNavigationRequest() && request.url() === frameUrl) {
         // Claude Docs renders the editor at runtime, not in the srcdoc HTML.
         const srcdoc = `<body><script>document.body.innerHTML=${JSON.stringify(body)}<\/script></body>`;
-        void request.respond({ status: 200, contentType: 'text/html', body: `<iframe data-testid="ldoc-iframe" sandbox="allow-scripts" srcdoc="${srcdoc.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"></iframe>` });
+        void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: `<iframe data-testid="ldoc-iframe" sandbox="allow-scripts" srcdoc="${srcdoc.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"></iframe>` });
       } else if (url.origin === 'https://claude.ai' && url.pathname === CLAUDE_API_PATH) {
         void request.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(getClaudeConversation()) });
       } else { void request.continue(); }
@@ -619,12 +627,15 @@ describe('E2E: Export Flow', () => {
     page.on('request', intercept);
     try {
       await page.goto(CLAUDE_URL, { waitUntil: 'load' });
+      const editor = page.frames().find(frame => frame.url() === 'about:srcdoc');
+      expect(editor).toBeDefined();
+      expect(await editor!.$eval('h1', element => element.textContent)).toBe(heading);
       const response = await exportCurrentPage(browser, CLAUDE_URL);
       expect(response.success, response.error).toBe(true);
       const records = response.data!.split('\n').map(line => JSON.parse(line));
       const artifact = records.find(record => record._artifact);
-      expect(artifact?.title).toBe('Research report');
-      expect(artifact?.content).toContain('# Original report');
+      expect(artifact?.title).toBe(title);
+      expect(artifact?.content).toContain(`# ${heading}`);
       expect(artifact?.content).toContain('Complete ending.');
       expect(artifact?.content).toContain('| [Evidence](https://example.org/report) |');
       expect(artifact?.content).not.toContain('hidden reasoning');

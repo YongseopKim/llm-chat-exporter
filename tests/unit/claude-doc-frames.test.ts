@@ -21,6 +21,38 @@ describe('Claude Docs frame acquisition', () => {
     expect(readClaudeDocFrame(id, 'Report')).toBe('<h1>Original body</h1><p>Ending.</p>');
   });
 
+  it.each([
+    ['AERO (Aerodrome / Aero) - 프로젝트의 실적과 토큰의 조건부 평가', ' Aero) - 프로젝트의 실적과 토큰의 조건부 평가'],
+    ['Renamed report', 'Old report title'],
+    ['Report without an accessible label', null],
+  ])('reads the original heading when the accessible label differs: %s', (title, label) => {
+    Object.defineProperty(document.location, 'ancestorOrigins', { configurable: true, value: [`https://${id}.frame.claudeusercontent.com`] });
+    document.body.innerHTML = '<div class="ProseMirror" role="textbox"><h1></h1><p>Complete ending.</p></div>';
+    const editor = document.querySelector('.ProseMirror')!;
+    if (label !== null) editor.setAttribute('aria-label', label);
+    editor.querySelector('h1')!.textContent = title;
+
+    expect(readClaudeDocFrame(id, title)).toBe(editor.innerHTML);
+    expect(readClaudeDocFrame('wrong-id', title)).toBeNull();
+    expect(readClaudeDocFrame(id, 'Another report')).toBeNull();
+  });
+
+  it('keeps label-only documents and rejects empty or ambiguous matching editors', () => {
+    Object.defineProperty(document.location, 'ancestorOrigins', { configurable: true, value: [`https://${id}.frame.claudeusercontent.com`] });
+    document.body.innerHTML = '<div class="ProseMirror" role="textbox" aria-label="Report"><p>Original body.</p></div>';
+    expect(readClaudeDocFrame(id, 'Report')).toBe('<p>Original body.</p>');
+    document.body.innerHTML += '<div class="ProseMirror" role="textbox" aria-label="Stale label"><h1>Report</h1><p>Second body.</p></div>';
+    expect(readClaudeDocFrame(id, 'Report')).toBeNull();
+    document.body.innerHTML = '<div class="ProseMirror" role="textbox" aria-label="Report"><p> </p></div>';
+    expect(readClaudeDocFrame(id, 'Report')).toBeNull();
+  });
+
+  it('does not use a later section heading to accept an unrelated document', () => {
+    Object.defineProperty(document.location, 'ancestorOrigins', { configurable: true, value: [`https://${id}.frame.claudeusercontent.com`] });
+    document.body.innerHTML = '<div class="ProseMirror" role="textbox" aria-label="Other report"><h1>Other report</h1><p>Other body.</p><h1>Report</h1></div>';
+    expect(readClaudeDocFrame(id, 'Report')).toBeNull();
+  });
+
   it('rejects an invalid artifact ID before injecting', async () => {
     vi.mocked(chrome.scripting.executeScript).mockClear();
     await expect(collectClaudeDoc(1, '../other', 'Report')).rejects.toThrow(/invalid/);
