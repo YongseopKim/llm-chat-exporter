@@ -121,6 +121,7 @@ describe('ClaudeParser', () => {
     parser = new ClaudeParser();
     originalDocument = global.document;
     originalFetch = global.fetch;
+    vi.mocked(chrome.runtime.sendMessage).mockReset();
     const doc = createDOMFromHTML('<html><body></body></html>', `https://claude.ai/chat/${CONVERSATION}`);
     doc.cookie = `lastActiveOrg=${ORG}`;
     global.document = doc as any;
@@ -154,6 +155,55 @@ describe('ClaudeParser', () => {
   });
 
   describe('readConversation', () => {
+    it('exports a Claude Docs frame card instead of silently omitting its document', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+      global.document.body.innerHTML = `<button data-testid="frame-card-open" aria-label="View Research report"></button>
+        <div role="region" aria-label="Artifact panel: Research report">
+          <iframe title="Research report" src="/code/artifact/22222222-2222-4222-8222-222222222222"></iframe>
+        </div>`;
+      vi.mocked(chrome.runtime.sendMessage).mockResolvedValue({
+        success: true, html: '<h1>Original research document</h1><p>Complete ending.</p><a href="https://example.org/report">Evidence</a>',
+      });
+
+      const { artifacts: [artifact], warnings } = await parser.readConversation();
+
+      expect(artifact).toEqual({ title: 'Research report', version: 'rendered', content: '# Original research document\n\nComplete ending.\n\n[Evidence](https://example.org/report)' });
+      expect(warnings).toContain('Claude: the document source was not available in the conversation API; exported the rendered Markdown document.');
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'READ_CLAUDE_DOC', artifactId: '22222222-2222-4222-8222-222222222222', title: 'Research report' });
+    });
+
+    it('fails on inaccessible Claude Docs content and closes a panel it opened', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+      global.document.body.innerHTML = '<button data-testid="frame-card-open" aria-label="View Report"></button>';
+      const card = global.document.querySelector('button')!;
+      const close = vi.fn();
+      card.addEventListener('click', () => {
+        global.document.body.insertAdjacentHTML('beforeend', '<div role="region" aria-label="Artifact panel: Report"><button aria-label="Close"></button><iframe src="/code/artifact/22222222-2222-4222-8222-222222222222"></iframe></div>');
+        global.document.querySelector('[aria-label="Close"]')!.addEventListener('click', close);
+      });
+      vi.mocked(chrome.runtime.sendMessage).mockResolvedValue({ success: false, error: 'Document inaccessible' });
+      await expect(parser.readConversation()).rejects.toThrow('Document inaccessible');
+      expect(close).toHaveBeenCalledOnce();
+    });
+
+    it('restores another document panel after reading the latest Claude Docs card', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+      global.document.body.innerHTML = '<button data-testid="frame-card-open" aria-label="View Earlier"></button><button data-testid="frame-card-open" aria-label="View Latest"></button><div role="region" aria-label="Artifact panel: Earlier"></div>';
+      const region = global.document.querySelector('[role="region"]')!;
+      const [earlier, latest] = Array.from(global.document.querySelectorAll('button'));
+      const restore = vi.fn(() => region.setAttribute('aria-label', 'Artifact panel: Earlier'));
+      earlier.addEventListener('click', restore);
+      latest.addEventListener('click', () => {
+        region.setAttribute('aria-label', 'Artifact panel: Latest');
+        region.innerHTML = '<iframe src="/code/artifact/22222222-2222-4222-8222-222222222222"></iframe>';
+      });
+      vi.mocked(chrome.runtime.sendMessage).mockResolvedValue({ success: true, html: '<p>Latest body</p>' });
+      const { artifacts: [artifact] } = await parser.readConversation();
+      expect(artifact?.content).toBe('Latest body');
+      expect(restore).toHaveBeenCalledOnce();
+      expect(region.getAttribute('aria-label')).toBe('Artifact panel: Earlier');
+    });
+
     it('reads the conversation of the current URL from the active organization', async () => {
       const calls = mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
 

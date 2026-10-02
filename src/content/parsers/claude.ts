@@ -462,7 +462,7 @@ export class ClaudeParser implements ChatParser {
 
   /** Read missing document content or sources; keep API message and code text. */
   private async readRenderedDocument(existing?: ArtifactData): Promise<ArtifactData | null> {
-    const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="artifact-card-open"]'));
+    const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="artifact-card-open"], [data-testid="frame-card-open"]'));
     const cardTitle = (card: Element) => card.getAttribute('aria-label')?.replace(/^View /, '').trim();
     const card = existing ? cards.find(candidate => cardTitle(candidate) === existing.title) : cards[cards.length - 1];
     if (!card) return null;
@@ -474,10 +474,23 @@ export class ClaudeParser implements ChatParser {
       .find(panel => panel.getAttribute('aria-label') === `Artifact panel: ${title}`) || null;
     try {
       if (!matchingPanel()) card.click();
-      const body = await waitForDom(() => {
-        const content = matchingPanel()?.querySelector('#markdown-artifact .standard-markdown');
-        return content?.textContent?.trim() ? content : null;
-      }, 10000).catch(() => { throw new Error(`Claude: could not read the document "${title}". Open its Markdown document panel and export again.`); });
+      let body: Element;
+      if (card.getAttribute('data-testid') === 'frame-card-open') {
+        const frame = await waitForDom(() => matchingPanel()?.querySelector<HTMLIFrameElement>('iframe') || null, 10000);
+        const url = new URL(frame.src, document.location.origin);
+        const artifactId = url.origin === document.location.origin ? url.pathname.match(/^\/code\/artifact\/([0-9a-f-]+)$/i)?.[1] : undefined;
+        if (!artifactId) throw new Error('Claude: unexpected document panel frame.');
+        const response = await chrome.runtime.sendMessage({ type: 'READ_CLAUDE_DOC', artifactId, title });
+        if (!response?.success || typeof response.html !== 'string' || !response.html.trim()) {
+          throw new Error(response?.error || `Claude: the document "${title}" is empty or inaccessible.`);
+        }
+        body = new DOMParser().parseFromString(response.html, 'text/html').body;
+      } else {
+        body = await waitForDom(() => {
+          const content = matchingPanel()?.querySelector('#markdown-artifact .standard-markdown');
+          return content?.textContent?.trim() ? content : null;
+        }, 10000).catch(() => { throw new Error(`Claude: could not read the document "${title}". Open its Markdown document panel and export again.`); });
+      }
       if (existing) {
         const sources = body.cloneNode(true) as Element;
         const original = existing.content.replace(/\\([()])/g, '$1');
@@ -490,7 +503,9 @@ export class ClaudeParser implements ChatParser {
       return { title, version: 'rendered', content: htmlToMarkdown(reportHtml(body)) };
     } finally {
       if (!initialLabel) {
-        document.querySelector<HTMLButtonElement>('button[aria-label="Close artifact"]')?.click();
+        const close = matchingPanel()?.querySelector<HTMLButtonElement>('button[aria-label="Close"]')
+          || document.querySelector<HTMLButtonElement>('button[aria-label="Close artifact"]');
+        close?.click();
       } else if (matchingPanel()?.getAttribute('aria-label') !== initialLabel) {
         cards.find(candidate => `Artifact panel: ${candidate.getAttribute('aria-label')?.replace(/^View /, '')}` === initialLabel)?.click();
       }

@@ -223,6 +223,7 @@ See `config/README.md` for detailed selector update guide.
 - Prompts are exported as typed: ChatGPT shows a typed prompt unrendered, so its line breaks and Markdown characters are kept verbatim; Grok's paragraph line breaks and literal `## Title` lines are kept as typed
 - Grok search sources are checked against the count on the drawer button ("45 sources"); a different count produces a warning
 - Claude Markdown documents whose source is absent from the conversation API are read from their document panel. The `_artifact` record uses `version: "rendered"` and metadata includes a warning; conversation messages still come from the API. Unsupported document types fail explicitly rather than producing an empty artifact.
+- Claude Docs documents are read from their sandboxed editor frame. This requires access to `*.frame.claudeusercontent.com`; an inaccessible document fails the export instead of silently omitting its body.
 - Claude document citation URLs missing from an otherwise complete API artifact are appended from its matching document panel under "Research sources". The API body and version are preserved; failed source verification produces a warning.
 - Surf attachment-only prompts are recorded as `[File: name]`; the file contents are not downloaded.
 - ChatGPT research export requires access to `*.web-sandbox.oaiusercontent.com` because the report app runs in a separate origin. An unreadable report fails the export instead of silently saving only a status message.

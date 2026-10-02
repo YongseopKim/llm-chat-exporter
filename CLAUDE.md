@@ -410,6 +410,8 @@ Gemini completed research cards open `deep-research-immersive-panel`; the report
 
 Claude's API artifact body can be complete while omitting the document's rendered citation URLs. Check the Markdown panel whose card title matches the reconstructed artifact, even when its API content is nonempty. Append missing URLs under "Research sources" while preserving the original API body and version. Do not use another artifact's panel; failed source verification must produce a metadata warning. The original downloaded example and measured comparison are recorded in `docs/research-surf-export-plan.md`.
 
+Claude Docs uses `frame-card-open` and `/code/artifact/<id>`, rather than `artifact-card-open` and `#markdown-artifact`. Its `.ProseMirror[role="textbox"]` body is rendered at runtime inside a sandboxed srcdoc iframe under `<id>.frame.claudeusercontent.com`. Read it through the background worker's `chrome.scripting.executeScript`, matching both the editor's parent origin and its title. The srcdoc attribute itself contains only the editor bootstrap, so parsing that attribute does not recover the document. Missing document content must fail the export. Preserve the original panel state and record the artifact as `version: "rendered"` with the existing metadata warning.
+
 Surf uses `#surf-root .justify-start` for prompts and `[data-markdown-renderer]` for answers. Exclude renderers nested inside a user prompt. File tiles use their full `title` as `[File: name]`; preserve report tables and links while dropping controls.
 
 See `docs/research-surf-export-plan.md` for original observations, verification results, and live-download limitations.

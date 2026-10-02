@@ -5,12 +5,30 @@
 
 import { isSupportedUrl, generateFilename } from './utils/background-utils';
 import { collectResearchFrames } from './research-frames';
+import { collectClaudeDoc } from './claude-doc-frames';
 import {
   executeVersionedContentScript,
   type ExportResponse,
 } from './content-script-loader';
 
 declare const __LLM_CHAT_EXPORTER_BUILD_ID__: string;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type !== 'READ_CLAUDE_DOC') return false;
+  if (!sender.tab?.id || !sender.tab.url || new URL(sender.tab.url).hostname !== 'claude.ai' || sender.frameId !== 0) {
+    sendResponse({ success: false, error: 'Documents must be requested by the Claude conversation.' });
+    return false;
+  }
+  if (typeof message.artifactId !== 'string' || typeof message.title !== 'string') {
+    sendResponse({ success: false, error: 'Invalid Claude document request.' });
+    return false;
+  }
+  collectClaudeDoc(sender.tab.id, message.artifactId, message.title).then(
+    html => sendResponse({ success: true, html }),
+    error => sendResponse({ success: false, error: error.message }),
+  );
+  return true;
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== 'READ_RESEARCH_FRAMES') return false;
