@@ -84,6 +84,7 @@ npm run validate:selectors # 셀렉터 설정 검증
 - 이미지는 URL만 저장 (바이너리 다운로드 없음)
 - Claude artifact는 마지막 artifact의 최신 버전만 내보냄
 - Claude 대화 API에 Markdown 문서 원본이 없으면 문서 패널에서 읽습니다. 이때 `_artifact` 줄에 `version: "rendered"`를 기록하고 메타데이터에 경고를 남깁니다. 대화 메시지는 계속 API에서 읽습니다.
+- Claude 문서 본문이 API에 있어도 출처 URL이 빠져 있으면 제목이 일치하는 문서 패널에서 읽어 "Research sources" 아래에 보충합니다. API 본문과 버전은 유지하며, 출처 확인에 실패하면 경고를 남깁니다.
 - Surf의 첨부파일 질문은 `[File: 파일명]`으로 기록하며 파일 내용은 다운로드하지 않습니다.
 - ChatGPT 보고서 앱을 읽으려면 `*.web-sandbox.oaiusercontent.com` 접근 권한이 필요합니다. 보고서를 읽지 못하면 안내 문구만 저장하지 않고 내보내기를 실패 처리합니다.
 - 단일 대화만 내보내기 가능 (배치/히스토리 내보내기 없음)

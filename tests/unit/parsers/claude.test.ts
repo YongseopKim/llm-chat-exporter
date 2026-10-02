@@ -397,12 +397,74 @@ describe('ClaudeParser', () => {
       expect(artifact?.content).toContain('https://example.org/report');
     });
 
+    it('retains the API artifact body and supplements its missing rendered research sources', async () => {
+      // The downloaded v1 artifact contains the full Markdown body but none
+      // of the citation links shown in this matching document panel.
+      const originalBody = '# Research report\n\nExact API body.\n\n```\n  code\n```';
+      mockFetch({ [conversationPath]: { status: 200, body: conversation({
+        chat_messages: [message({ uuid: 'a1', sender: 'assistant', content: [{
+          type: 'tool_use', name: 'artifacts', input: {
+            id: 'report', command: 'create', title: 'Research report', content: originalBody,
+          },
+        }] })],
+      }) } });
+      global.document.body.innerHTML = `<button data-testid="artifact-card-open" aria-label="View Research report"></button>
+        <button data-testid="artifact-card-open" aria-label="View Other report"></button>
+        <div role="region" aria-label="Artifact panel: Research report"><div id="markdown-artifact"><div class="standard-markdown">
+          <h1>Research report</h1><p>Exact API body.
+          <span class="inline-flex"><a class="group/tag" href="https://example.org/evidence">Evidence<svg></svg></a></span>
+          <a href="https://example.org/second">Second source</a><a href="https://example.org/evidence">Evidence again</a></p>
+        </div></div></div>
+        <div role="region" aria-label="Artifact panel: Other report"><div id="markdown-artifact"><div class="standard-markdown">
+          <a href="https://example.org/unrelated">Unrelated</a>
+        </div></div></div>`;
+      const { artifact, warnings } = await parser.readConversation();
+      expect(artifact?.version).toBe('v1');
+      expect(artifact?.content.startsWith(originalBody + '\n\n')).toBe(true);
+      expect(artifact?.content).toContain('## Research sources');
+      expect(artifact?.content).toContain('https://example.org/second');
+      expect(artifact?.content.match(/https:\/\/example.org\/evidence/g)).toHaveLength(1);
+      expect(artifact?.content).not.toContain('https://example.org/unrelated');
+      expect(warnings).toEqual([]);
+    });
+
     it('reports no artifact when the conversation made none', async () => {
       mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
 
       const { artifact } = await parser.readConversation();
 
       expect(artifact).toBeNull();
+    });
+
+    it('does not duplicate a rendered source already present in the API document', async () => {
+      const originalBody = '# Report\n\n[Evidence](https://example.org/evidence)';
+      mockFetch({ [conversationPath]: { status: 200, body: conversation({
+        chat_messages: [message({ uuid: 'a1', sender: 'assistant', content: [{
+          type: 'tool_use', name: 'artifacts', input: {
+            id: 'report', command: 'create', title: 'Report', content: originalBody,
+          },
+        }] })],
+      }) } });
+      global.document.body.innerHTML = `<button data-testid="artifact-card-open" aria-label="View Report"></button>
+        <div role="region" aria-label="Artifact panel: Report"><div id="markdown-artifact"><div class="standard-markdown">
+          <a href="https://example.org/evidence">Evidence</a>
+        </div></div></div>`;
+      const { artifact } = await parser.readConversation();
+      expect(artifact?.content).toBe(originalBody);
+    });
+
+    it('warns and retains the API document when rendered source acquisition fails', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation({
+        chat_messages: [message({ uuid: 'a1', sender: 'assistant', content: [{
+          type: 'tool_use', name: 'artifacts', input: {
+            id: 'report', command: 'create', title: 'Report', content: '# Complete API body',
+          },
+        }] })],
+      }) } });
+      vi.spyOn(parser as any, 'readRenderedDocument').mockRejectedValue(new Error('Document panel unavailable'));
+      const { artifact, warnings } = await parser.readConversation();
+      expect(artifact?.content).toBe('# Complete API body');
+      expect(warnings).toEqual(["Claude: could not verify the artifact's rendered source links: Document panel unavailable"]);
     });
 
     it('names the project the conversation belongs to', async () => {

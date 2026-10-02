@@ -35,7 +35,7 @@ import type {
 } from './interface';
 import { htmlToMarkdown } from '../converter';
 import { waitForDom } from './dom-wait';
-import { reportHtml } from './report-html';
+import { reportHtml, sourceLinksHtml } from './report-html';
 
 const HOSTNAME = 'claude.ai';
 
@@ -291,6 +291,12 @@ export class ClaudeParser implements ChatParser {
       } else if (artifact) {
         throw new Error('Claude: the artifact source is empty and its document could not be read.');
       }
+    } else {
+      try {
+        artifact = await this.readRenderedDocument(artifact) || artifact;
+      } catch (error) {
+        warnings.push(`Claude: could not verify the artifact's rendered source links: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
 
     return {
@@ -302,12 +308,13 @@ export class ClaudeParser implements ChatParser {
     };
   }
 
-  /** Artifact-only fallback; conversation messages still come from the API. */
-  private async readRenderedDocument(): Promise<ArtifactData | null> {
+  /** Read missing document content or sources; keep API message and code text. */
+  private async readRenderedDocument(existing?: ArtifactData): Promise<ArtifactData | null> {
     const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="artifact-card-open"]'));
-    const card = cards[cards.length - 1];
+    const cardTitle = (card: Element) => card.getAttribute('aria-label')?.replace(/^View /, '').trim();
+    const card = existing ? cards.find(candidate => cardTitle(candidate) === existing.title) : cards[cards.length - 1];
     if (!card) return null;
-    const title = card.getAttribute('aria-label')?.replace(/^View /, '').trim();
+    const title = cardTitle(card);
     if (!title) throw new Error('Claude: the document card has no title.');
     const initialPanel = document.querySelector('[role="region"][aria-label^="Artifact panel:"]');
     const initialLabel = initialPanel?.getAttribute('aria-label');
@@ -319,6 +326,15 @@ export class ClaudeParser implements ChatParser {
         const content = matchingPanel()?.querySelector('#markdown-artifact .standard-markdown');
         return content?.textContent?.trim() ? content : null;
       }, 10000).catch(() => { throw new Error(`Claude: could not read the document "${title}". Open its Markdown document panel and export again.`); });
+      if (existing) {
+        const sources = body.cloneNode(true) as Element;
+        const original = existing.content.replace(/\\([()])/g, '$1');
+        sources.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(link => {
+          if (original.includes(link.href)) link.remove();
+        });
+        const added = htmlToMarkdown(sourceLinksHtml(sources));
+        return added ? { ...existing, content: `${existing.content}\n\n${added}` } : existing;
+      }
       return { title, version: 'rendered', content: htmlToMarkdown(reportHtml(body)) };
     } finally {
       if (!initialLabel) {

@@ -389,6 +389,8 @@ ChatGPT research runs in a cross-origin app frame that hosts an about:blank repo
 
 Gemini completed research cards open `deep-research-immersive-panel`; the report is outside `model-response`. Read its Markdown body and source links, associate it with the clicked card, and restore the original panel state. Inline KaTeX may store its source in `data-math` without a MathML annotation; preserve that source during conversion.
 
+Claude's API artifact body can be complete while omitting the document's rendered citation URLs. Check the Markdown panel whose card title matches the reconstructed artifact, even when its API content is nonempty. Append missing URLs under "Research sources" while preserving the original API body and version. Do not use another artifact's panel; failed source verification must produce a metadata warning. The original downloaded example and measured comparison are recorded in `docs/research-surf-export-plan.md`.
+
 Surf uses `#surf-root .justify-start` for prompts and `[data-markdown-renderer]` for answers. Exclude renderers nested inside a user prompt. File tiles use their full `title` as `[File: name]`; preserve report tables and links while dropping controls.
 
 See `docs/research-surf-export-plan.md` for original observations, verification results, and live-download limitations.

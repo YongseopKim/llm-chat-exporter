@@ -153,9 +153,53 @@ main, install dependencies and build there, then verify its manifest and
 output files so the existing extension can be reloaded in place.
 
 Chrome's browser-control policy blocks `chrome://extensions/`, so the user
-must perform the extension reload. After reloading it, export each supplied
-logged-in conversation and compare the downloaded JSONL with these captured
-originals. Until then, actual downloads and Claude's complete API-to-file
-path are pending; replay and fixture results do not satisfy that remaining
-acceptance step. Surf streaming detection also has not been checked during
-a live generation.
+must perform the extension reload. The subsequently downloaded files were
+checked as recorded below. Claude's corrected live download and Surf's
+first live download remain pending. Surf streaming detection also has not
+been checked during a live generation.
+
+### Downloaded output check and Claude source correction
+
+The user requested inspection of `~/Downloads/`. All JSONL files in that
+folder were parsed, their metadata and roles checked, and their report
+content compared against the original page captures. These are actual
+downloaded outputs, rather than the earlier parser replay files.
+
+Commands and evidence files:
+
+```sh
+node /private/tmp/llm-research-export-captures/verify-downloads.cjs
+node /private/tmp/llm-research-export-captures/verify-claude-source-repair.cjs
+npm test > /private/tmp/llm-research-export-results/claude-sources-full-suite.log 2>&1
+```
+
+| Platform | Downloaded records | Content check | Original unique URLs | Missing URLs |
+| --- | ---: | --- | ---: | ---: |
+| ChatGPT | 3: metadata, user, assistant | 90 report candidates matched | 0 | 0 |
+| Gemini | 5: metadata and 4 messages | 103 matched, 24 controls or empty | 151 | 0 |
+| Grok | 3: metadata, user, assistant | 178 report candidates matched | 78 | 0 |
+| Claude | 4: metadata, user, assistant, artifact | Body complete; citation badges absent | 98 | 98 |
+| Surf | No matching downloaded file | Pending | Not measured from a download | Not measured |
+
+Claude's apparent text differences were checked separately after removing
+the original rendered citation badges (`a[class~="group/tag"]`) and
+normalizing Markdown list prefixes. All 548 original body candidates were
+present in the downloaded artifact. This body-only check is recorded in
+`claude-body-verification.json`; it does not excuse the missing URLs.
+
+The bug was reproduced with a failing regression test: an API artifact
+already containing its body skipped rendered source acquisition entirely.
+The fix reads the title-matched document panel and appends only URLs absent
+from the API body, keeping its exact text and version. Unrelated panels
+are excluded; a source acquisition failure retains the API document and
+adds a metadata warning. Versions are bumped to manifest `0.3.1` and
+package `1.2.1` for this bug fix.
+
+Verification using the actual downloaded artifact as input and the original
+rendered document capture found all 98 URLs, with zero missing URLs and the
+API body and version preserved. The repaired replay is
+`/private/tmp/llm-research-export-results/claude-repaired-replay.jsonl`;
+it is not a new live download and the original Downloads file is unchanged.
+The complete suite passed 25 files and 577 tests. The final live check
+requires reloading the corrected build and exporting Claude again, plus
+exporting Surf. These checks remain pending.

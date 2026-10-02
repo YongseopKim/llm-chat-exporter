@@ -205,6 +205,7 @@ See `config/README.md` for detailed selector update guide.
 - Images are stored as URLs only (no binary download)
 - Claude artifacts: only the latest version of the latest artifact is exported
 - Claude Markdown documents whose source is absent from the conversation API are read from their document panel. The `_artifact` record uses `version: "rendered"` and metadata includes a warning; conversation messages still come from the API. Unsupported document types fail explicitly rather than producing an empty artifact.
+- Claude document citation URLs missing from an otherwise complete API artifact are appended from its matching document panel under "Research sources". The API body and version are preserved; failed source verification produces a warning.
 - Surf attachment-only prompts are recorded as `[File: name]`; the file contents are not downloaded.
 - ChatGPT research export requires access to `*.web-sandbox.oaiusercontent.com` because the report app runs in a separate origin. An unreadable report fails the export instead of silently saving only a status message.
 - Single conversation export only (no batch/history export)
