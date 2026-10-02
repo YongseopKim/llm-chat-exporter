@@ -2,7 +2,7 @@
 
 [English](README.md) | **한국어**
 
-ChatGPT, Claude, Gemini 웹 인터페이스의 대화를 JSONL 형식으로 내보내는 Chrome 확장 프로그램입니다.
+ChatGPT, Claude, Gemini, Grok, Perplexity, Surf 웹 인터페이스의 대화를 JSONL 형식으로 내보내는 Chrome 확장 프로그램입니다.
 
 ## 프로젝트 소개
 
@@ -16,7 +16,7 @@ ChatGPT, Claude, Gemini 웹 인터페이스의 대화를 JSONL 형식으로 내�
 
 ## 사용 방법
 
-1. ChatGPT, Claude, 또는 Gemini에서 대화 페이지 열기
+1. 지원 플랫폼에서 대화 페이지 열기
 2. `Ctrl+Shift+E` (Mac: `Cmd+Shift+E`) 누르기
 3. JSONL 파일 자동 다운로드
 
@@ -34,6 +34,11 @@ ChatGPT, Claude, Gemini 웹 인터페이스의 대화를 JSONL 형식으로 내�
 | ChatGPT | `https://chatgpt.com/*` |
 | Claude | `https://claude.ai/*` |
 | Gemini | `https://gemini.google.com/*` |
+| Grok | `https://grok.com/*` |
+| Perplexity | `https://www.perplexity.ai/*` |
+| Surf | `https://asksurf.ai/*` |
+
+ChatGPT의 iframe 보고서와 Gemini의 완료된 Deep Research 보고서는 해당 답변에 포함됩니다. Gemini의 출처 링크는 "Research sources" 아래에 추가됩니다. 내보내기가 끝날 때까지 보고서 앱을 닫지 마세요.
 
 ## 설치 방법
 
@@ -78,6 +83,9 @@ npm run validate:selectors # 셀렉터 설정 검증
 - DOM 구조 변경 시 셀렉터 업데이트 필요
 - 이미지는 URL만 저장 (바이너리 다운로드 없음)
 - Claude artifact는 마지막 artifact의 최신 버전만 내보냄
+- Claude 대화 API에 Markdown 문서 원본이 없으면 문서 패널에서 읽습니다. 이때 `_artifact` 줄에 `version: "rendered"`를 기록하고 메타데이터에 경고를 남깁니다. 대화 메시지는 계속 API에서 읽습니다.
+- Surf의 첨부파일 질문은 `[File: 파일명]`으로 기록하며 파일 내용은 다운로드하지 않습니다.
+- ChatGPT 보고서 앱을 읽으려면 `*.web-sandbox.oaiusercontent.com` 접근 권한이 필요합니다. 보고서를 읽지 못하면 안내 문구만 저장하지 않고 내보내기를 실패 처리합니다.
 - 단일 대화만 내보내기 가능 (배치/히스토리 내보내기 없음)
 
 ## 라이선스

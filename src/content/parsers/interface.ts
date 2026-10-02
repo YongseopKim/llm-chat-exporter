@@ -77,7 +77,7 @@ export interface ProjectInfo {
  */
 export interface ArtifactData {
   title: string;
-  /** "v<n>", counting the commands that produced this version */
+  /** "v<n>" counts source commands; "rendered" means a document-panel capture. */
   version: string;
   /** The artifact's source as Claude wrote it (Markdown, code, ...) */
   content: string;
@@ -121,7 +121,7 @@ export interface ExportMetadata {
   /**
    * Platform identifier
    */
-  platform: 'chatgpt' | 'claude' | 'gemini' | 'grok' | 'perplexity';
+  platform: 'chatgpt' | 'claude' | 'gemini' | 'grok' | 'perplexity' | 'surf';
 
   /**
    * Full URL of the conversation

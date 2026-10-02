@@ -7,13 +7,14 @@ import { isSupportedUrl, getPlatformName, generateFilename, sanitizeFilename, SU
 
 describe('background-utils', () => {
   describe('SUPPORTED_HOSTS', () => {
-    it('should contain five platforms', () => {
-      expect(SUPPORTED_HOSTS).toHaveLength(5);
+    it('should contain the supported platforms including Surf', () => {
+      expect(SUPPORTED_HOSTS).toHaveLength(6);
       expect(SUPPORTED_HOSTS).toContain('chatgpt.com');
       expect(SUPPORTED_HOSTS).toContain('claude.ai');
       expect(SUPPORTED_HOSTS).toContain('gemini.google.com');
       expect(SUPPORTED_HOSTS).toContain('grok.com');
       expect(SUPPORTED_HOSTS).toContain('perplexity.ai');
+      expect(SUPPORTED_HOSTS).toContain('asksurf.ai');
     });
   });
 
@@ -59,6 +60,12 @@ describe('background-utils', () => {
   });
 
   describe('getPlatformName', () => {
+    it('recognizes Surf consistently and names its export', () => {
+      const url = 'https://asksurf.ai/chat/4c4a0bd0-8936-4974-a81f-7c76e1b760db';
+      expect(isSupportedUrl(url)).toBe(true);
+      expect(getPlatformName(url)).toBe('surf');
+      expect(generateFilename(url, 'Research')).toBe('surf_Research.jsonl');
+    });
     it('should extract chatgpt platform name', () => {
       expect(getPlatformName('https://chatgpt.com/c/123')).toBe('chatgpt');
       expect(getPlatformName('https://chatgpt.com/')).toBe('chatgpt');

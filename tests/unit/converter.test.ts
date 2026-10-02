@@ -578,6 +578,12 @@ describe('htmlToMarkdown', () => {
       expect(md).not.toContain('rendered content');
     });
 
+    it('preserves Gemini inline math with data-math and no MathML annotation', () => {
+      const html = '<p>The <span class="math-inline" data-math="ARX token captures value intrinsically; operators must stake"><span class="katex"><span class="katex-html" aria-hidden="true">ARXtokencapturesvalueintrinsically;operatorsmuststake</span></span></span>ARX to provide compute.</p>';
+      expect(htmlToMarkdown(html)).toContain('$ARX token captures value intrinsically; operators must stake$');
+      expect(htmlToMarkdown(html)).toContain('ARX to provide compute.');
+    });
+
     it('should extract LaTeX from inline math (katex without display)', () => {
       const html = `<span class="katex">
         <span class="katex-mathml">

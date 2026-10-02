@@ -60,6 +60,8 @@ export class ChatGPTParser extends BaseParser {
 
   private readonly citationSources = new Map<string, CitationSource[]>();
   private readonly citationFailures = new Map<string, { attempts: number; warning: string }>();
+  private readonly researchReports = new Map<string, string>();
+  private readonly researchByTurn = new Map<string, string[]>();
 
   constructor() {
     super('chatgpt');
@@ -94,6 +96,8 @@ export class ChatGPTParser extends BaseParser {
     this.order = [];
     this.citationSources.clear();
     this.citationFailures.clear();
+    this.researchReports.clear();
+    this.researchByTurn.clear();
 
     await super.loadAllMessages({
       ...options,
@@ -180,8 +184,40 @@ export class ChatGPTParser extends BaseParser {
   /** Clone newly mounted turns before ChatGPT unmounts them again. */
   private async snapshotMountedMessages(): Promise<void> {
     const keys: string[] = [];
+    const live = this.getLiveMessageNodes();
+    const researchByNode = new Map<HTMLElement, string[]>();
+    const frames = Array.from(document.querySelectorAll<HTMLIFrameElement>('iframe[title="심층 리서치"], iframe[title="Deep research"], iframe[title="Deep Research"]'));
+    const pending = frames.filter(frame => !this.researchReports.has(frame.src));
+    if (pending.length) {
+      let response;
+      try {
+        response = await chrome.runtime.sendMessage({ type: 'READ_RESEARCH_FRAMES', urls: pending.map(frame => frame.src) });
+      } catch (error) {
+        throw new Error(`ChatGPT: could not read the research report: ${(error as Error).message}`);
+      }
+      if (!response?.success) throw new Error(`ChatGPT: could not read the research report: ${response?.error || 'No frame response.'}`);
+      for (const frame of pending) {
+        const report = response.reports?.find((value: { frameUrl: string; html: string }) => value.frameUrl === frame.src);
+        if (!report?.html?.trim()) throw new Error('ChatGPT: the research report is empty.');
+        this.researchReports.set(frame.src, report.html);
+      }
+    }
+    for (const frame of frames) {
+      const scope = frame.closest('[data-turn-key], [data-turn-id], [data-turn]');
+      const candidates = live.filter(node => scope?.contains(node) && this.extractRole(node) === 'assistant');
+      const target = candidates[candidates.length - 1];
+      if (!target) throw new Error('ChatGPT: could not associate the research report with its assistant turn.');
+      const reports = researchByNode.get(target) || [];
+      reports.push(this.researchReports.get(frame.src)!);
+      researchByNode.set(target, reports);
+    }
+    for (const [node, reports] of researchByNode) {
+      const key = this.getTurnKey(node);
+      if (key === null) throw new Error('ChatGPT: the research report turn has no stable identity.');
+      this.researchByTurn.set(key, reports);
+    }
 
-    for (const node of this.getLiveMessageNodes()) {
+    for (const node of live) {
       const key = this.getTurnKey(node);
       if (key === null) {
         // Nothing identifies this window, so it cannot be merged into the
@@ -190,6 +226,12 @@ export class ChatGPTParser extends BaseParser {
       }
       keys.push(key);
       const snapshot = node.cloneNode(true) as HTMLElement;
+      const reports = this.researchByTurn.get(key);
+      if (reports?.length) {
+        const body = snapshot.querySelector(this.selectors.content.assistant);
+        if (!body) throw new Error('ChatGPT: the research turn has no assistant content container.');
+        body.insertAdjacentHTML('beforeend', reports.map(html => `<section data-export-research-report>${html}</section>`).join('\n'));
+      }
       const citations = Array.from(node.querySelectorAll<HTMLAnchorElement>('[data-testid="chatgpt-citation"]'));
       const clonedCitations = Array.from(snapshot.querySelectorAll<HTMLAnchorElement>('[data-testid="chatgpt-citation"]'));
       for (const [index, citation] of citations.entries()) {

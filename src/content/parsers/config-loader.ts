@@ -83,7 +83,7 @@ export class ConfigLoader {
    * Validate configuration on load
    */
   private validateConfig(): void {
-    const requiredPlatforms: PlatformKey[] = ['chatgpt', 'gemini', 'grok', 'perplexity'];
+    const requiredPlatforms: PlatformKey[] = ['chatgpt', 'gemini', 'grok', 'perplexity', 'surf'];
 
     for (const platform of requiredPlatforms) {
       const config = this.config.platforms[platform];

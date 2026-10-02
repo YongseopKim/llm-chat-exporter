@@ -2,7 +2,7 @@
 
 **English** | [한국어](README.ko.md)
 
-A Chrome Extension that exports conversations from ChatGPT, Claude, and Gemini web UIs to JSONL format with a single keyboard shortcut.
+A Chrome Extension that exports conversations from ChatGPT, Claude, Gemini, Grok, Perplexity, and Surf web UIs to JSONL format with a single keyboard shortcut.
 
 ## Introduction
 
@@ -31,12 +31,15 @@ A Chrome Extension that exports conversations from ChatGPT, Claude, and Gemini w
 | Claude | `https://claude.ai/*` |
 | Gemini | `https://gemini.google.com/*` |
 | Grok | `https://grok.com/*` |
+| Perplexity | `https://www.perplexity.ai/*` |
+| Surf | `https://asksurf.ai/*` |
 
 ### Key Features
 
 - **Keyboard Shortcut**: `Ctrl+Shift+E` (Windows/Linux) or `Cmd+Shift+E` (Mac)
 - **DOM Virtualization Handling**: Scrolls to load all messages before export
 - **Markdown Conversion**: Code blocks, tables, lists preserved accurately
+- **Deep Research**: ChatGPT iframe reports and Gemini completed reports are included in the associated assistant message. Gemini source links are appended under "Research sources". Keep the research app loaded until export finishes.
 - **Mermaid Diagram Support**: Compatible with [Mermaid Preserving Renderer](https://github.com/YongseopKim/llm-chat-mermaid-renderer) extension
 - **Timestamp Preservation**: Message timestamps when available in DOM
 - **Configuration-Driven**: DOM selectors externalized for easy updates
@@ -65,7 +68,7 @@ Then load in Chrome:
 
 ## Usage
 
-1. Open a conversation on ChatGPT, Claude, or Gemini
+1. Open a conversation on a supported platform
 2. Press `Ctrl+Shift+E` (or `Cmd+Shift+E` on Mac)
 3. The extension scrolls to load all messages, then downloads a JSONL file
 4. File is saved as `{platform}_{timestamp}.jsonl`
@@ -93,7 +96,7 @@ First line contains metadata, subsequent lines contain individual messages:
 | Field | Type | Description |
 |-------|------|-------------|
 | `_meta` | `true` | Metadata line identifier |
-| `platform` | `"chatgpt"` \| `"claude"` \| `"gemini"` | Platform identifier |
+| `platform` | `"chatgpt"` \| `"claude"` \| `"gemini"` \| `"grok"` \| `"perplexity"` \| `"surf"` | Platform identifier |
 | `url` | string | Full conversation URL |
 | `exported_at` | ISO 8601 | Export timestamp |
 
@@ -201,6 +204,9 @@ See `config/README.md` for detailed selector update guide.
 - DOM structure changes may require selector updates
 - Images are stored as URLs only (no binary download)
 - Claude artifacts: only the latest version of the latest artifact is exported
+- Claude Markdown documents whose source is absent from the conversation API are read from their document panel. The `_artifact` record uses `version: "rendered"` and metadata includes a warning; conversation messages still come from the API. Unsupported document types fail explicitly rather than producing an empty artifact.
+- Surf attachment-only prompts are recorded as `[File: name]`; the file contents are not downloaded.
+- ChatGPT research export requires access to `*.web-sandbox.oaiusercontent.com` because the report app runs in a separate origin. An unreadable report fails the export instead of silently saving only a status message.
 - Single conversation export only (no batch/history export)
 
 ### Mermaid Diagrams

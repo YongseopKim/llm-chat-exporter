@@ -140,6 +140,7 @@ export interface SelectorConfig {
     gemini: PlatformConfig;
     grok: PlatformConfig;
     perplexity: PlatformConfig;
+    surf: PlatformConfig;
   };
 }
 
@@ -148,4 +149,4 @@ export interface SelectorConfig {
  *
  * Claude is absent: its parser reads the conversation API instead.
  */
-export type PlatformKey = 'chatgpt' | 'gemini' | 'grok' | 'perplexity';
+export type PlatformKey = 'chatgpt' | 'gemini' | 'grok' | 'perplexity' | 'surf';

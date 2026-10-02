@@ -19,6 +19,7 @@ import { ClaudeParser } from './claude';
 import { GeminiParser } from './gemini';
 import { GrokParser } from './grok';
 import { PerplexityParser } from './perplexity';
+import { SurfParser } from './surf';
 
 /**
  * Parser Factory - Platform-based parser selection
@@ -62,6 +63,8 @@ export class ParserFactory {
         return new PerplexityParser();
       }
 
+      if (hostname === 'asksurf.ai') return new SurfParser();
+
       // Unsupported platform
       return null;
 
@@ -93,7 +96,8 @@ export class ParserFactory {
         hostname.includes('claude.ai') ||
         hostname.includes('gemini.google.com') ||
         hostname.includes('grok.com') ||
-        hostname.includes('perplexity.ai')
+        hostname.includes('perplexity.ai') ||
+        hostname === 'asksurf.ai'
       );
     } catch {
       return false;

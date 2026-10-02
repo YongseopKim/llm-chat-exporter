@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-09-28",
+  "lastUpdated": "2026-10-02",
   "platforms": {
     "chatgpt": {
       "hostname": "chatgpt.com",
@@ -74,6 +74,20 @@
           "suffixPattern": "\\s*[-–—]\\s*Grok$",
           "emojiPattern": "^[\\p{Emoji_Presentation}\\p{Extended_Pictographic}]\\s*"
         }
+      }
+    },
+    "surf": {
+      "hostname": "asksurf.ai",
+      "selectors": {
+        "messages": { "combined": "#surf-root .justify-start, #surf-root [data-markdown-renderer]" },
+        "content": { "user": ".justify-start", "assistant": "[data-markdown-renderer]" },
+        "generation": "#surf-root button[aria-label=\"Stop\"], #surf-root button[aria-label=\"Stop generating\"]",
+        "role": {
+          "strategy": "combined-selector",
+          "userSelector": "#surf-root .justify-start",
+          "assistantSelector": "#surf-root [data-markdown-renderer]"
+        },
+        "title": { "strategy": "document-title" }
       }
     },
     "perplexity": {

@@ -198,7 +198,7 @@ function validate() {
 
     // Validate required platforms
     // Claude is not listed: its parser reads the conversation API, not the DOM
-    const requiredPlatforms = ['chatgpt', 'gemini', 'grok', 'perplexity'];
+    const requiredPlatforms = ['chatgpt', 'gemini', 'grok', 'perplexity', 'surf'];
 
     header('Platform Validation');
 

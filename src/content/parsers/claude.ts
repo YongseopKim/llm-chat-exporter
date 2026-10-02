@@ -33,6 +33,9 @@ import type {
   ParsedMessage,
   ProjectInfo,
 } from './interface';
+import { htmlToMarkdown } from '../converter';
+import { waitForDom } from './dom-wait';
+import { reportHtml } from './report-html';
 
 const HOSTNAME = 'claude.ai';
 
@@ -278,14 +281,52 @@ export class ClaudeParser implements ChatParser {
         message.sender === 'human' ? userMarkdown(message) : assistantMarkdown(message, artifacts),
       timestamp: message.created_at,
     }));
+    const warnings = this.compareWithPage(messages.length);
+    let artifact = artifacts.latest();
+    if (!artifact?.content.trim()) {
+      const rendered = await this.readRenderedDocument();
+      if (rendered) {
+        artifact = rendered;
+        warnings.push('Claude: the document source was not available in the conversation API; exported the rendered Markdown document.');
+      } else if (artifact) {
+        throw new Error('Claude: the artifact source is empty and its document could not be read.');
+      }
+    }
 
     return {
       messages,
       title: conversation.name || undefined,
       project: await this.readProject(org, conversation.project_uuid),
-      artifact: artifacts.latest(),
-      warnings: this.compareWithPage(messages.length),
+      artifact,
+      warnings,
     };
+  }
+
+  /** Artifact-only fallback; conversation messages still come from the API. */
+  private async readRenderedDocument(): Promise<ArtifactData | null> {
+    const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="artifact-card-open"]'));
+    const card = cards[cards.length - 1];
+    if (!card) return null;
+    const title = card.getAttribute('aria-label')?.replace(/^View /, '').trim();
+    if (!title) throw new Error('Claude: the document card has no title.');
+    const initialPanel = document.querySelector('[role="region"][aria-label^="Artifact panel:"]');
+    const initialLabel = initialPanel?.getAttribute('aria-label');
+    const matchingPanel = () => Array.from(document.querySelectorAll('[role="region"]'))
+      .find(panel => panel.getAttribute('aria-label') === `Artifact panel: ${title}`) || null;
+    try {
+      if (!matchingPanel()) card.click();
+      const body = await waitForDom(() => {
+        const content = matchingPanel()?.querySelector('#markdown-artifact .standard-markdown');
+        return content?.textContent?.trim() ? content : null;
+      }, 10000).catch(() => { throw new Error(`Claude: could not read the document "${title}". Open its Markdown document panel and export again.`); });
+      return { title, version: 'rendered', content: htmlToMarkdown(reportHtml(body)) };
+    } finally {
+      if (!initialLabel) {
+        document.querySelector<HTMLButtonElement>('button[aria-label="Close artifact"]')?.click();
+      } else if (matchingPanel()?.getAttribute('aria-label') !== initialLabel) {
+        cards.find(candidate => `Artifact panel: ${candidate.getAttribute('aria-label')?.replace(/^View /, '')}` === initialLabel)?.click();
+      }
+    }
   }
 
   /**

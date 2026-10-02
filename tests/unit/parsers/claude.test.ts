@@ -384,6 +384,19 @@ describe('ClaudeParser', () => {
       expect(artifact).toEqual({ title: 'Plan', version: 'v2', content: '# Plan\n\nStep one\nStep two' });
     });
 
+    it('preserves a visible research document when the API does not carry artifact commands', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+      global.document.body.innerHTML = `<button data-testid="artifact-card-open" aria-label="View Research report"></button>
+        <div role="region" aria-label="Artifact panel: Research report"><div id="markdown-artifact"><div class="standard-markdown">
+          <h1>Original research document</h1><p>Complete last paragraph.</p><a href="https://example.org/report">Evidence</a>
+        </div></div></div>`;
+      const { artifact } = await parser.readConversation();
+      expect(artifact?.title).toBe('Research report');
+      expect(artifact?.content).toContain('# Original research document');
+      expect(artifact?.content).toContain('Complete last paragraph.');
+      expect(artifact?.content).toContain('https://example.org/report');
+    });
+
     it('reports no artifact when the conversation made none', async () => {
       mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
 

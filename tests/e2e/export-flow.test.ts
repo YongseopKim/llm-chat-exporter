@@ -466,6 +466,43 @@ describe('E2E: Export Flow', () => {
     }
   }, 30000);
 
+  it('exports a ChatGPT research report from the cross-origin app and its nested blank frame', async () => {
+    const url = 'https://chatgpt.com/c/e2e-research';
+    const frameUrl = 'https://mcp-app-fixture.web-sandbox.oaiusercontent.com/';
+    const body = '<h1>Research report</h1><p>Complete final paragraph.</p><a href="https://example.org/report">Original source</a>';
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.url() === url) {
+        void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: `<!doctype html><html><body>
+          <div data-turn-key="research"><div data-content-search-unit-key="fallback-turn-0:0:user"><div class="whitespace-pre-wrap">Research prompt</div></div>
+          <iframe title="심층 리서치" src="${frameUrl}"></iframe>
+          <div data-content-search-unit-key="fallback-turn-0:3:assistant"><div data-markdown-text-style="assistant-message">Research started.</div></div></div>
+        </body></html>` });
+      } else if (request.url() === frameUrl) {
+        void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: `<!doctype html><html><body>
+          <iframe id="root" src="about:blank"></iframe><script>
+            document.querySelector('iframe').contentDocument.body.innerHTML = ${JSON.stringify(`<div class="_reportPage_16ou1_1">${body}</div>`)};
+          </script></body></html>` });
+      } else void request.abort();
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(url, { waitUntil: 'load' });
+      expect(await page.$eval('iframe', frame => frame.title)).toBe('심층 리서치');
+      const response = await exportCurrentPage(browser, url);
+      expect(response.success, response.error).toBe(true);
+      const [meta, user, assistant] = response.data!.split('\n').map(line => JSON.parse(line));
+      expect(meta.warnings).toBeUndefined();
+      expect(user.content).toBe('Research prompt');
+      expect(assistant.content).toContain('# Research report');
+      expect(assistant.content).toContain('Complete final paragraph.');
+      expect(assistant.content).toContain('https://example.org/report');
+    } finally {
+      page.off('request', intercept);
+      await page.setRequestInterception(false);
+    }
+  }, 30000);
+
   it('should export a Claude conversation from its API through the loaded extension', async () => {
     await page.setRequestInterception(true);
     const intercept = (request: HTTPRequest) => {

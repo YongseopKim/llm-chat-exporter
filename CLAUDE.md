@@ -365,7 +365,7 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - The DOM parser grew to 1,065 lines, 11 of its 20 commits were fixes, and every failure was silent. On 2026-09-24 an app-shell style (`--desktop-top-bar-row-height: 0px`) made the collapsed-block check drop every assistant turn: seven live conversations exported all assistant turns as `""`, and multi-paragraph prompts kept only their first paragraph.
 - The API returns the exact branch the page shows, as the Markdown Claude wrote, with message times, title and project - nothing to scroll, wait for, or infer from styles. Verified on those seven conversations: message counts matched the page and every body was complete.
 - It is the same request the page makes, to claude.ai, with the user's session: nothing leaves the browser.
-- A failed request throws (`Claude: could not load this conversation (HTTP n)`) rather than exporting a partial page. There is deliberately no DOM fallback - it would bring back the code that failed silently.
+- A failed request throws (`Claude: could not load this conversation (HTTP n)`) rather than exporting a partial page. There is no DOM fallback for conversation messages. If the API does not carry artifact source commands, the latest visible Markdown document card is opened and its document panel is exported as `_artifact` with `version: "rendered"` and a metadata warning. This artifact-only fallback never substitutes DOM message parsing for the conversation API.
 
 **Unverified against a live conversation** (no example available on 2026-09-24): the `artifacts` tool input (`id`, `command`, `title`, `content`, `old_str`, `new_str`), the `visualize` tool name and its `title` input, and attachment `file_name` for pasted text. Check these first if an artifact, visualization or attachment exports wrongly.
 
@@ -382,6 +382,16 @@ ChatGPT's `+N` citation badge exposes additional URLs only in its hover tooltip.
 Current ChatGPT marks code-block divs with `data-markdown-copy="code-block"`, without a `pre` element. Normalize these wrappers to `pre/code` and discard their copy toolbar before Markdown conversion. Read the original code text when writing fences, preserving indentation, blank lines and literal Markdown. The fence must be longer than any embedded backtick run.
 
 Verify each code block against the original DOM text, including whitespace, through JSONL serialization. Alphanumeric normalization checks cannot detect lost line breaks and must not establish format completeness.
+
+### Deep Research and Surf (2026-10-02)
+
+ChatGPT research runs in a cross-origin app frame that hosts an about:blank report frame. The background worker reads it through `chrome.scripting.executeScript`; the app can read its own child document. Attach the report to the assistant turn identified by its containing `data-turn-key`, preserve it across virtualization windows, and fail explicitly on missing report content. The manifest grants the app's `*.web-sandbox.oaiusercontent.com` origin, without using `<all_urls>`.
+
+Gemini completed research cards open `deep-research-immersive-panel`; the report is outside `model-response`. Read its Markdown body and source links, associate it with the clicked card, and restore the original panel state. Inline KaTeX may store its source in `data-math` without a MathML annotation; preserve that source during conversion.
+
+Surf uses `#surf-root .justify-start` for prompts and `[data-markdown-renderer]` for answers. Exclude renderers nested inside a user prompt. File tiles use their full `title` as `[File: name]`; preserve report tables and links while dropping controls.
+
+See `docs/research-surf-export-plan.md` for original observations, verification results, and live-download limitations.
 
 ### Configuration-Driven Architecture (Phase 7)
 **Decision**: Externalize all DOM selectors to JSON configuration

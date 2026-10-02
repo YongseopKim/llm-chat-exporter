@@ -227,13 +227,13 @@ turndownService.addRule('mathBlockKatex', {
       (node as HTMLElement).classList.contains('katex-display')
     );
   },
-  replacement: (_content, node) => {
+  replacement: (content, node) => {
     const element = node as HTMLElement;
     const annotation = element.querySelector(
       'annotation[encoding="application/x-tex"]'
     );
-    const latex = annotation?.textContent || '';
-    return latex ? `\n$$${latex}$$\n` : '';
+    const latex = annotation?.textContent || element.closest('[data-math]')?.getAttribute('data-math') || '';
+    return latex ? `\n$$${latex}$$\n` : content;
   }
 });
 
@@ -252,13 +252,13 @@ turndownService.addRule('mathInlineKatex', {
       !element.closest('.katex-display')
     );
   },
-  replacement: (_content, node) => {
+  replacement: (content, node) => {
     const element = node as HTMLElement;
     const annotation = element.querySelector(
       'annotation[encoding="application/x-tex"]'
     );
-    const latex = annotation?.textContent || '';
-    return latex ? `$${latex}$` : '';
+    const latex = annotation?.textContent || element.closest('[data-math]')?.getAttribute('data-math') || '';
+    return latex ? `$${latex}$` : content;
   }
 });
 

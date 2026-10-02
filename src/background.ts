@@ -4,12 +4,30 @@
  */
 
 import { isSupportedUrl, generateFilename } from './utils/background-utils';
+import { collectResearchFrames } from './research-frames';
 import {
   executeVersionedContentScript,
   type ExportResponse,
 } from './content-script-loader';
 
 declare const __LLM_CHAT_EXPORTER_BUILD_ID__: string;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type !== 'READ_RESEARCH_FRAMES') return false;
+  if (!sender.tab?.id || !sender.tab.url || new URL(sender.tab.url).hostname !== 'chatgpt.com' || sender.frameId !== 0) {
+    sendResponse({ success: false, error: 'Research frames must be requested by the ChatGPT conversation.' });
+    return false;
+  }
+  if (!Array.isArray(message.urls) || !message.urls.length || message.urls.some((url: unknown) => typeof url !== 'string')) {
+    sendResponse({ success: false, error: 'Invalid research frame request.' });
+    return false;
+  }
+  collectResearchFrames(sender.tab.id, message.urls).then(
+    reports => sendResponse({ success: true, reports }),
+    error => sendResponse({ success: false, error: error.message }),
+  );
+  return true;
+});
 
 /**
  * JSONL 데이터의 첫 줄(메타데이터)에서 title 추출
@@ -76,7 +94,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       type: 'basic',
       iconUrl: 'icons/icon48.png',
       title: 'LLM Chat Exporter',
-      message: 'This site is not supported. Please use on ChatGPT, Claude, Gemini, Grok, or Perplexity.',
+      message: 'This site is not supported. Please use on ChatGPT, Claude, Gemini, Grok, Perplexity, or Surf.',
       priority: 1
     });
     return;
