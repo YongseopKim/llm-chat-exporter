@@ -18,6 +18,7 @@ import type { ParsedMessage, ExportMetadata, ExportedMessage, ArtifactData } fro
  * @param parsedMessages - Messages with HTML content (converted here) or
  *   Markdown content (written verbatim)
  * @param metadata - Export metadata (platform, URL, title, etc.)
+ * @param artifacts - Documents written verbatim as `_artifact` lines
  * @returns Promise resolving to the JSONL string with metadata line + message lines
  *
  * @example
@@ -34,7 +35,7 @@ import type { ParsedMessage, ExportMetadata, ExportedMessage, ArtifactData } fro
 export async function buildJsonl(
   parsedMessages: ParsedMessage[],
   metadata: ExportMetadata,
-  artifact?: ArtifactData | null
+  artifacts: ArtifactData[] = []
 ): Promise<string> {
   // Line 1: Metadata
   const metaLine = JSON.stringify({
@@ -56,8 +57,8 @@ export async function buildJsonl(
 
   const lines = [metaLine, ...messageLines];
 
-  // Optional artifact line (Claude only)
-  if (artifact) {
+  // One line per document the answers produced, after the messages
+  for (const artifact of artifacts) {
     lines.push(JSON.stringify({ _artifact: true, ...artifact }));
   }
 

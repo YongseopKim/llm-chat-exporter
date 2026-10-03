@@ -67,7 +67,7 @@ async function exportConversation(): Promise<ExportResponse> {
     ...(conversation.title && { title: conversation.title }),
     ...(conversation.project && { project: conversation.project }),
     ...(conversation.warnings.length > 0 && { warnings: conversation.warnings }),
-  }, conversation.artifact);
+  }, conversation.artifacts);
 
   console.log('LLM Chat Exporter: Export complete');
   return {

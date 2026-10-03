@@ -38,6 +38,9 @@ const PROJECT_PATH_PATTERN = /^\/g\/(g-p-[0-9a-f]+)(?:-([^/]+))?\//;
  */
 const TURN_TEST_ID_PATTERN = /^conversation-turn-(\d+)$/;
 
+/** The container of a prompt the page shows as typed (see extractBodyHtml) */
+const TYPED_PROMPT_SELECTOR = '.whitespace-pre-wrap';
+
 /**
  * ChatGPT platform parser
  *
@@ -326,11 +329,30 @@ export class ChatGPTParser extends BaseParser {
    * @protected
    */
   protected override extractContent(node: HTMLElement, role: 'user' | 'assistant'): string {
-    const parts = [this.extractAttachmentsHtml(node), super.extractContent(node, role)].filter(
+    const parts = [this.extractAttachmentsHtml(node), this.extractBodyHtml(node, role)].filter(
       (part) => part !== ''
     );
 
     return parts.length > 0 ? parts.join('\n') : this.extractImagesHtml(node);
+  }
+
+  /**
+   * Mark a typed prompt so its text is exported as written
+   *
+   * ChatGPT shows a typed prompt unrendered in `.whitespace-pre-wrap`: its
+   * line breaks and Markdown characters are the prompt. Measured on
+   * 2026-10-03, a prompt's text held 670 line breaks and the export kept 87,
+   * because Markdown conversion collapsed them and escaped "##" and "[".
+   * A rich pasted prompt renders as `.markdown` and converts as usual.
+   *
+   * @private
+   */
+  private extractBodyHtml(node: HTMLElement, role: 'user' | 'assistant'): string {
+    const body = super.extractContent(node, role);
+    const element = node.querySelector(this.selectors.content[role]);
+    return role === 'user' && body && element?.matches(TYPED_PROMPT_SELECTOR)
+      ? `<div data-export-verbatim="">${body}</div>`
+      : body;
   }
 
   /**

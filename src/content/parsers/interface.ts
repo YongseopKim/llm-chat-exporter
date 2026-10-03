@@ -51,8 +51,11 @@ export interface Conversation {
   /** Project the conversation belongs to (ChatGPT/Claude) */
   project?: ProjectInfo | null;
 
-  /** Latest artifact of the conversation (Claude) */
-  artifact?: ArtifactData | null;
+  /**
+   * Documents the answers produced outside the message text: Claude's latest
+   * artifact, and files Claude or Grok wrote to the project and presented
+   */
+  artifacts?: ArtifactData[];
 
   /**
    * Signs that the export may not match the page, e.g. a message whose
@@ -73,13 +76,17 @@ export interface ProjectInfo {
 }
 
 /**
- * Claude artifact, rebuilt from the commands that created and edited it
+ * A document an answer produced, exported whole after the messages
  */
 export interface ArtifactData {
+  /** Artifact title, or the file's path in the project */
   title: string;
-  /** "v<n>" counts source commands; "rendered" means a document-panel capture. */
+  /**
+   * "v<n>" counts the Claude artifact's source commands; "rendered" means a
+   * document-panel capture; "file" means the project file as it is stored now.
+   */
   version: string;
-  /** The artifact's source as Claude wrote it (Markdown, code, ...) */
+  /** The document's source as it was written (Markdown, code, ...) */
   content: string;
 }
 

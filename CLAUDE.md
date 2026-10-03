@@ -216,7 +216,7 @@ JSONL format with metadata line followed by message lines:
 ### 3. Claude (Solved by leaving the DOM)
 Virtualized rows, a paginated "Load earlier messages" button, thinking/tool steps told apart only by inline styles, artifacts in a separate panel, citations hidden in hover popups: see "Claude Exports From The Conversation API" below. From the API response:
 - **Branch**: walk `current_leaf_message_uuid` back through `parent_message_uuid`
-- **Body**: `text` blocks only; `thinking`, `tool_use`, `tool_result` are skipped
+- **Body**: `text` blocks; `thinking`, `tool_use`, `tool_result` are skipped, except the two tools the page shows (see "Answers Keep What The Page Shows Outside The Text")
 - **Citations**: ` [n]` after each cited span (`end_index`), `[n]: url "title"` definitions under the turn
 - **Artifacts**: `[Artifact: title]` inline; the latest artifact is rebuilt by replaying its `create`/`update`/`rewrite` commands into the `_artifact` line
 - **Visualizations**: `[Visualization omitted: title]` for `visualize*` tool calls
@@ -315,7 +315,7 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - **Browser**: Chrome desktop only (Manifest V3)
 - **Platforms**: `chatgpt.com`, `claude.ai`, `gemini.google.com`, `grok.com`
 - **Scope**: Single conversation per export (no batch/history export)
-- **Privacy**: No third-party requests; the only requests go to the chat site itself (Claude's conversation API, same-origin images), with the user's own session
+- **Privacy**: No third-party requests; the only requests go to the chat site itself (Claude's conversation and project APIs, Grok's project file API, same-origin images), with the user's own session, plus the signed storage URL Grok's API returns for a project file, fetched without cookies
 - **Images**: Store URLs/placeholders only, no binary download
 - **Timestamps**: Claude has real message times; DOM platforms fall back to export time
 - **Title**: Not extracted (removed in Phase 5 - unstable selectors across platforms)
@@ -375,7 +375,26 @@ ChatGPT's current conversation scroller uses `flex-direction: column-reverse`: t
 
 Both ChatGPT and Grok must snapshot mounted messages at each scroll stop, before virtualization removes them. Merge Grok windows by response ID or `data-plane-row`, never by body text: repeated messages are distinct turns.
 
+Grok's source drawer has one section per agent step, opened one at a time. Steps other than web searches ("명령 실행함", "파일 작성함") have no links: read each section once it renders, whatever it holds. On 2026-10-03 waiting for a link in every section timed out on the first step and dropped all 45 sources. The button's count ("45 sources") is the sum of each section's distinct links; a different collected count produces a metadata warning.
+
 ChatGPT's `+N` citation badge exposes additional URLs only in its hover tooltip. Collect each tooltip page while the original message is mounted, then write readable source links into its detached snapshot. Grok's collapsed source drawer exposes search-result links; append them under "Search sources" without exporting thinking. Retry transient ChatGPT tooltip failures and read the current popup DOM after each page change. Cache only complete citation groups; a failed group gets a bounded retry in a later mounted window, and metadata warnings include only groups still unresolved after the walk. Persistent source UI failures must produce metadata warnings while preserving the visible body and links. Markdown table cells must convert their inner HTML, because `textContent` discards source URLs.
+
+### Typed Prompts Keep Their Text (2026-10-03)
+
+ChatGPT shows a typed prompt unrendered in `.whitespace-pre-wrap`, splitting out only fenced code blocks. Its line breaks and Markdown characters are the prompt: `ChatGPTParser` wraps the body in `data-export-verbatim`, and the converter keeps its text as written and writes each code block back as a fence. Measured on 2026-10-03: a prompt's text held 670 line breaks, the export kept 87, and 26,801 characters after its code block became one escaped line. A rich pasted prompt (`.markdown`) converts as usual.
+
+Grok renders a prompt's Markdown but keeps a paragraph's line breaks with `white-space: pre-wrap` and shows a typed `## Title` line as text. The snapshot marks elements whose live style keeps line breaks (`data-export-line-breaks`, see `line-breaks.ts`), and turns a prompt paragraph starting with `#{1,6} ` back into that heading, so the export reads `## Title`, not `\## Title`.
+
+### Answers Keep What The Page Shows Outside The Text (2026-10-03)
+
+Measured on the 2026-10-03 conversations; each was missing from their exports:
+- **Claude AskUserQuestion**: the question and the option the user picked are a turn inside the assistant message. Exported where asked as `[Question: q]`, `- label: description` per option, and `[User answer: a]`. The answer is read from the result text `"<question>"="<answer>"`; if it cannot be picked out, the result text is kept as written.
+- **Claude project files**: `Projects` with `method: "project_write"` and `present_to_user: true` shows a file card after the answer. The text is only in the project: `GET /api/organizations/<org>/projects/<project>/docs/<doc_uuid>` (doc_uuid from the tool result). Exported as `[Artifact: <path>]` after the answer's text and an `_artifact` line with `version: "file"`. Writes without `present_to_user` are working files and are not exported.
+- **Grok file cards**: `[role=button]` labelled with the file name, holding an icon, name, size and a download button. The icon was inlined as 26 KB of base64 and the labels read as answer text. Replaced with `[Artifact: <name>]`; the file comes from `GET /rest/workspaces/<project>/files?recursive=true` (name to path), `GET /rest/workspaces/<project>/files/content?path=<path>` (`signedUrl`, `size`), then the signed URL without cookies. A download whose byte length differs from `size` is rejected.
+
+Project files are read as stored at export time, so a later overwrite is what gets exported. An unreadable file keeps its marker and adds a metadata warning; the messages are complete without it. `Conversation.artifacts` holds every document, and each becomes one `_artifact` line after the messages.
+
+**Do not "fix" this**: `[Question: ...]`/`[User answer: ...]` inside an assistant message, and several `_artifact` lines, are the expected output.
 
 ### ChatGPT Code Blocks Preserve Exact Whitespace (2026-09-29)
 

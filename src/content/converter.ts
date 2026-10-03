@@ -27,6 +27,12 @@ import TurndownService from 'turndown';
  * - Removes toggle buttons (.mpr-toggle)
  * - Preserves original source code (.mpr-source)
  *
+ * Also prepares text whose layout the parser marked, since Turndown would
+ * collapse its whitespace:
+ * - `data-export-verbatim`: text shown as typed, kept exactly (verbatimText)
+ * - `data-export-line-breaks`: an element whose page style shows its "\n"
+ *   characters as line breaks; each becomes a kept line break
+ *
  * @param html - Raw HTML string
  * @returns Cleaned HTML with simplified <pre><code> structure
  */
@@ -113,7 +119,85 @@ function cleanCodeBlockHtml(html: string): string {
     }
   });
 
+  doc.querySelectorAll('[data-export-verbatim]').forEach((element) => {
+    if (element.parentElement?.closest('[data-export-verbatim]')) return;
+    const literal = doc.createElement('pre');
+    literal.setAttribute('data-export-literal', '');
+    literal.textContent = verbatimText(element);
+    element.replaceWith(literal);
+  });
+
+  doc.querySelectorAll('[data-export-line-breaks]').forEach((element) => {
+    Array.from(element.childNodes).forEach((child) => {
+      if (child.nodeType !== 3 || !/\S/.test(child.textContent || '')) return;
+      const lines = (child.textContent || '').split('\n');
+      if (lines.length < 2) return;
+      const fragment = doc.createDocumentFragment();
+      lines.forEach((line, index) => {
+        if (index > 0) {
+          const lineBreak = doc.createElement('br');
+          lineBreak.setAttribute('data-export-line-break', '');
+          fragment.append(lineBreak);
+        }
+        if (line) fragment.append(doc.createTextNode(line));
+      });
+      child.replaceWith(fragment);
+    });
+  });
+
   return doc.body.innerHTML;
+}
+
+/** A fenced code block whose fence is longer than any backtick run inside it */
+function fencedCode(code: string, language: string): string {
+  const embeddedFences = code.match(/`{3,}/g) || [];
+  const fence = '`'.repeat(Math.max(3, ...embeddedFences.map((run) => run.length + 1)));
+  return `${fence}${language}\n${code}\n${fence}`;
+}
+
+/**
+ * The text of an element the page shows exactly as it was typed
+ *
+ * ChatGPT does not render a typed prompt as Markdown: it shows the text with
+ * its line breaks and splits out only the fenced code blocks. Turndown would
+ * collapse the line breaks and escape the Markdown characters, so the text is
+ * kept as written and each code block is written back as a fence on its own
+ * lines.
+ */
+function verbatimText(root: Element): string {
+  let text = '';
+  let afterFence = false;
+
+  const add = (value: string) => {
+    if (afterFence && value && !value.startsWith('\n')) text += '\n';
+    if (value) afterFence = false;
+    text += value;
+  };
+
+  const visit = (node: Node) => {
+    node.childNodes.forEach((child) => {
+      if (child.nodeType === 3) {
+        add(child.textContent || '');
+        return;
+      }
+      if (child.nodeType !== 1) return;
+      const element = child as Element;
+      const code = element.nodeName === 'PRE' ? element.querySelector('code') : null;
+      if (code) {
+        if (text && !text.endsWith('\n')) text += '\n';
+        const language = code.className.match(/language-(\w+)/)?.[1] || '';
+        text += fencedCode(code.textContent || '', language);
+        afterFence = true;
+      } else if (element.nodeName === 'BR') {
+        add('\n');
+      } else {
+        visit(element);
+      }
+    });
+  };
+
+  visit(root);
+  return text;
 }
 
 // Configure Turndown service
@@ -142,11 +226,26 @@ turndownService.addRule('codeBlock', {
 
     // The child conversion can escape Markdown or trim code whitespace.
     // Use the original text, and a longer fence if the code contains one.
-    const code = codeNode.textContent || '';
-    const embeddedFences = code.match(/`{3,}/g) || [];
-    const fence = '`'.repeat(Math.max(3, ...embeddedFences.map(run => run.length + 1)));
-    return `\n\n${fence}${language}\n${code}\n${fence}\n\n`;
+    return `\n\n${fencedCode(codeNode.textContent || '', language)}\n\n`;
   }
+});
+
+/**
+ * Text kept exactly as typed (see verbatimText), already Markdown
+ */
+turndownService.addRule('literalText', {
+  filter: (node) => node.nodeName === 'PRE' && (node as HTMLElement).hasAttribute('data-export-literal'),
+  replacement: (_content, node) => `\n\n${node.textContent || ''}\n\n`
+});
+
+/**
+ * A line break the page shows inside a paragraph (white-space: pre-wrap)
+ *
+ * Written as the plain newline it was, not as Markdown's two-space break.
+ */
+turndownService.addRule('keptLineBreak', {
+  filter: (node) => node.nodeName === 'BR' && (node as HTMLElement).hasAttribute('data-export-line-break'),
+  replacement: () => '\n'
 });
 
 /**

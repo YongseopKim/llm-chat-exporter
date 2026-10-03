@@ -435,6 +435,44 @@ describe('E2E: Export Flow', () => {
     }
   }, 30000);
 
+  it('exports a typed ChatGPT prompt exactly as written through the loaded extension', async () => {
+    // Reduced from the 2026-10-03 prompt whose line breaks were collapsed:
+    // text, ChatGPT's code-block div, more text, and a trailing literal fence.
+    const url = 'https://chatgpt.com/c/e2e-typed-prompt';
+    const before = '맨 아래에 위치한 글 내용을 봐줘.\n내가 원하는 건 "BASE" 이야.\n\n---\n\n## 원하는 프레임워크 최종 템플릿\n\n';
+    const code = "# Uptober\n\n```sh\npython3 - <<'PY'\nPY";
+    const after = '\n\n| 티커 | 가격 |\n|---|---:|\n| NMR | 11.52 |\n\n[바깥 판정](judgments.md)\n   - 들여쓴 줄\n';
+    const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const prompt = escape(before) +
+      '<div data-markdown-copy="code-block" data-theme="dark"><div data-markdown-copy="exclude"><button aria-label="복사"><svg></svg></button></div>' +
+      '<div tabindex="0" dir="ltr"><code><span>' + escape(code) + '</span></code></div></div>' + escape(after) + '```';
+    const fixture = getCurrentChatGptHtml().replace(
+      '<div class="whitespace-pre-wrap">First prompt</div>',
+      '<div class="whitespace-pre-wrap">' + prompt + '</div>',
+    );
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.isNavigationRequest() && request.url() === url) {
+        void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: fixture });
+      } else {
+        void request.continue();
+      }
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      const response = await exportCurrentPage(browser, url);
+      expect(response.success, response.error).toBe(true);
+      const [meta, ...messages] = response.data!.split('\n').map(line => JSON.parse(line));
+      expect(meta.warnings).toBeUndefined();
+      expect(messages[0].content).toBe(before + '````\n' + code + '\n````' + after + '```');
+      expect(messages[2].content).toBe('Second prompt');
+    } finally {
+      page.off('request', intercept);
+      await page.setRequestInterception(false);
+    }
+  }, 30000);
+
   it.each([
     ['https://chatgpt.com/c/e2e-reverse-sources', getReverseChatGptHtml, 'chatgpt'],
     ['https://grok.com/c/e2e-virtualized-sources', getVirtualizedGrokHtml, 'grok'],

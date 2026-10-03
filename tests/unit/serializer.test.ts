@@ -282,7 +282,7 @@ describe('buildJsonl', () => {
         content: '# My Document\n\nContent here'
       };
 
-      const jsonl = await buildJsonl(messages, defaultMetadata, artifact);
+      const jsonl = await buildJsonl(messages, defaultMetadata, [artifact]);
       const lines = jsonl.split('\n');
 
       expect(lines.length).toBe(4); // meta + 2 messages + 1 artifact
@@ -310,15 +310,30 @@ describe('buildJsonl', () => {
       });
     });
 
-    it('should not add artifact line when artifact is null', async () => {
+    it('should not add artifact lines for an empty artifact list', async () => {
       const messages: ParsedMessage[] = [
         { role: 'user', contentHtml: '<p>Hello</p>', timestamp: '2025-11-29T10:00:00Z' }
       ];
 
-      const jsonl = await buildJsonl(messages, defaultMetadata, null as any);
+      const jsonl = await buildJsonl(messages, defaultMetadata, []);
       const lines = jsonl.split('\n');
 
       expect(lines.length).toBe(2); // meta + 1 message
+    });
+
+    it('should write one _artifact line per artifact, in order', async () => {
+      const artifacts: ArtifactData[] = [
+        { title: 'Plan', version: 'v2', content: '# Plan' },
+        { title: 'claude/report.md', version: 'file', content: '# Report' },
+      ];
+
+      const jsonl = await buildJsonl([], defaultMetadata, artifacts);
+      const lines = jsonl.split('\n').map((line) => JSON.parse(line));
+
+      expect(lines.slice(1)).toEqual([
+        { _artifact: true, title: 'Plan', version: 'v2', content: '# Plan' },
+        { _artifact: true, title: 'claude/report.md', version: 'file', content: '# Report' },
+      ]);
     });
 
     it('should write artifact content verbatim, since it is already source text', async () => {
@@ -328,7 +343,7 @@ describe('buildJsonl', () => {
 
       const artifact: ArtifactData = { title: 'Doc', version: 'v1', content: '<h1>Raw</h1>' };
 
-      const jsonl = await buildJsonl([], defaultMetadata, artifact);
+      const jsonl = await buildJsonl([], defaultMetadata, [artifact]);
 
       expect(htmlToMarkdown).not.toHaveBeenCalled();
       expect(JSON.parse(jsonl.split('\n')[1]).content).toBe('<h1>Raw</h1>');

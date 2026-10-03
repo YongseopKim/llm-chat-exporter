@@ -11,7 +11,7 @@ A Chrome Extension that exports conversations from ChatGPT, Claude, Gemini, Grok
 ### Core Values
 
 - **Context Preservation**: Captures the complete web UI experience, not just raw API responses
-- **Local-First**: All processing happens in-browser; the only requests go to the chat site itself (Claude's conversation API, same-origin images)
+- **Local-First**: All processing happens in-browser; the only requests go to the chat site itself (Claude's conversation and project APIs, Grok's project file API, same-origin images) and to the signed storage URL Grok's API returns for a project file
 - **Data Ownership**: Your conversations stay on your machine permanently
 
 ### Use Cases
@@ -107,6 +107,20 @@ First line contains metadata, subsequent lines contain individual messages:
 | `role` | `"user"` \| `"assistant"` | Normalized sender role |
 | `content` | string | Markdown-converted message body |
 | `timestamp` | ISO 8601 | Message time (or export time if unavailable) |
+
+### Artifact Lines (After the Messages)
+
+Documents an answer produced outside its text follow the messages, one line each. The message marks where each one appeared with `[Artifact: <title>]`.
+
+```jsonl
+{"_artifact":true,"title":"claude/BASE (Base) 조건부 평가 리포트.md","version":"file","content":"# BASE - Base ..."}
+```
+
+| `version` | Source |
+|-----------|--------|
+| `v<n>` | Claude artifact, rebuilt from its `n` create/update/rewrite commands |
+| `rendered` | Claude Markdown document read from its document panel |
+| `file` | File Claude or Grok wrote to the project and showed as a card, as the project stores it now |
 
 ## Development
 
@@ -204,6 +218,10 @@ See `config/README.md` for detailed selector update guide.
 - DOM structure changes may require selector updates
 - Images are stored as URLs only (no binary download)
 - Claude artifacts: only the latest version of the latest artifact is exported
+- Project files (Claude `project_write` with a card, Grok file cards) are read as the project stores them at export time; a later edit or overwrite of the same file is what gets exported. A file that cannot be read keeps its `[Artifact: ...]` marker and produces a warning.
+- A question Claude asked with AskUserQuestion is exported inside the assistant message as `[Question: ...]`, its options, and `[User answer: ...]`
+- Prompts are exported as typed: ChatGPT shows a typed prompt unrendered, so its line breaks and Markdown characters are kept verbatim; Grok's paragraph line breaks and literal `## Title` lines are kept as typed
+- Grok search sources are checked against the count on the drawer button ("45 sources"); a different count produces a warning
 - Claude Markdown documents whose source is absent from the conversation API are read from their document panel. The `_artifact` record uses `version: "rendered"` and metadata includes a warning; conversation messages still come from the API. Unsupported document types fail explicitly rather than producing an empty artifact.
 - Claude document citation URLs missing from an otherwise complete API artifact are appended from its matching document panel under "Research sources". The API body and version are preserved; failed source verification produces a warning.
 - Surf attachment-only prompts are recorded as `[File: name]`; the file contents are not downloaded.

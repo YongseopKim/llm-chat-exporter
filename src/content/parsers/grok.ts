@@ -18,8 +18,53 @@
 
 import { BaseParser } from './base-parser';
 import type { ScrollOptions } from '../scroller';
+import type { ArtifactData, Conversation } from './interface';
 import { mergeTurnOrder } from './message-order';
 import { readGrokSources } from './grok-sources';
+import { readGrokFile } from './grok-files';
+import { markLineBreaks } from './line-breaks';
+
+/**
+ * Name of the file a card in an answer stands for, or null for other buttons
+ *
+ * Measured on 2026-10-03: `<div role="button" aria-label="<name> 열기">` holding
+ * an icon, `<span><name></span><span>문서 · 19.89 KB</span>`, and a
+ * `<button aria-label="<name> 다운로드">`. The name is matched in both labels
+ * rather than the words around it, which follow the UI language.
+ */
+function fileCardName(card: Element): string | null {
+  const name = card.querySelector('span')?.textContent?.trim();
+  if (!name || !(card.getAttribute('aria-label') || '').includes(name)) {
+    return null;
+  }
+  const download = Array.from(card.querySelectorAll('button[aria-label]')).some((button) =>
+    button.getAttribute('aria-label')!.includes(name)
+  );
+  return download ? name : null;
+}
+
+/**
+ * Turn a prompt line Grok shows as "## Title" text back into the heading typed
+ *
+ * Grok renders a prompt's lists, tables and links, but leaves "## Title" as
+ * plain text, which converted to "\## Title". The typed text is the record.
+ */
+function restoreTypedHeadings(prompt: HTMLElement): void {
+  prompt.querySelectorAll('p').forEach((paragraph) => {
+    const first = paragraph.firstChild;
+    const marker = first?.nodeType === 3 ? first.textContent?.match(/^(#{1,6}) +/) : null;
+    if (!first || !marker) {
+      return;
+    }
+    first.textContent = first.textContent!.slice(marker[0].length);
+    const heading = paragraph.ownerDocument.createElement(`h${marker[1].length}`);
+    if (paragraph.hasAttribute('data-export-line-breaks')) {
+      heading.setAttribute('data-export-line-breaks', '');
+    }
+    heading.append(...Array.from(paragraph.childNodes));
+    paragraph.replaceWith(heading);
+  });
+}
 
 /**
  * Grok platform parser
@@ -30,6 +75,8 @@ import { readGrokSources } from './grok-sources';
 export class GrokParser extends BaseParser {
   private readonly collected = new Map<string, HTMLElement>();
   private readonly sources = new Map<string, string>();
+  /** Names of the files each message's cards stand for */
+  private readonly files = new Map<string, string[]>();
   private order: string[] = [];
   constructor() {
     super('grok');
@@ -85,6 +132,7 @@ export class GrokParser extends BaseParser {
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     this.collected.clear();
     this.sources.clear();
+    this.files.clear();
     this.order = [];
     await super.loadAllMessages({
       ...options,
@@ -94,6 +142,26 @@ export class GrokParser extends BaseParser {
         await options.onStep?.();
       },
     });
+  }
+
+  /**
+   * Read the conversation, then the files its answers wrote to the project
+   *
+   * A file that cannot be read keeps its `[Artifact: name]` marker and adds a
+   * warning: the messages are complete without it.
+   */
+  override async readConversation(): Promise<Conversation> {
+    const conversation = await super.readConversation();
+    const artifacts: ArtifactData[] = [];
+    const names = new Set(this.order.flatMap((key) => this.files.get(key) ?? []));
+    for (const name of names) {
+      try {
+        artifacts.push(await readGrokFile(name));
+      } catch (error) {
+        conversation.warnings.push(`Grok: could not read the file "${name}": ${(error as Error).message}`);
+      }
+    }
+    return { ...conversation, artifacts };
   }
 
   override getMessageNodes(): HTMLElement[] {
@@ -110,7 +178,11 @@ export class GrokParser extends BaseParser {
       keys.push(key);
       if (!this.sources.has(key)) {
         try {
-          this.sources.set(key, await readGrokSources(node));
+          const sources = await readGrokSources(node);
+          if (sources.listed !== null && sources.collected !== sources.listed) {
+            this.loadingWarnings.push(`Grok: Collected ${sources.collected} of the ${sources.listed} sources listed for ${key}.`);
+          }
+          this.sources.set(key, sources.html);
         } catch (error) {
           this.loadingWarnings.push(`Grok: Could not collect the source list for ${key}: ${(error as Error).message}`);
           this.sources.set(key, '');
@@ -119,11 +191,37 @@ export class GrokParser extends BaseParser {
       // Keep the parent too: legacy Grok roles are marked by sibling buttons.
       const parent = node.parentElement!.cloneNode(true) as HTMLElement;
       const snapshot = parent.querySelector<HTMLElement>('.message-bubble')!;
+      markLineBreaks(node, snapshot);
       snapshot.querySelectorAll('.thinking-container, [role="button"][aria-label$=" sources"], [role="button"][aria-label$=" source"]').forEach(ui => ui.remove());
+      this.files.set(key, this.replaceFileCards(snapshot));
+      if (this.extractRole(node) === 'user') restoreTypedHeadings(snapshot);
       snapshot.insertAdjacentHTML('beforeend', this.sources.get(key)!);
       this.collected.set(key, snapshot);
     }
     this.order = mergeTurnOrder(this.order, keys);
+  }
+
+  /**
+   * Replace each file card with an `[Artifact: name]` marker
+   *
+   * The card's icon is a same-origin image that was inlined as 26 KB of
+   * base64, and its size and download labels read as part of the answer. The
+   * file itself is exported as an `_artifact` line (see readConversation).
+   *
+   * @returns The names of the files, in page order
+   */
+  private replaceFileCards(snapshot: HTMLElement): string[] {
+    const names: string[] = [];
+    snapshot.querySelectorAll('[role="button"][aria-label]').forEach((card) => {
+      const name = fileCardName(card);
+      if (!name) return;
+      const marker = snapshot.ownerDocument.createElement('span');
+      marker.setAttribute('data-export-placeholder', '');
+      marker.textContent = `[Artifact: ${name}]`;
+      card.replaceWith(marker);
+      names.push(name);
+    });
+    return names;
   }
 
   /**

@@ -377,7 +377,7 @@ describe('ClaudeParser', () => {
         },
       });
 
-      const { messages, artifact } = await parser.readConversation();
+      const { messages, artifacts: [artifact] } = await parser.readConversation();
 
       expect(messages[1].contentMarkdown).toBe('[Artifact: Plan]\n\nCreated.');
       expect(messages[3].contentMarkdown).toBe('[Artifact: Plan]\n\nUpdated.');
@@ -390,7 +390,7 @@ describe('ClaudeParser', () => {
         <div role="region" aria-label="Artifact panel: Research report"><div id="markdown-artifact"><div class="standard-markdown">
           <h1>Original research document</h1><p>Complete last paragraph.</p><a href="https://example.org/report">Evidence</a>
         </div></div></div>`;
-      const { artifact } = await parser.readConversation();
+      const { artifacts: [artifact] } = await parser.readConversation();
       expect(artifact?.title).toBe('Research report');
       expect(artifact?.content).toContain('# Original research document');
       expect(artifact?.content).toContain('Complete last paragraph.');
@@ -418,7 +418,7 @@ describe('ClaudeParser', () => {
         <div role="region" aria-label="Artifact panel: Other report"><div id="markdown-artifact"><div class="standard-markdown">
           <a href="https://example.org/unrelated">Unrelated</a>
         </div></div></div>`;
-      const { artifact, warnings } = await parser.readConversation();
+      const { artifacts: [artifact], warnings } = await parser.readConversation();
       expect(artifact?.version).toBe('v1');
       expect(artifact?.content.startsWith(originalBody + '\n\n')).toBe(true);
       expect(artifact?.content).toContain('## Research sources');
@@ -431,9 +431,237 @@ describe('ClaudeParser', () => {
     it('reports no artifact when the conversation made none', async () => {
       mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
 
-      const { artifact } = await parser.readConversation();
+      const { artifacts } = await parser.readConversation();
 
-      expect(artifact).toBeNull();
+      expect(artifacts).toEqual([]);
+    });
+
+    // Reduced from claude.ai/chat/fa31b6c6-55d0-4c68-a088-67c56e3e8d9c
+    // (2026-10-03). Claude asked which "BASE" to research and the user picked
+    // an option inside the same assistant turn; the export dropped the choice.
+    it('records a question Claude asked and the answer the user picked', async () => {
+      const question = '"BASE"를 어떤 대상으로 조사할까요?';
+      mockFetch({
+        [conversationPath]: {
+          status: 200,
+          body: conversation({
+            chat_messages: [
+              message({ uuid: 'h0', content: [text('Research BASE')] }),
+              message({
+                uuid: 'a1',
+                sender: 'assistant',
+                parent_message_uuid: 'h0',
+                content: [
+                  text('제 추천은 A입니다.'),
+                  {
+                    type: 'tool_use',
+                    id: 'toolu_ask',
+                    name: 'AskUserQuestion',
+                    input: {
+                      questions: [{
+                        question,
+                        header: '조사 대상',
+                        multiSelect: false,
+                        options: [
+                          { label: 'Base 네트워크 (Recommended)', description: 'Coinbase L2' },
+                          { label: 'AERO (Aerodrome)', description: 'Base 생태계 토큰' },
+                        ],
+                      }],
+                    },
+                  },
+                  {
+                    type: 'tool_result',
+                    tool_use_id: 'toolu_ask',
+                    name: 'AskUserQuestion',
+                    content: [{
+                      type: 'text',
+                      text: `Your questions have been answered: "${question}"="Base 네트워크 (Recommended)". You can now continue with these answers in mind.`,
+                    }],
+                  },
+                  text('Base 리포트를 저장했습니다.'),
+                ],
+              }),
+            ],
+          }),
+        },
+      });
+
+      const { messages } = await parser.readConversation();
+
+      expect(messages[1].contentMarkdown).toBe(
+        '제 추천은 A입니다.\n\n' +
+          `[Question: ${question}]\n` +
+          '- Base 네트워크 (Recommended): Coinbase L2\n' +
+          '- AERO (Aerodrome): Base 생태계 토큰\n' +
+          '[User answer: Base 네트워크 (Recommended)]\n\n' +
+          'Base 리포트를 저장했습니다.'
+      );
+    });
+
+    it('keeps the answer to each of several questions apart', async () => {
+      mockFetch({
+        [conversationPath]: {
+          status: 200,
+          body: conversation({
+            chat_messages: [
+              message({
+                uuid: 'a1',
+                sender: 'assistant',
+                content: [
+                  {
+                    type: 'tool_use',
+                    id: 'toolu_ask',
+                    name: 'AskUserQuestion',
+                    input: { questions: [{ question: 'Scope?', options: [] }, { question: 'Depth?', options: [] }] },
+                  },
+                  {
+                    type: 'tool_result',
+                    tool_use_id: 'toolu_ask',
+                    content: [{
+                      type: 'text',
+                      text: 'Your questions have been answered: "Scope?"="Base, "the chain"", "Depth?"="Deep". You can now continue with these answers in mind.',
+                    }],
+                  },
+                ],
+              }),
+            ],
+          }),
+        },
+      });
+
+      const { messages } = await parser.readConversation();
+
+      expect(messages[0].contentMarkdown).toBe(
+        '[Question: Scope?]\n[User answer: Base, "the chain"]\n\n[Question: Depth?]\n[User answer: Deep]'
+      );
+    });
+
+    it('keeps the tool result as written when the answers cannot be told apart', async () => {
+      mockFetch({
+        [conversationPath]: {
+          status: 200,
+          body: conversation({
+            chat_messages: [
+              message({
+                uuid: 'a1',
+                sender: 'assistant',
+                content: [
+                  { type: 'tool_use', id: 'toolu_ask', name: 'AskUserQuestion', input: { questions: [{ question: 'Scope?' }] } },
+                  { type: 'tool_result', tool_use_id: 'toolu_ask', is_error: true, content: [{ type: 'text', text: 'User declined to answer.' }] },
+                ],
+              }),
+            ],
+          }),
+        },
+      });
+
+      const { messages } = await parser.readConversation();
+
+      expect(messages[0].contentMarkdown).toBe('[Question: Scope?]\n[User answer: User declined to answer.]');
+    });
+
+    // Same conversation: the report was written to the project with the
+    // Projects tool. The page shows its card after the answer, and the file's
+    // text lives only in the project, not in the conversation API.
+    it('exports a project file the answer presented, from the project', async () => {
+      const report = '# BASE - Base\n\n**기준일은 2026-10-03이다.**\n';
+      mockFetch({
+        [conversationPath]: {
+          status: 200,
+          body: conversation({
+            project_uuid: PROJECT,
+            chat_messages: [
+              message({
+                uuid: 'a1',
+                sender: 'assistant',
+                content: [
+                  {
+                    type: 'tool_use',
+                    id: 'toolu_scratch',
+                    name: 'Projects',
+                    input: { method: 'project_write', path: 'claude/scratch.md', present_to_user: false },
+                  },
+                  {
+                    type: 'tool_result',
+                    tool_use_id: 'toolu_scratch',
+                    name: 'Projects',
+                    content: [{ type: 'text', text: JSON.stringify({ method: 'project_write', path: 'claude/scratch.md', doc_uuid: 'doc-scratch' }) }],
+                  },
+                  {
+                    type: 'tool_use',
+                    id: 'toolu_write',
+                    name: 'Projects',
+                    input: {
+                      local_path: '/home/claude/BASE (Base) 조건부 평가 리포트.md',
+                      method: 'project_write',
+                      path: 'claude/BASE (Base) 조건부 평가 리포트.md',
+                      present_to_user: true,
+                    },
+                  },
+                  {
+                    type: 'tool_result',
+                    tool_use_id: 'toolu_write',
+                    name: 'Projects',
+                    is_error: false,
+                    content: [{
+                      type: 'text',
+                      text: JSON.stringify({
+                        method: 'project_write',
+                        path: 'claude/BASE (Base) 조건부 평가 리포트.md',
+                        doc_uuid: 'doc-1',
+                        replaced: false,
+                        present_to_user: true,
+                      }),
+                    }],
+                  },
+                  text('리포트를 저장했습니다.'),
+                ],
+              }),
+            ],
+          }),
+        },
+        [`/api/organizations/${ORG}/projects/${PROJECT}/docs/doc-1`]: {
+          status: 200,
+          body: { uuid: 'doc-1', file_name: 'claude/BASE (Base) 조건부 평가 리포트.md', content: report },
+        },
+      });
+
+      const { messages, artifacts, warnings } = await parser.readConversation();
+
+      expect(messages[0].contentMarkdown).toBe(
+        '리포트를 저장했습니다.\n\n[Artifact: claude/BASE (Base) 조건부 평가 리포트.md]'
+      );
+      expect(artifacts).toEqual([
+        { title: 'claude/BASE (Base) 조건부 평가 리포트.md', version: 'file', content: report },
+      ]);
+      expect(warnings).toEqual([]);
+    });
+
+    it('warns and keeps the marker when a presented project file cannot be read', async () => {
+      mockFetch({
+        [conversationPath]: {
+          status: 200,
+          body: conversation({
+            project_uuid: PROJECT,
+            chat_messages: [
+              message({
+                uuid: 'a1',
+                sender: 'assistant',
+                content: [
+                  { type: 'tool_use', id: 'toolu_write', name: 'Projects', input: { method: 'project_write', path: 'report.md', present_to_user: true } },
+                  { type: 'tool_result', tool_use_id: 'toolu_write', content: [{ type: 'text', text: '{"method":"project_write","path":"report.md","doc_uuid":"gone"}' }] },
+                ],
+              }),
+            ],
+          }),
+        },
+      });
+
+      const { messages, artifacts, warnings } = await parser.readConversation();
+
+      expect(messages[0].contentMarkdown).toBe('[Artifact: report.md]');
+      expect(artifacts).toEqual([]);
+      expect(warnings).toEqual(['Claude: could not read the project file "report.md" (HTTP 404).']);
     });
 
     it('does not duplicate a rendered source already present in the API document', async () => {
@@ -449,7 +677,7 @@ describe('ClaudeParser', () => {
         <div role="region" aria-label="Artifact panel: Report"><div id="markdown-artifact"><div class="standard-markdown">
           <a href="https://example.org/evidence">Evidence</a>
         </div></div></div>`;
-      const { artifact } = await parser.readConversation();
+      const { artifacts: [artifact] } = await parser.readConversation();
       expect(artifact?.content).toBe(originalBody);
     });
 
@@ -462,7 +690,7 @@ describe('ClaudeParser', () => {
         }] })],
       }) } });
       vi.spyOn(parser as any, 'readRenderedDocument').mockRejectedValue(new Error('Document panel unavailable'));
-      const { artifact, warnings } = await parser.readConversation();
+      const { artifacts: [artifact], warnings } = await parser.readConversation();
       expect(artifact?.content).toBe('# Complete API body');
       expect(warnings).toEqual(["Claude: could not verify the artifact's rendered source links: Document panel unavailable"]);
     });

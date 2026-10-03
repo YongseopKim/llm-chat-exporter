@@ -24,6 +24,12 @@
  * - assistant `content` interleaves thinking, tool_use, tool_result and text
  *   blocks; only text is what the page shows as the answer
  * - text blocks carry `citations` whose offsets index into that block's text
+ *
+ * Two tool calls are part of what the page shows (measured 2026-10-03):
+ * - AskUserQuestion: the question card and the option the user picked,
+ *   which is a turn of the conversation inside the assistant message
+ * - Projects `project_write` with `present_to_user`: a file card after the
+ *   answer; the file's text is in the project, not in the conversation
  */
 
 import type {
@@ -55,6 +61,10 @@ const ARTIFACT_TOOL = 'artifacts';
 /** Visualizations render in a sandboxed iframe titled "visualize: <title>" */
 const VISUALIZATION_TOOL_PREFIX = 'visualize';
 
+const QUESTION_TOOL = 'AskUserQuestion';
+
+const PROJECT_TOOL = 'Projects';
+
 interface ApiSource {
   url?: string;
   title?: string;
@@ -71,6 +81,23 @@ interface ApiBlock {
   citations?: ApiCitation[];
   name?: string;
   input?: Record<string, unknown>;
+  /** tool_use: its id; tool_result: the id of the call it answers */
+  id?: string;
+  tool_use_id?: string;
+  /** tool_result output */
+  content?: Array<{ type: string; text?: string }>;
+  is_error?: boolean;
+}
+
+interface ApiQuestion {
+  question?: string;
+  options?: Array<{ label?: string; description?: string }>;
+}
+
+/** A file written to the project and shown as a card */
+interface ProjectFile {
+  path: string;
+  docId: string;
 }
 
 interface ApiFile {
@@ -222,6 +249,71 @@ class ArtifactHistory {
   }
 }
 
+function resultText(result: ApiBlock | undefined): string {
+  return (result?.content ?? []).map((part) => part.text ?? '').join('\n').trim();
+}
+
+/**
+ * The option picked for each question, read from AskUserQuestion's result
+ *
+ * The result reads: Your questions have been answered: "<question>"="<answer>",
+ * "<question>"="<answer>". You can now continue ... An answer can hold quotes
+ * and commas, so each one runs up to where the next question starts.
+ */
+function pickedAnswers(text: string, questions: string[]): Array<string | undefined> {
+  const starts = questions.map((question) => text.indexOf(`"${question}"="`));
+  return questions.map((question, index) => {
+    if (starts[index] < 0) {
+      return undefined;
+    }
+    const from = starts[index] + question.length + 4;
+    const next = starts.slice(index + 1).find((start) => start > from);
+    const answer =
+      next === undefined
+        ? text.slice(from, text.lastIndexOf('"'))
+        : text.slice(from, next).replace(/",\s*$/, '');
+    return answer || undefined;
+  });
+}
+
+/**
+ * A question Claude asked and the answer the user picked
+ *
+ * When the answer cannot be picked out, the tool's result is kept as written
+ * rather than guessed at.
+ */
+function questionMarkdown(input: Record<string, unknown> | undefined, result: ApiBlock | undefined): string {
+  const questions = (Array.isArray(input?.questions) ? input.questions : []) as ApiQuestion[];
+  const text = resultText(result);
+  const answers = pickedAnswers(text, questions.map((question) => question.question ?? ''));
+
+  return questions
+    .map((question, index) =>
+      [
+        `[Question: ${question.question ?? ''}]`,
+        ...(question.options ?? []).map(
+          (option) => `- ${option.label ?? ''}${option.description ? `: ${option.description}` : ''}`
+        ),
+        `[User answer: ${answers[index] ?? (text || 'no answer')}]`,
+      ].join('\n')
+    )
+    .join('\n\n');
+}
+
+/** The project file a successful, presented `project_write` call wrote */
+function presentedProjectFile(call: ApiBlock, result: ApiBlock | undefined): ProjectFile | null {
+  if (call.input?.method !== 'project_write' || call.input?.present_to_user !== true || !result || result.is_error) {
+    return null;
+  }
+  try {
+    const written = JSON.parse(resultText(result)) as { path?: string; doc_uuid?: string };
+    const path = written.path || stringField(call.input, 'path');
+    return path && written.doc_uuid ? { path, docId: written.doc_uuid } : null;
+  } catch {
+    return null;
+  }
+}
+
 function userMarkdown(message: ApiMessage): string {
   const parts = (message.content ?? [])
     .filter((block) => block.type === 'text')
@@ -236,9 +328,19 @@ function userMarkdown(message: ApiMessage): string {
   return parts.filter((part) => part !== '').join('\n\n');
 }
 
-function assistantMarkdown(message: ApiMessage, artifacts: ArtifactHistory): string {
+function assistantMarkdown(
+  message: ApiMessage,
+  artifacts: ArtifactHistory,
+  projectFiles: ProjectFile[]
+): string {
   const sources = new SourceList();
   const parts: string[] = [];
+  const results = new Map(
+    (message.content ?? [])
+      .filter((block) => block.type === 'tool_result' && block.tool_use_id)
+      .map((block) => [block.tool_use_id as string, block])
+  );
+  const presented: ProjectFile[] = [];
 
   for (const block of message.content ?? []) {
     if (block.type === 'text') {
@@ -248,8 +350,16 @@ function assistantMarkdown(message: ApiMessage, artifacts: ArtifactHistory): str
     } else if (block.type === 'tool_use' && block.name?.startsWith(VISUALIZATION_TOOL_PREFIX)) {
       const title = stringField(block.input, 'title');
       parts.push(title ? `[Visualization omitted: ${title}]` : '[Visualization omitted]');
+    } else if (block.type === 'tool_use' && block.name === QUESTION_TOOL) {
+      parts.push(questionMarkdown(block.input, results.get(block.id ?? '')));
+    } else if (block.type === 'tool_use' && block.name === PROJECT_TOOL) {
+      const file = presentedProjectFile(block, results.get(block.id ?? ''));
+      if (file) presented.push(file);
     }
   }
+  // The page shows presented files as cards after the answer's text
+  parts.push(...presented.map((file) => `[Artifact: ${file.path}]`));
+  projectFiles.push(...presented);
   parts.push(sources.render());
 
   return parts.filter((part) => part !== '').join('\n\n');
@@ -275,10 +385,13 @@ export class ClaudeParser implements ChatParser {
 
     const { org, conversation } = await this.fetchConversation(conversationId);
     const artifacts = new ArtifactHistory();
+    const projectFiles: ProjectFile[] = [];
     const messages: ParsedMessage[] = currentBranch(conversation).map((message) => ({
       role: message.sender === 'human' ? 'user' : 'assistant',
       contentMarkdown:
-        message.sender === 'human' ? userMarkdown(message) : assistantMarkdown(message, artifacts),
+        message.sender === 'human'
+          ? userMarkdown(message)
+          : assistantMarkdown(message, artifacts, projectFiles),
       timestamp: message.created_at,
     }));
     const warnings = this.compareWithPage(messages.length);
@@ -303,9 +416,48 @@ export class ClaudeParser implements ChatParser {
       messages,
       title: conversation.name || undefined,
       project: await this.readProject(org, conversation.project_uuid),
-      artifact,
+      artifacts: [
+        ...(artifact ? [artifact] : []),
+        ...(await this.readProjectFiles(org, conversation.project_uuid, projectFiles, warnings)),
+      ],
       warnings,
     };
+  }
+
+  /**
+   * Read each presented project file as it is stored now
+   *
+   * A later write to the same path replaces the earlier one. A file that
+   * cannot be read keeps its `[Artifact: path]` marker and adds a warning.
+   */
+  private async readProjectFiles(
+    org: string,
+    projectId: string | null | undefined,
+    files: ProjectFile[],
+    warnings: string[]
+  ): Promise<ArtifactData[]> {
+    const latest = new Map(files.map((file) => [file.path, file.docId]));
+    const read: ArtifactData[] = [];
+
+    for (const [path, docId] of latest) {
+      let status = 'no project';
+      try {
+        if (projectId) {
+          const response = await apiGet(`/api/organizations/${org}/projects/${projectId}/docs/${docId}`);
+          status = `HTTP ${response.status}`;
+          const doc = response.ok ? ((await response.json()) as { content?: unknown }) : null;
+          if (typeof doc?.content === 'string') {
+            read.push({ title: path, version: 'file', content: doc.content });
+            continue;
+          }
+        }
+      } catch (error) {
+        status = error instanceof Error ? error.message : String(error);
+      }
+      warnings.push(`Claude: could not read the project file "${path}" (${status}).`);
+    }
+
+    return read;
   }
 
   /** Read missing document content or sources; keep API message and code text. */

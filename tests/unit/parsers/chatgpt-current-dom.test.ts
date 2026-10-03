@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ChatGPTParser } from '../../../src/content/parsers/chatgpt';
 import { createDOMFromHTML } from './shared/fixtures';
+import { buildJsonl } from '../../../src/content/serializer';
 
 // Reduced from the observed chatgpt.com/c/6ab8f152-73c4-83e9-9ed1-9e99736dc186 DOM.
 // Its old data-turn, data-message-author-role, conversation-turn, and .markdown
@@ -56,9 +57,70 @@ describe('ChatGPTParser - current ChatGPT DOM', () => {
       'user', 'assistant', 'user', 'assistant',
     ]);
     expect(conversation.messages.map((m) => m.contentHtml.trim())).toEqual([
-      'User 0', '<p>Assistant 0</p><pre><code>code 0</code></pre>',
-      'User 1', '<p>Assistant 1</p><pre><code>code 1</code></pre>',
+      '<div data-export-verbatim="">User 0</div>', '<p>Assistant 0</p><pre><code>code 0</code></pre>',
+      '<div data-export-verbatim="">User 1</div>', '<p>Assistant 1</p><pre><code>code 1</code></pre>',
     ]);
+    expect(conversation.warnings).toEqual([]);
+  });
+
+  // Reduced from chatgpt.com/g/g-p-6abfe4fae.../c/6ac0b518-62d0-83ec-8eb6-12d1a217baed
+  // (2026-10-03). ChatGPT shows a typed prompt unrendered, with line breaks
+  // kept by white-space: pre-wrap, and splits out only its fenced code block.
+  // The prompt's text held 670 line breaks; the export kept 87, and the
+  // 26,801 characters after the code block became a single escaped line.
+  it('exports a typed prompt exactly as written, with its line breaks and Markdown characters', async () => {
+    const before = [
+      '맨 아래에 위치한 글 내용을 봐줘. ',
+      '내가 원하는 건 "BASE" 이야.',
+      '',
+      '---',
+      '',
+      '## 원하는 프레임워크 최종 템플릿',
+      '',
+      '### 조건부 평가(==Valuation)',
+      '',
+      '---',
+      '',
+      '',
+    ].join('\n');
+    const code = "# Uptober 워치리스트\n\n| 티커 | 가격 |\n|---|---:|\n\n```sh\npython3 - <<'PY'\nprint(1)\nPY";
+    const after = [
+      '',
+      '',
+      '모델의 연환산액은 [저장본](../pages/defillama.md)과 *다르다*.',
+      '',
+      '| 티커 | 확인할 원문 |',
+      '|---|---|',
+      '| NMR | 매출_원문 \\| 공시 |',
+      '',
+      '## 개정에서 바뀐 판단',
+      '',
+      '1. 첫째',
+      '   - 들여쓴 항목',
+      '',
+    ].join('\n');
+    const escape = (value: string) =>
+      value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const doc = createDOMFromHTML(
+      `<html><body><div data-turn-key="typed"><div data-content-search-turn-key="t">
+        <div data-content-search-unit-key="t:0:user"><div data-user-message-bubble="true"><div class="whitespace-pre-wrap">${escape(before)}<div data-markdown-copy="code-block" data-theme="dark"><div data-markdown-copy="exclude"><div></div><div><div><span data-state="closed"><button type="button" aria-label="복사" inert="" aria-hidden="true"><svg></svg></button></span></div></div></div><div tabindex="0" dir="ltr" inert="" aria-hidden="true"><code><span>${escape(code)}</span></code></div></div>${escape(after)}\`\`\`</div></div></div>
+        <div data-content-search-unit-key="t:2:assistant"><div data-markdown-text-style="assistant-message"><p>Answer</p></div></div>
+      </div></div></body></html>`,
+      'https://chatgpt.com/c/typed-prompt'
+    );
+    global.document = doc as any;
+    global.window = doc.defaultView as any;
+    global.window.scrollTo = () => {};
+
+    const conversation = await new ChatGPTParser().readConversation();
+    const jsonl = await buildJsonl(conversation.messages, {
+      platform: 'chatgpt',
+      url: 'https://chatgpt.com/c/typed-prompt',
+      exported_at: '2026-10-03T10:39:10.841Z',
+    });
+    const prompt = JSON.parse(jsonl.split('\n')[1]).content;
+
+    expect(prompt).toBe(before + '````\n' + code + '\n````' + after + '```');
     expect(conversation.warnings).toEqual([]);
   });
 
@@ -93,8 +155,8 @@ describe('ChatGPTParser - current ChatGPT DOM', () => {
     await parser.loadAllMessages({ stepDelay: 0, quietPeriod: 0, stableSteps: 1 });
 
     expect(parser.getMessageNodes().map((node) => parser.parseNode(node).contentHtml.trim())).toEqual([
-      'User 0', '<p>Assistant 0</p><pre><code>code 0</code></pre>',
-      'User 1', '<p>Assistant 1</p><pre><code>code 1</code></pre>',
+      '<div data-export-verbatim="">User 0</div>', '<p>Assistant 0</p><pre><code>code 0</code></pre>',
+      '<div data-export-verbatim="">User 1</div>', '<p>Assistant 1</p><pre><code>code 1</code></pre>',
     ]);
     expect(top).toBe(500);
   });
