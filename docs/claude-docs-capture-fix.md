@@ -102,3 +102,37 @@ downloads from the user's installed extension.
 
 Package and extension patch versions are `1.2.3` and `0.3.3`. A fresh live
 export after reloading the installed extension remains to be checked.
+
+## Generated Markdown file reports
+
+The downloaded `claude_Maple Finance SYRUP analysis.jsonl` contained the
+conversation summary but no `_artifact` record. The original SYRUP page
+exposed `file-card-open` inside `data-sheet-kind="markdown"`, with the full
+report in `#wiggle-file-content .standard-markdown`. Neither the Claude Docs
+frame selector nor the original artifact selector matched this file card.
+
+The parser now reads these generated Markdown files through their separate
+file viewer. It matches the viewer's `h2[title]` to the card title, opens
+Preview when needed, and restores the prior file or Code mode. Unreadable
+Markdown files reject the export. Other generated file formats are excluded
+from this Markdown-document acquisition path.
+
+The failing report regression passed after the fix. The full `npm test`
+run passed 26 files and 598 tests, including a Chrome extension test that
+opens a closed file viewer, preserves the complete report, table and link,
+and closes it again. Unit tests also cover an unrelated open viewer, Code
+mode restoration, non-Markdown files, and failure cleanup. Build, TypeScript
+and diff checks passed; selector validation retained its three existing
+warnings. Package and extension versions are `1.2.4` and `0.3.4`.
+
+```sh
+npm test > /private/tmp/claude-file-report-suite.log 2>&1
+node /private/tmp/verify-claude-syrup.cjs
+```
+
+The verifier enumerated all 143 original report content candidates and
+checked the order of 142 leaf blocks, all 3 tables and 23 unique source URLs.
+No body or source URL omissions were found. The recovered JSONL retains
+the downloaded messages and adds the report obtained by the production
+parser from captured original viewer HTML. Its metadata warning identifies
+that recovery; it is not a fresh full-conversation extension download.

@@ -155,6 +155,76 @@ describe('ClaudeParser', () => {
   });
 
   describe('readConversation', () => {
+    it('exports a generated Markdown file report and preserves its tables and sources', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+      global.document.body.innerHTML = `<div data-sheet-kind="markdown"><button data-testid="file-card-open" aria-label="View File report"></button></div>
+        <section><div role="radiogroup" aria-label="File view mode"><span role="radio" aria-label="Preview" aria-checked="true"></span></div>
+        <h2 title="File report">File report MD</h2><button aria-label="Close"></button>
+        <div id="wiggle-file-content"><div class="standard-markdown"><h1>Full document title</h1><p>Complete report ending.</p>
+        <table><tr><th>Source</th></tr><tr><td><a href="https://example.org/file-report">Original evidence</a></td></tr></table></div></div></section>`;
+      const { artifacts: [artifact], warnings } = await parser.readConversation();
+      expect(artifact?.title).toBe('File report');
+      expect(artifact?.content).toContain('# Full document title');
+      expect(artifact?.content).toContain('Complete report ending.');
+      expect(artifact?.content).toContain('| [Original evidence](https://example.org/file-report) |');
+      expect(warnings).toContain('Claude: the document source was not available in the conversation API; exported the rendered Markdown document.');
+    });
+
+    it('opens the requested file instead of exporting an unrelated open viewer, then restores it', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+      global.document.body.innerHTML = `<div data-sheet-kind="markdown"><button data-testid="file-card-open" aria-label="View Earlier"></button><button data-testid="file-card-open" aria-label="View Latest"></button></div>
+        <section><div role="radiogroup" aria-label="File view mode"></div><h2 title="Earlier"></h2><button aria-label="Close"></button>
+        <div id="wiggle-file-content"><div class="standard-markdown"><p>Unrelated body.</p></div></div></section>`;
+      const header = global.document.querySelector('h2')!;
+      const body = global.document.querySelector('.standard-markdown')!;
+      global.document.querySelector('[aria-label="View Latest"]')!.addEventListener('click', () => {
+        header.setAttribute('title', 'Latest'); body.innerHTML = '<p>Latest complete body.</p>';
+      });
+      const restore = vi.fn(() => { header.setAttribute('title', 'Earlier'); });
+      global.document.querySelector('[aria-label="View Earlier"]')!.addEventListener('click', restore);
+      const { artifacts: [artifact] } = await parser.readConversation();
+      expect(artifact?.content).toBe('Latest complete body.');
+      expect(restore).toHaveBeenCalledOnce();
+    });
+
+    it('restores Code mode after reading the file preview', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+      global.document.body.innerHTML = `<div data-sheet-kind="markdown"><button data-testid="file-card-open" aria-label="View Report"></button></div>
+        <section><div role="radiogroup" aria-label="File view mode"><span role="radio" aria-label="Code" aria-checked="true"></span><span role="radio" aria-label="Preview" aria-checked="false"></span></div>
+        <h2 title="Report"></h2><button aria-label="Close"></button><div id="wiggle-file-content"><pre>Code view</pre></div></section>`;
+      const content = global.document.querySelector('#wiggle-file-content')!;
+      global.document.querySelector('[aria-label="Preview"]')!.addEventListener('click', () => {
+        content.innerHTML = '<div class="standard-markdown"><p>Original preview body.</p></div>';
+      });
+      const restore = vi.fn();
+      global.document.querySelector('[aria-label="Code"]')!.addEventListener('click', restore);
+      expect((await parser.readConversation()).artifacts[0]?.content).toBe('Original preview body.');
+      expect(restore).toHaveBeenCalledOnce();
+    });
+
+    it('fails when the generated file never provides readable content and closes its panel', async () => {
+      vi.useFakeTimers();
+      try {
+        mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+        global.document.body.innerHTML = '<div data-sheet-kind="markdown"><button data-testid="file-card-open" aria-label="View Report"></button></div>';
+        const close = vi.fn();
+        global.document.querySelector('button')!.addEventListener('click', () => {
+          global.document.body.insertAdjacentHTML('beforeend', '<section><div role="radiogroup" aria-label="File view mode"></div><h2 title="Report"></h2><button aria-label="Close"></button><div id="wiggle-file-content"></div></section>');
+          global.document.querySelector('[aria-label="Close"]')!.addEventListener('click', close);
+        });
+        const pending = expect(parser.readConversation()).rejects.toThrow('could not read the Markdown file');
+        await vi.advanceTimersByTimeAsync(10100);
+        await pending;
+        expect(close).toHaveBeenCalledOnce();
+      } finally { vi.useRealTimers(); }
+    });
+
+    it('ignores non-Markdown generated files', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+      global.document.body.innerHTML = '<div data-sheet-kind="pdf"><button data-testid="file-card-open" aria-label="View Other file"></button></div>';
+      expect((await parser.readConversation()).artifacts).toEqual([]);
+    });
+
     it('exports a Claude Docs frame card instead of silently omitting its document', async () => {
       mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
       global.document.body.innerHTML = `<button data-testid="frame-card-open" aria-label="View Research report"></button>

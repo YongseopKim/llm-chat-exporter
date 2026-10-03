@@ -462,20 +462,40 @@ export class ClaudeParser implements ChatParser {
 
   /** Read missing document content or sources; keep API message and code text. */
   private async readRenderedDocument(existing?: ArtifactData): Promise<ArtifactData | null> {
-    const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="artifact-card-open"], [data-testid="frame-card-open"]'));
+    const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="artifact-card-open"], [data-testid="frame-card-open"], [data-sheet-kind="markdown"] [data-testid="file-card-open"]'));
     const cardTitle = (card: Element) => card.getAttribute('aria-label')?.replace(/^View /, '').trim();
     const card = existing ? cards.find(candidate => cardTitle(candidate) === existing.title) : cards[cards.length - 1];
     if (!card) return null;
     const title = cardTitle(card);
     if (!title) throw new Error('Claude: the document card has no title.');
-    const initialPanel = document.querySelector('[role="region"][aria-label^="Artifact panel:"]');
-    const initialLabel = initialPanel?.getAttribute('aria-label');
-    const matchingPanel = () => Array.from(document.querySelectorAll('[role="region"]'))
-      .find(panel => panel.getAttribute('aria-label') === `Artifact panel: ${title}`) || null;
+    const isFile = card.getAttribute('data-testid') === 'file-card-open';
+    // Generated Markdown files use a file viewer, separate from artifact panels.
+    const filePanel = (): Element | null => {
+      for (let panel = document.querySelector('#wiggle-file-content')?.parentElement; panel; panel = panel.parentElement) {
+        if (panel.querySelector('[role="radiogroup"][aria-label="File view mode"]')) return panel;
+      }
+      return null;
+    };
+    const panelLabel = (panel: Element | null) => panel?.getAttribute('aria-label')
+      || (panel?.querySelector('h2[title]') ? `Artifact panel: ${panel.querySelector('h2[title]')!.getAttribute('title')}` : null);
+    const initialPanel = document.querySelector('[role="region"][aria-label^="Artifact panel:"]') || filePanel();
+    const initialLabel = panelLabel(initialPanel);
+    const initialMode = initialPanel?.querySelector('[role="radio"][aria-checked="true"]')?.getAttribute('aria-label');
+    const matchingPanel = () => isFile
+      ? (panelLabel(filePanel()) === `Artifact panel: ${title}` ? filePanel() : null)
+      : Array.from(document.querySelectorAll('[role="region"]'))
+        .find(panel => panel.getAttribute('aria-label') === `Artifact panel: ${title}`) || null;
     try {
       if (!matchingPanel()) card.click();
       let body: Element;
-      if (card.getAttribute('data-testid') === 'frame-card-open') {
+      if (isFile) {
+        const panel = await waitForDom(matchingPanel, 10000);
+        panel.querySelector<HTMLElement>('[role="radio"][aria-label="Preview"]')?.click();
+        body = await waitForDom(() => {
+          const content = matchingPanel()?.querySelector('#wiggle-file-content .standard-markdown');
+          return content?.textContent?.trim() ? content : null;
+        }, 10000).catch(() => { throw new Error(`Claude: could not read the Markdown file "${title}".`); });
+      } else if (card.getAttribute('data-testid') === 'frame-card-open') {
         const frame = await waitForDom(() => matchingPanel()?.querySelector<HTMLIFrameElement>('iframe') || null, 10000);
         const url = new URL(frame.src, document.location.origin);
         const artifactId = url.origin === document.location.origin ? url.pathname.match(/^\/code\/artifact\/([0-9a-f-]+)$/i)?.[1] : undefined;
@@ -506,8 +526,11 @@ export class ClaudeParser implements ChatParser {
         const close = matchingPanel()?.querySelector<HTMLButtonElement>('button[aria-label="Close"]')
           || document.querySelector<HTMLButtonElement>('button[aria-label="Close artifact"]');
         close?.click();
-      } else if (matchingPanel()?.getAttribute('aria-label') !== initialLabel) {
+      } else if (panelLabel(matchingPanel()) !== initialLabel) {
         cards.find(candidate => `Artifact panel: ${candidate.getAttribute('aria-label')?.replace(/^View /, '')}` === initialLabel)?.click();
+      }
+      if (isFile && initialMode === 'Code' && panelLabel(filePanel()) === initialLabel) {
+        filePanel()?.querySelector<HTMLElement>('[role="radio"][aria-label="Code"]')?.click();
       }
     }
   }

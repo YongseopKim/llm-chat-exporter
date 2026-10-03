@@ -645,6 +645,39 @@ describe('E2E: Export Flow', () => {
     }
   }, 30000);
 
+  it('opens a generated Markdown file and exports its full report through the extension', async () => {
+    await page.setRequestInterception(true);
+    const filePanel = `<section id="file-panel"><div role="radiogroup" aria-label="File view mode"><span role="radio" aria-label="Preview" aria-checked="true"></span></div>
+      <h2 title="Generated report">Generated report MD</h2><button aria-label="Close" onclick="this.closest('section').remove()"></button>
+      <div id="wiggle-file-content"><div class="standard-markdown"><h1>Full original report title</h1><p>Complete file report ending.</p>
+      <table><tr><th>Source</th></tr><tr><td><a href="https://example.org/file-report">Original evidence</a></td></tr></table></div></div></section>`;
+    const intercept = (request: HTTPRequest) => {
+      const url = new URL(request.url());
+      if (request.isNavigationRequest() && request.url() === CLAUDE_URL) {
+        const card = `<div data-sheet-kind="markdown"><button data-testid="file-card-open" aria-label="View Generated report" id="generated-file"></button></div>`;
+        const script = `<script>document.getElementById('generated-file').onclick=()=>document.body.insertAdjacentHTML('beforeend',${JSON.stringify(filePanel)});</script>`;
+        void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: getClaudeHtml().replace('</body>', card + script + '</body>') });
+      } else if (url.origin === 'https://claude.ai' && url.pathname === CLAUDE_API_PATH) {
+        void request.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(getClaudeConversation()) });
+      } else { void request.continue(); }
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(CLAUDE_URL, { waitUntil: 'load' });
+      const response = await exportCurrentPage(browser, CLAUDE_URL);
+      expect(response.success, response.error).toBe(true);
+      const artifact = response.data!.split('\n').map(line => JSON.parse(line)).find(record => record._artifact);
+      expect(artifact?.title).toBe('Generated report');
+      expect(artifact?.content).toContain('# Full original report title');
+      expect(artifact?.content).toContain('Complete file report ending.');
+      expect(artifact?.content).toContain('| [Original evidence](https://example.org/file-report) |');
+      expect(await page.$('#file-panel')).toBeNull();
+    } finally {
+      page.off('request', intercept);
+      await page.setRequestInterception(false);
+    }
+  }, 30000);
+
   // The command/download layer is covered by background utility tests; the
   // regression above executes the built content script through Chrome's real
   // extension service worker and validates the returned JSONL end to end.
