@@ -202,6 +202,35 @@ describe('ClaudeParser', () => {
       expect(restore).toHaveBeenCalledOnce();
     });
 
+    it('opens Preview when the file panel header mounts before its content container', async () => {
+      vi.useFakeTimers();
+      try {
+        mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+        global.document.body.innerHTML = `<div data-sheet-kind="markdown"><button data-testid="file-card-open" aria-label="View Report"></button></div>
+          <section><div data-pane-header><div><span><div role="radiogroup" aria-label="File view mode"><span role="radio" aria-label="Code" aria-checked="true"></span><span role="radio" aria-label="Preview" aria-checked="false"></span></div></span>
+          <h2 title="Report"></h2></div><button aria-label="Close"></button></div></section>`;
+        const preview = vi.fn(() => {
+          global.document.querySelector('section')!.insertAdjacentHTML('beforeend', '<div id="wiggle-file-content"><div class="standard-markdown"><p>Complete report.</p></div></div>');
+        });
+        global.document.querySelector('[aria-label="Preview"]')!.addEventListener('click', preview);
+        const pending = parser.readConversation().then(value => ({ value }), error => ({ error }));
+        await vi.advanceTimersByTimeAsync(10100);
+        expect(await pending).toMatchObject({ value: { artifacts: [{ title: 'Report', content: 'Complete report.' }] } });
+        expect(preview).toHaveBeenCalledOnce();
+      } finally { vi.useRealTimers(); }
+    });
+
+    it('identifies the requested Markdown file when its panel never opens', async () => {
+      vi.useFakeTimers();
+      try {
+        mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
+        global.document.body.innerHTML = '<div data-sheet-kind="markdown"><button data-testid="file-card-open" aria-label="View Report"></button></div>';
+        const pending = parser.readConversation().then(value => ({ value }), error => ({ error }));
+        await vi.advanceTimersByTimeAsync(10100);
+        expect(await pending).toMatchObject({ error: new Error('Claude: could not open the Markdown file panel "Report". Open its file card and export again.') });
+      } finally { vi.useRealTimers(); }
+    });
+
     it('fails when the generated file never provides readable content and closes its panel', async () => {
       vi.useFakeTimers();
       try {

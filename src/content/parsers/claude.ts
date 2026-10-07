@@ -471,8 +471,13 @@ export class ClaudeParser implements ChatParser {
     const isFile = card.getAttribute('data-testid') === 'file-card-open';
     // Generated Markdown files use a file viewer, separate from artifact panels.
     const filePanel = (): Element | null => {
-      for (let panel = document.querySelector('#wiggle-file-content')?.parentElement; panel; panel = panel.parentElement) {
-        if (panel.querySelector('[role="radiogroup"][aria-label="File view mode"]')) return panel;
+      // The header and view controls can mount before the preview body. Find
+      // the viewer from its controls so Preview can create the content below.
+      const controls = document.querySelector('[role="radiogroup"][aria-label="File view mode"]');
+      const header = controls?.closest('[data-pane-header]');
+      if (header?.querySelector('h2[title]')) return header.parentElement;
+      for (let panel = controls?.parentElement; panel; panel = panel.parentElement) {
+        if (panel.querySelector('h2[title]')) return panel;
       }
       return null;
     };
@@ -489,7 +494,9 @@ export class ClaudeParser implements ChatParser {
       if (!matchingPanel()) card.click();
       let body: Element;
       if (isFile) {
-        const panel = await waitForDom(matchingPanel, 10000);
+        const panel = await waitForDom(matchingPanel, 10000).catch(() => {
+          throw new Error(`Claude: could not open the Markdown file panel "${title}". Open its file card and export again.`);
+        });
         panel.querySelector<HTMLElement>('[role="radio"][aria-label="Preview"]')?.click();
         body = await waitForDom(() => {
           const content = matchingPanel()?.querySelector('#wiggle-file-content .standard-markdown');

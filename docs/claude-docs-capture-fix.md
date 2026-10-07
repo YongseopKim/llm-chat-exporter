@@ -136,3 +136,53 @@ No body or source URL omissions were found. The recovered JSONL retains
 the downloaded messages and adds the report obtained by the production
 parser from captured original viewer HTML. Its metadata warning identifies
 that recovery; it is not a fresh full-conversation extension download.
+
+## Markdown file panels before the preview body mounts
+
+The user reported "export 잘못됨" for
+`https://claude.ai/chat/39070fbf-a15b-4de2-8dfe-f819ac44a004`.
+The downloaded error record says
+`"error": "The source details did not finish loading."`.
+The subsequently saved rendered HTML contains a Markdown `file-card-open`,
+a `File view mode` control, a `data-pane-header` with `h2[title]`, and the
+complete report in `#wiggle-file-content .standard-markdown`.
+
+That saved open-preview state matches the old parser, so it does not establish
+what was mounted at the instant of the failed export. A regression using the
+captured header structure without its content container does reproduce the
+same error: the old parser needs the body container to find the panel, preventing
+it from pressing Preview to mount that body. This is a plausible failure path,
+not a confirmed diagnosis of the live failure.
+
+The parser now locates the file viewer from its view controls and pane header,
+checks the requested title, then opens Preview and waits for the body. If the
+panel never opens, the error identifies the requested Markdown file and the
+failed stage. Existing title matching, content failure and panel restoration
+behavior remain covered by the parser tests.
+
+Verification used the original saved HTML, not a reconstructed report. The
+private verifier removes Markdown formatting and link targets from the output
+for body comparison and ignores whitespace introduced by the HTML save. It
+compares every original heading, paragraph, list item and table cell, checks
+leaf-block order, and compares normalized source URLs separately. It found
+471 original candidates, 471 ordered leaf blocks, and 338 unique source URLs;
+none were missing or out of order. This verifies rendered text and URLs, not
+byte-for-byte fidelity to the separately downloaded Markdown. An artifact-only
+JSONL replay is in `/private/tmp/claude-payment-document-replay.jsonl`; it does
+not contain the conversation messages and is not a live extension export.
+
+```sh
+./node_modules/.bin/vitest run tests/unit/parsers/claude.test.ts
+node /private/tmp/verify-claude-export-panel.cjs
+npm run build
+npm run validate:selectors
+./node_modules/.bin/tsc --noEmit --resolveJsonModule
+npm test > /private/tmp/claude-export-panel-final-suite.log 2>&1
+```
+
+Package and extension patch versions are `1.3.4` and `0.4.4`.
+The final `npm test` run passed 27 files and 615 tests. Build, TypeScript and
+diff checks passed; selector validation reported zero errors and three existing
+warnings. No linter is configured in `package.json`.
+A fresh live export after extension reload is still required to confirm the
+reported failure is resolved.
