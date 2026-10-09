@@ -1,7 +1,9 @@
 /** ChatGPT's component-rendered answers, observed on 2026-10-09. */
 export const DIL_SELECTOR = '[data-dil-message-id]';
 const STYLE_PROPERTIES = new Set([
-  'display', 'position', 'box-sizing', 'width', 'height', 'min-width', 'max-width',
+  'display', 'position', 'top', 'right', 'bottom', 'left', 'z-index',
+  'opacity', 'visibility', 'overflow', 'overflow-x', 'overflow-y', 'transform',
+  'aspect-ratio', 'object-fit', 'object-position', 'box-sizing', 'width', 'height', 'min-width', 'max-width',
   'min-height', 'max-height', 'flex', 'flex-direction', 'flex-wrap', 'flex-shrink',
   'align-items', 'align-self', 'justify-content', 'gap', 'row-gap', 'column-gap',
   'grid-template-columns', 'grid-template-rows', 'grid-column', 'grid-row',
@@ -63,10 +65,11 @@ export function captureDilHtml(source: HTMLElement): string {
     copy.removeAttribute('class');
     copy.removeAttribute('style');
     if (computed) {
-      for (let i = 0; i < computed.length; i++) {
-        const name = computed.item(i);
+      // Computed style enumeration exposes longhands, not border/radius
+      // shorthands. Read the allowlist directly so diagram outlines survive.
+      for (const name of STYLE_PROPERTIES) {
         const value = computed.getPropertyValue(name);
-        if (STYLE_PROPERTIES.has(name) && !/url\s*\(/i.test(value)) copy.style.setProperty(name, value);
+        if (value && !/url\s*\(/i.test(value)) copy.style.setProperty(name, value);
       }
     }
     // Explicit component layout also makes reduced DOM fixtures portable.

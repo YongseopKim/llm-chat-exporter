@@ -49,26 +49,27 @@ function page(sourceCount: number): string {
 
 /** Each result renders two links to the same page: its title and its snippet */
 function result(url: string, title: string): string {
-  return `<a href="${url}" target="_blank"><span>${title}</span><p>Snippet of ${title}</p></a><a href="${url}"><img src="https://www.google.com/s2/favicons?domain=x"></a>`;
+  return `<div class="group/search-result"><a href="${url}" target="_blank"><span>${title}</span><p>Snippet of ${title}</p></a><a href="${url}"><img src="https://www.google.com/s2/favicons?domain=x"></a></div>`;
 }
 
 /** The source drawer: one section open at a time, rendered on expansion */
-function installSourceDrawer(): void {
+function installSourceDrawer(lazyControls = false, duplicateResult = false): void {
   const sections = [
     { title: '명령 실행함', body: '<pre>cat /workspace/artifacts/AAVE-Aave-report.md</pre>' },
-    { title: '웹 검색함 Base L2 TVL 2', body: result('https://a.example/tvl', 'Base L2 TVL') + result('https://b.example/q2', 'Coinbase Q2') },
+    { title: '웹 검색함 Base L2 TVL 2', body: result('https://a.example/tvl', 'Base L2 TVL') + result('https://b.example/q2', 'Coinbase Q2') + (duplicateResult ? result('https://a.example/tvl', 'Base L2 TVL') : '') },
     { title: '웹 검색함 Coinbase revenue 1', body: result('https://b.example/q2', 'Coinbase Q2') },
     { title: '파일 작성함 /artifacts/BASE-Base-report.md', body: '<p>/artifacts/BASE-Base-report.md</p>' },
   ];
   document.querySelector('[aria-label$=" sources"]')!.addEventListener('click', () => {
     const aside = document.createElement('aside');
     aside.innerHTML = '<button aria-label="닫기"></button><div>출처</div><div>Thinking about your request</div>' +
-      sections.map((section, i) => `<h3><button aria-controls="step-${i}" aria-expanded="false">${section.title}</button></h3><div id="step-${i}"></div>`).join('');
+      sections.map((section, i) => `<h3><button ${lazyControls ? '' : `aria-controls="step-${i}"`} aria-expanded="false">${section.title}</button></h3><div id="step-${i}"></div>`).join('');
     aside.querySelectorAll<HTMLButtonElement>('h3 button').forEach((button, i) => {
       button.addEventListener('click', () => {
         aside.querySelectorAll('h3 button').forEach((other) => other.setAttribute('aria-expanded', 'false'));
         aside.querySelectorAll('[id^="step-"]').forEach((region) => { region.innerHTML = ''; });
         button.setAttribute('aria-expanded', 'true');
+        button.setAttribute('aria-controls', `step-${i}`);
         setTimeout(() => { aside.querySelector(`#step-${i}`)!.innerHTML = sections[i].body; }, 5);
       });
     });
@@ -125,6 +126,25 @@ describe('GrokParser - project answer with a file and search sources', () => {
     global.fetch = originalFetch;
     window.history.pushState({}, '', '/');
     vi.restoreAllMocks();
+  });
+
+  it('counts repeated result cards while exporting each URL only once', async () => {
+    document.body.innerHTML = page(4);
+    installSourceDrawer(true, true);
+    mockProjectFiles();
+    const conversation = await new GrokParser().readConversation();
+    expect(conversation.warnings).toEqual([]);
+    expect(htmlToMarkdown(conversation.messages[1].contentHtml!).match(/https:\/\/a\.example\/tvl/g)).toHaveLength(1);
+  });
+
+  it('collects collapsed sections whose aria-controls appears only after expansion', async () => {
+    document.body.innerHTML = page(3);
+    installSourceDrawer(true);
+    mockProjectFiles();
+    const conversation = await new GrokParser().readConversation();
+    expect(conversation.warnings).toEqual([]);
+    expect(htmlToMarkdown(conversation.messages[1].contentHtml!)).toContain('[Coinbase Q2](https://b.example/q2)');
+    expect(document.querySelector('aside')).toBeNull();
   });
 
   it('collects every source, skipping drawer sections that list no links', async () => {

@@ -18,8 +18,8 @@ export interface GrokSources {
  * section timed out on such a step and dropped all 45 sources. A section is
  * read once it has rendered, whatever it holds.
  *
- * The button's count is the sum of each search's distinct results (a page can
- * appear in two searches), so `collected` counts the same way for comparison.
+ * The button counts result cards, including repeated URLs within a search.
+ * Count each card once despite its title and domain anchors; export URLs once.
  */
 export async function readGrokSources(node: HTMLElement): Promise<GrokSources> {
   const trigger = node.querySelector<HTMLElement>('[role="button"][aria-label$=" sources"], [role="button"][aria-label$=" source"]');
@@ -30,20 +30,21 @@ export async function readGrokSources(node: HTMLElement): Promise<GrokSources> {
   try {
     trigger.click();
     drawer = await waitForDom(() => Array.from(doc.querySelectorAll<HTMLElement>('aside'))
-      .find(aside => aside.querySelector('button[aria-label="닫기"], button[aria-label="Close"]') && aside.querySelector('h3 button[aria-controls]')) || null);
+      .find(aside => aside.querySelector('button[aria-label="닫기"], button[aria-label="Close"]') && aside.querySelector('h3 button[aria-expanded]')) || null);
     const sources = new Map<string, string>();
     let collected = 0;
-    for (const button of Array.from(drawer.querySelectorAll<HTMLButtonElement>('h3 button[aria-controls]'))) {
-      const id = button.getAttribute('aria-controls')!;
+    for (const button of Array.from(drawer.querySelectorAll<HTMLButtonElement>('h3 button[aria-expanded]'))) {
       if (button.getAttribute('aria-expanded') !== 'true') button.click();
       const panel = await waitForDom(() => {
-        const region = doc.getElementById(id);
+        // Current Grok mounts the panel and aria-controls only on expansion.
+        const id = button.getAttribute('aria-controls');
+        const region = id ? doc.getElementById(id) : null;
         return region?.textContent?.trim() ? region : null;
       });
-      const found = new Set<string>();
+      const found = new Set<Element | string>();
       for (const link of Array.from(panel.querySelectorAll<HTMLAnchorElement>('a[href]'))) {
         if (!/^https?:/.test(link.href)) continue;
-        found.add(link.href);
+        found.add(link.closest('[class~="group/search-result"]') || link.href);
         const copy = link.cloneNode(true) as HTMLAnchorElement;
         copy.querySelectorAll('p, img, svg').forEach(child => child.remove());
         const title = copy.textContent?.trim();
