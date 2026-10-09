@@ -248,6 +248,17 @@ turndownService.addRule('keptLineBreak', {
   replacement: () => '\n'
 });
 
+turndownService.addRule('dilTask', {
+  filter: node => (node as HTMLElement).hasAttribute?.('data-export-dil-task'),
+  replacement: (content, node) => `\n- [${(node as HTMLElement).getAttribute('data-export-dil-task')}] ${content.trim().replace(/\n+/g, ' ')}\n`
+});
+
+// Rich ChatGPT checkbox controls carry state in aria-checked, not text.
+turndownService.addRule('dilCheckbox', {
+  filter: node => (node as HTMLElement).hasAttribute?.('data-export-dil-check'),
+  replacement: (_content, node) => node.textContent || ''
+});
+
 /**
  * Custom Rule 2: Table conversion
  * Converts HTML tables to Markdown table format

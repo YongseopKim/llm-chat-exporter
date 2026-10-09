@@ -461,3 +461,23 @@ When implementing features:
 3. **Preserve modularity**: Keep platform parsers completely isolated from each other
 4. **Minimize dependencies**: Vanilla JavaScript/TypeScript preferred
 5. **Stable selectors first**: Always prioritize data attributes and ARIA over class names
+
+### ChatGPT Component-Rendered Answers (2026-10-09)
+
+The conversation `6ac89493-99fc-83e8-8f45-e3cc2011c4ae` renders the entire answer
+inside `[data-dil-message-id]`, within the existing assistant Markdown wrapper.
+`data-d-default-strong` marks emphasis; checkbox buttons use `aria-checked` and a
+sibling label. Normalize these only in ChatGPT rich answers. Code language can
+live in the excluded toolbar rather than on `code`.
+
+Diagrams combine HTML boxes, rows, grids and SVG icons. Preserve SVG icons as
+inline data images in Markdown, and capture each complete rich answer as a
+standalone HTML `_artifact` with resolved layout styles before detaching the
+virtualized snapshot. Its `[Artifact: chatgpt-answer-<message-id>.html]` marker
+links the readable message to the layout capture. Never infer arrow direction
+from an unfamiliar SVG path. Remove copy controls and citation favicons.
+
+Rich citation badges are popover buttons rather than anchors; their popup
+source cards are also buttons with no URL attributes. Preserve visible links
+and badge labels and emit an explicit metadata warning about popup-only URLs.
+Do not report complete source capture from the visible badge text alone.

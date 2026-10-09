@@ -21,7 +21,8 @@ import { BaseParser } from './base-parser';
 import { mergeTurnOrder } from './message-order';
 import { readCitationSources, writeCitationSources, type CitationSource } from './chatgpt-citations';
 import type { ScrollOptions } from '../scroller';
-import type { ProjectInfo } from './interface';
+import type { ProjectInfo, Conversation, ArtifactData } from './interface';
+import { DIL_SELECTOR, normalizeDil, captureDilHtml } from './chatgpt-dil';
 
 /**
  * Matches ChatGPT project chat URLs. The trailing name slug is optional —
@@ -66,6 +67,19 @@ export class ChatGPTParser extends BaseParser {
   private readonly researchReports = new Map<string, string>();
   private readonly researchByTurn = new Map<string, string[]>();
 
+  private readonly renderedAnswers = new Map<string, ArtifactData>();
+
+  override async readConversation(): Promise<Conversation> {
+    const conversation = await super.readConversation();
+    if (this.renderedAnswers.size) {
+      conversation.artifacts = Array.from(this.renderedAnswers.values());
+      if (this.getMessageNodes().some(node => node.querySelector(`${DIL_SELECTOR} [data-d-component="popover-trigger"]`))) {
+        conversation.warnings.push('ChatGPT: Rich response source badges expose no URLs in the DOM. Badge labels and visible links are preserved; popup-only source URLs are not captured.');
+      }
+    }
+    return conversation;
+  }
+
   constructor() {
     super('chatgpt');
   }
@@ -96,6 +110,7 @@ export class ChatGPTParser extends BaseParser {
    */
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     this.collected.clear();
+    this.renderedAnswers.clear();
     this.order = [];
     this.citationSources.clear();
     this.citationFailures.clear();
@@ -229,6 +244,16 @@ export class ChatGPTParser extends BaseParser {
       }
       keys.push(key);
       const snapshot = node.cloneNode(true) as HTMLElement;
+      const richAnswers = Array.from(node.querySelectorAll<HTMLElement>(DIL_SELECTOR));
+      for (const [index, rich] of richAnswers.entries()) {
+        const id = rich.getAttribute('data-dil-message-id') || `${key}-${index}`;
+        const title = `chatgpt-answer-${id}.html`;
+        this.renderedAnswers.set(id, { title, version: 'rendered', content: captureDilHtml(rich) });
+        const marker = node.ownerDocument.createElement('p');
+        marker.setAttribute('data-export-placeholder', '');
+        marker.textContent = `[Artifact: ${title}]`;
+        snapshot.querySelectorAll(DIL_SELECTOR)[index]?.append(marker);
+      }
       const reports = this.researchByTurn.get(key);
       if (reports?.length) {
         const body = snapshot.querySelector(this.selectors.content.assistant);
@@ -348,7 +373,12 @@ export class ChatGPTParser extends BaseParser {
    * @private
    */
   private extractBodyHtml(node: HTMLElement, role: 'user' | 'assistant'): string {
-    const body = super.extractContent(node, role);
+    let contentNode = node;
+    if (role === 'assistant' && node.querySelector(DIL_SELECTOR)) {
+      contentNode = node.cloneNode(true) as HTMLElement;
+      contentNode.querySelectorAll<HTMLElement>(DIL_SELECTOR).forEach(normalizeDil);
+    }
+    const body = super.extractContent(contentNode, role);
     const element = node.querySelector(this.selectors.content[role]);
     return role === 'user' && body && element?.matches(TYPED_PROMPT_SELECTOR)
       ? `<div data-export-verbatim="">${body}</div>`
