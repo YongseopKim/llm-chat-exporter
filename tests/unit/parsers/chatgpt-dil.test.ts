@@ -1,3 +1,4 @@
+import { JSDOM } from 'jsdom';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { captureDilHtml } from '../../../src/content/parsers/chatgpt-dil';
 import { ChatGPTParser } from '../../../src/content/parsers/chatgpt';
@@ -22,29 +23,59 @@ function node() {
 
 describe('ChatGPT rich response rendering', () => {
   afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ''; });
+  it('shares identical styles without changing their resolved appearance or the live DOM', () => {
+    const message = node();
+    const rich = message.querySelector('[data-dil-message-id]')!;
+    rich.insertAdjacentHTML('beforeend', '<section>' + '<span style="color:rgb(20, 30, 40);font-size:17px">Repeated</span>'.repeat(100) + '</section>');
+    const before = message.outerHTML;
+    const view = new JSDOM(captureDilHtml(message)).window;
+    const spans = Array.from(view.document.querySelectorAll('section span'));
+    expect(view.document.querySelector('style')).not.toBeNull();
+    expect(view.document.querySelector('[style]')).toBeNull();
+    expect(new Set(spans.map(span => span.className)).size).toBe(1);
+    for (const span of spans) {
+      expect(view.getComputedStyle(span).color).toBe(getComputedStyle(rich.querySelector('section span')!).color);
+      expect(view.getComputedStyle(span).fontSize).toBe('17px');
+    }
+    expect(message.outerHTML).toBe(before);
+  });
+
+  it('keeps HTML delimiters in captured CSS inert', () => {
+    const message = node();
+    const box = message.querySelector<HTMLElement>('[data-d-component="box"]')!;
+    box.style.fontFamily = '"</style><script>alert(1)</script>"';
+    const saved = new DOMParser().parseFromString(captureDilHtml(message), 'text/html');
+    expect(saved.querySelector('script')).toBeNull();
+    expect(saved.querySelectorAll('style')).toHaveLength(1);
+    expect(saved.querySelector('style')!.textContent).toContain('\\3c /style>');
+    expect(saved.querySelectorAll('[data-d-component="box"]')).toHaveLength(1);
+  });
+
   it('preserves resolved diagram borders without the original page stylesheet', () => {
     const message = node();
     const box = message.querySelector<HTMLElement>('[data-d-component="box"]')!;
     box.style.border = '1px solid rgb(20, 30, 40)';
     box.style.borderRadius = '12px';
     const expected = getComputedStyle(box).borderTop;
-    const saved = new DOMParser().parseFromString(captureDilHtml(message), 'text/html');
+    const view = new JSDOM(captureDilHtml(message)).window;
+    const saved = view.document;
     const savedBox = saved.querySelector<HTMLElement>('[data-d-component="box"]')!;
-    expect(savedBox.style.borderTop).toBe(expected);
-    expect(savedBox.style.borderRadius).toBe(getComputedStyle(box).borderRadius);
+    expect(view.getComputedStyle(savedBox).borderTop).toBe(expected);
+    expect(view.getComputedStyle(savedBox).borderRadius).toBe(getComputedStyle(box).borderRadius);
   });
 
   it('keeps image cropping, clipping and overlay stacking from the live styles', () => {
     const message = node();
     const rich = message.querySelector<HTMLElement>('[data-dil-message-id]')!;
     rich.insertAdjacentHTML('beforeend', '<div data-d-component="image" style="position:relative;overflow:hidden;aspect-ratio:5 / 4"><img src="https://images.openai.com/example" style="object-fit:cover;object-position:70.9% 50%;z-index:1"><div data-overlay style="position:absolute;top:0px;left:0px;opacity:0;z-index:2"></div></div>');
-    const saved = new DOMParser().parseFromString(captureDilHtml(message), 'text/html');
+    const view = new JSDOM(captureDilHtml(message)).window;
+    const saved = view.document;
     for (const selector of ['[data-d-component="image"]', 'img[src]', '[data-overlay]']) {
       const original = rich.querySelector<HTMLElement>(selector)!;
       const copy = saved.querySelector<HTMLElement>(selector)!;
       for (const name of ['aspect-ratio', 'overflow', 'object-fit', 'object-position', 'top', 'left', 'opacity', 'z-index']) {
         const value = getComputedStyle(original).getPropertyValue(name);
-        if (value) expect(copy.style.getPropertyValue(name)).toBe(value);
+        if (value) expect(view.getComputedStyle(copy).getPropertyValue(name)).toBe(value);
       }
     }
   });

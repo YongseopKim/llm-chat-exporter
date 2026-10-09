@@ -87,5 +87,23 @@ export function captureDilHtml(source: HTMLElement): string {
     el.textContent = el.getAttribute('aria-checked') === 'true' ? '[x]' : '[ ]';
     el.removeAttribute('role');
   });
-  return '<!doctype html><html><head><meta charset="utf-8"><title>ChatGPT rendered answer</title></head><body>' + clone.outerHTML + '</body></html>';
+  // Keep exactly the captured declarations, sharing repeated combinations.
+  // Do this after removing controls so they do not leave unused CSS behind.
+  const styles = new Map<string, string>();
+  for (const el of [clone, ...Array.from(clone.querySelectorAll<HTMLElement>('[style]'))]) {
+    const declarations = el.getAttribute('style');
+    el.removeAttribute('style');
+    if (!declarations) continue;
+    let className = styles.get(declarations);
+    if (!className) {
+      className = `dil-${styles.size}`;
+      styles.set(declarations, className);
+    }
+    el.setAttribute('class', className);
+  }
+  // A font-family may contain literal HTML delimiters. CSS escaping keeps
+  // the value intact without letting it terminate the HTML style element.
+  const css = Array.from(styles, ([declarations, name]) => `.${name}{${declarations}}`)
+    .join('\n').replace(/</g, '\\3c ');
+  return '<!doctype html><html><head><meta charset="utf-8"><title>ChatGPT rendered answer</title><style>' + css + '</style></head><body>' + clone.outerHTML + '</body></html>';
 }
