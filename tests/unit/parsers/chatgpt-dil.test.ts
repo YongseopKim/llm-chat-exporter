@@ -65,4 +65,21 @@ describe('ChatGPT rich response rendering', () => {
     expect(lines.at(-1).content).toBe(artifact.content);
     expect(lines[1].content).toContain(`[Artifact: ${artifact.title}]`);
   });
+  it('writes popup source URLs into both the readable answer and its HTML artifact', async () => {
+    const message = node();
+    message.querySelector('[data-dil-message-id]')!.insertAdjacentHTML('beforeend',
+      '<p>Evidence <span data-d-component="popover-trigger">SEC +1</span></p>');
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    vi.mocked(chrome.runtime.sendMessage).mockResolvedValue({ success: true, groups: [[
+      { title: 'Release', url: 'https://www.sec.gov/release' },
+      { title: 'Statement', url: 'https://www.sec.gov/statement' },
+    ]], warnings: [] });
+    const result = await new ChatGPTParser().readConversation();
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'READ_RICH_SOURCES', id: 'answer' });
+    expect(result.messages[0].contentHtml).toContain('https://www.sec.gov/statement');
+    expect(result.artifacts![0].content).toContain('<a href="https://www.sec.gov/statement">Statement</a>');
+    expect(result.warnings).toEqual([]);
+    expect(message.textContent).toContain('SEC +1');
+  });
+
 });

@@ -4,6 +4,7 @@
  */
 
 import { isSupportedUrl, generateFilename } from './utils/background-utils';
+import { collectRichSources } from './chatgpt-rich-sources';
 import { collectResearchFrames } from './research-frames';
 import { collectClaudeDoc } from './claude-doc-frames';
 import {
@@ -12,6 +13,20 @@ import {
 } from './content-script-loader';
 
 declare const __LLM_CHAT_EXPORTER_BUILD_ID__: string;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type !== 'READ_RICH_SOURCES') return false;
+  if (!sender.tab?.id || !sender.tab.url || new URL(sender.tab.url).hostname !== 'chatgpt.com' || sender.frameId !== 0
+      || typeof message.id !== 'string' || !message.id) {
+    sendResponse({ success: false, error: 'Rich sources must be requested by the ChatGPT conversation.' });
+    return false;
+  }
+  collectRichSources(sender.tab.id, message.id).then(
+    result => sendResponse({ success: true, ...result }),
+    error => sendResponse({ success: false, error: error.message }),
+  );
+  return true;
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== 'READ_CLAUDE_DOC') return false;

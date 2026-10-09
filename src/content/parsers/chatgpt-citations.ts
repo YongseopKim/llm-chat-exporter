@@ -76,7 +76,7 @@ export async function readCitationSources(citation: HTMLAnchorElement): Promise<
 }
 
 /** Replace a snapshot's source badge with readable links at the cited span. */
-export function writeCitationSources(citation: HTMLAnchorElement, sources: CitationSource[]): void {
+export function writeCitationSources(citation: HTMLElement, sources: CitationSource[]): void {
   const links = sources.map(source => {
     const link = citation.ownerDocument.createElement('a');
     link.href = source.url;

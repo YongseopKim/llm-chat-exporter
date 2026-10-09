@@ -22,6 +22,7 @@ import { mergeTurnOrder } from './message-order';
 import { readCitationSources, writeCitationSources, type CitationSource } from './chatgpt-citations';
 import type { ScrollOptions } from '../scroller';
 import type { ProjectInfo, Conversation, ArtifactData } from './interface';
+import type { RichSources } from '../../chatgpt-rich-sources';
 import { DIL_SELECTOR, normalizeDil, captureDilHtml } from './chatgpt-dil';
 
 /**
@@ -67,15 +68,14 @@ export class ChatGPTParser extends BaseParser {
   private readonly researchReports = new Map<string, string>();
   private readonly researchByTurn = new Map<string, string[]>();
 
+  private readonly richSources = new Map<string, RichSources>();
+
   private readonly renderedAnswers = new Map<string, ArtifactData>();
 
   override async readConversation(): Promise<Conversation> {
     const conversation = await super.readConversation();
     if (this.renderedAnswers.size) {
       conversation.artifacts = Array.from(this.renderedAnswers.values());
-      if (this.getMessageNodes().some(node => node.querySelector(`${DIL_SELECTOR} [data-d-component="popover-trigger"]`))) {
-        conversation.warnings.push('ChatGPT: Rich response source badges expose no URLs in the DOM. Badge labels and visible links are preserved; popup-only source URLs are not captured.');
-      }
     }
     return conversation;
   }
@@ -111,6 +111,7 @@ export class ChatGPTParser extends BaseParser {
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
     this.collected.clear();
     this.renderedAnswers.clear();
+    this.richSources.clear();
     this.order = [];
     this.citationSources.clear();
     this.citationFailures.clear();
@@ -248,7 +249,38 @@ export class ChatGPTParser extends BaseParser {
       for (const [index, rich] of richAnswers.entries()) {
         const id = rich.getAttribute('data-dil-message-id') || `${key}-${index}`;
         const title = `chatgpt-answer-${id}.html`;
+        const cacheKey = `${key}:rich:${id}`;
+        const failure = this.citationFailures.get(cacheKey);
+        if (rich.querySelector('[data-d-component="popover-trigger"]')
+            && (!this.richSources.has(id) || this.richSources.get(id)!.warnings.length > 0) && (failure?.attempts || 0) < 2) {
+          try {
+            const result = await chrome.runtime.sendMessage({ type: 'READ_RICH_SOURCES', id });
+            if (!result?.success) throw new Error(result?.error || 'Source reader unavailable.');
+            const previous = this.richSources.get(id);
+            result.groups = result.groups.map((group: CitationSource[], groupIndex: number) => group.length ? group : previous?.groups[groupIndex] || []);
+            this.richSources.set(id, result);
+            if (result.warnings.length) throw new Error(result.warnings.join(' '));
+            this.citationFailures.delete(cacheKey);
+          } catch (error) {
+            this.citationFailures.set(cacheKey, {
+              attempts: (failure?.attempts || 0) + 1,
+              warning: `ChatGPT: Could not collect rich response sources: ${(error as Error).message}`,
+            });
+          }
+        }
+        const applySources = (target: HTMLElement) => {
+          const badges = target.querySelectorAll<HTMLElement>('[data-d-component="popover-trigger"]');
+          this.richSources.get(id)?.groups.forEach((sources, badgeIndex) => {
+            if (sources.length && badges[badgeIndex]) writeCitationSources(badges[badgeIndex], sources);
+          });
+        };
+        const clonedRich = snapshot.querySelectorAll<HTMLElement>(DIL_SELECTOR)[index];
+        if (clonedRich) applySources(clonedRich);
         this.renderedAnswers.set(id, { title, version: 'rendered', content: captureDilHtml(rich) });
+        // Preserve computed layout from the live answer, then replace only source badges.
+        const artifactDoc = new DOMParser().parseFromString(this.renderedAnswers.get(id)!.content, 'text/html');
+        applySources(artifactDoc.body);
+        this.renderedAnswers.get(id)!.content = '<!DOCTYPE html>\n' + artifactDoc.documentElement.outerHTML;
         const marker = node.ownerDocument.createElement('p');
         marker.setAttribute('data-export-placeholder', '');
         marker.textContent = `[Artifact: ${title}]`;

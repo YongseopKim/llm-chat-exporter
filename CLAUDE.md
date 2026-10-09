@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**LLM Chat Exporter** is a Chrome Extension (Manifest V3) that exports conversations from ChatGPT, Claude, Gemini, and Grok web UIs to JSONL format. ChatGPT, Gemini, Grok and Perplexity are parsed from the DOM; Claude is read from the conversation API claude.ai's own page loads (see "Claude Exports From The Conversation API"). No API keys, no third-party servers.
+**LLM Chat Exporter** is a Chrome Extension (Manifest V3) that exports conversations from ChatGPT, Claude, Gemini, and Grok web UIs to JSONL format. ChatGPT, Gemini, Grok and Perplexity are parsed from the DOM (ChatGPT rich source URLs are supplemented from the same conversation API); Claude is read from the conversation API claude.ai's own page loads (see "Claude Exports From The Conversation API"). No API keys, no third-party servers.
 
 ### Core Value Proposition
 - **Context Preservation**: Captures conversations as they appear in the web UI, including service-optimized system prompts
@@ -478,6 +478,18 @@ links the readable message to the layout capture. Never infer arrow direction
 from an unfamiliar SVG path. Remove copy controls and citation favicons.
 
 Rich citation badges are popover buttons rather than anchors; their popup
-source cards are also buttons with no URL attributes. Preserve visible links
-and badge labels and emit an explicit metadata warning about popup-only URLs.
-Do not report complete source capture from the visible badge text alone.
+source cards are also buttons with no URL attributes. Read this conversation's
+API source component results at
+`mapping[messageId].message.metadata.model_dil_v2.appData.opGenui.componentResults`.
+Only `state.items` with valid source titles and HTTP(S) URLs are candidates.
+Match each popup's complete ordered title list to a unique URL group before
+writing links into the detached message and HTML artifact. Never assume API
+object order matches badge order or collect unrelated search results. Preserve
+visible anchors directly. Ambiguous or missing groups must emit metadata
+warnings, retain successful groups, and receive bounded retries.
+
+The source reader runs in MAIN through the existing scripting permission,
+uses the current same-origin session only in memory, and returns only source
+titles, URLs and warnings. Do not export session tokens, raw API responses, or
+generated component code; do not execute that code. No source card clicks,
+external tabs, extra host permissions, or permanent page hooks are required.
