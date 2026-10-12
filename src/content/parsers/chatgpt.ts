@@ -19,7 +19,7 @@
 
 import { BaseParser } from './base-parser';
 import { mergeTurnOrder } from './message-order';
-import { readCitationSources, writeCitationSources, type CitationSource } from './chatgpt-citations';
+import { readCitationSources, writeCitationSources, CitationStructureError, type CitationSource } from './chatgpt-citations';
 import type { ScrollOptions } from '../scroller';
 import type { ProjectInfo, Conversation, ArtifactData } from './interface';
 import type { RichSources } from '../../chatgpt-rich-sources';
@@ -60,6 +60,49 @@ export class ChatGPTParser extends BaseParser {
    */
   private readonly collected = new Map<string, HTMLElement>();
 
+  private conversationRoot?: HTMLElement;
+  private exportUrl?: string;
+
+  /** Offscreen messages are valid; hidden conversation roots are not. */
+  private isRendered(node: HTMLElement): boolean {
+    for (let el: HTMLElement | null = node; el; el = el.parentElement) {
+      if (el.hidden || el.hasAttribute('inert') || el.getAttribute('aria-hidden') === 'true') return false;
+      const style = el.ownerDocument.defaultView?.getComputedStyle(el);
+      if (style?.display === 'none' || style?.visibility === 'hidden' || style?.visibility === 'collapse') return false;
+    }
+    return true;
+  }
+
+  private getConversationRoot(): HTMLElement {
+    if (this.exportUrl && window.location.href !== this.exportUrl) {
+      throw new Error('ChatGPT: the conversation changed during export. Please export the new conversation again.');
+    }
+    if (this.conversationRoot) {
+      if (!this.conversationRoot.isConnected || !this.isRendered(this.conversationRoot)) {
+        throw new Error('ChatGPT: the conversation changed during export. Please export again.');
+      }
+      return this.conversationRoot;
+    }
+    const threads = Array.from(document.querySelectorAll<HTMLElement>('.thread-scroll-container')).filter(el => this.isRendered(el));
+    if (threads.length > 1) throw new Error('ChatGPT: multiple visible conversation regions. Close the other conversation and export again.');
+    if (threads.length === 1) return threads[0];
+    // Legacy pages and reduced fixtures do not always have a thread wrapper.
+    const mains = Array.from(document.querySelectorAll<HTMLElement>('main')).filter(el => this.isRendered(el));
+    if (mains.length > 1) throw new Error('ChatGPT: multiple visible conversation regions. Close the other conversation and export again.');
+    return mains[0] || document.body;
+  }
+
+  protected override getNodesWithFallback(): HTMLElement[] {
+    const root = this.getConversationRoot();
+    const { primary, fallbacks = [] } = this.selectors.messages;
+    for (const selector of [primary, ...fallbacks]) {
+      if (!selector) continue;
+      const nodes = Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(node => this.isRendered(node));
+      if (nodes.length) return nodes;
+    }
+    return [];
+  }
+
   /** Conversation order of every collected key, oldest first */
   private order: string[] = [];
 
@@ -88,9 +131,13 @@ export class ChatGPTParser extends BaseParser {
   protected override getMessageSelector(): string | undefined {
     const { primary, fallbacks = [] } = this.selectors.messages;
     return (
-      [primary, ...fallbacks].find((selector) => selector && document.querySelector(selector)) ||
+      [primary, ...fallbacks].find((selector) => selector && Array.from(this.getConversationRoot().querySelectorAll<HTMLElement>(selector)).some(node => this.isRendered(node))) ||
       primary
     );
+  }
+
+  override isGenerating(): boolean {
+    return this.getConversationRoot().querySelector(this.selectors.generation) !== null;
   }
 
   /** The current DOM stores each message's role at the end of its unit key. */
@@ -109,6 +156,9 @@ export class ChatGPTParser extends BaseParser {
    * Load and snapshot every mounted window of a virtualized conversation.
    */
   override async loadAllMessages(options: ScrollOptions = {}): Promise<void> {
+    this.conversationRoot = undefined;
+    this.exportUrl = window.location.href;
+    this.conversationRoot = this.getConversationRoot();
     this.collected.clear();
     this.renderedAnswers.clear();
     this.richSources.clear();
@@ -120,13 +170,16 @@ export class ChatGPTParser extends BaseParser {
 
     await super.loadAllMessages({
       ...options,
-      isLoading: options.isLoading || (() => Array.from(document.querySelectorAll('.thread-scroll-container [role="status"]'))
+      root: this.conversationRoot,
+      isLoading: options.isLoading || (() => Array.from(this.getConversationRoot().querySelectorAll('[role="status"]'))
         .some(node => /이전 메시지 불러오는 중|loading (?:earlier|older|previous) messages/i.test(node.textContent || ''))),
       onStep: async () => {
         await this.snapshotMountedMessages();
         await options.onStep?.();
+        this.getConversationRoot();
       },
     });
+    this.getConversationRoot();
     // A later mounted window can recover a source popup that was unavailable
     // earlier. Report only failures still unresolved after the complete walk.
     this.loadingWarnings.push(...Array.from(this.citationFailures.values(), failure => failure.warning));
@@ -205,7 +258,7 @@ export class ChatGPTParser extends BaseParser {
     const keys: string[] = [];
     const live = this.getLiveMessageNodes();
     const researchByNode = new Map<HTMLElement, string[]>();
-    const frames = Array.from(document.querySelectorAll<HTMLIFrameElement>('iframe[title="심층 리서치"], iframe[title="Deep research"], iframe[title="Deep Research"]'));
+    const frames = Array.from(this.getConversationRoot().querySelectorAll<HTMLIFrameElement>('iframe[title="심층 리서치"], iframe[title="Deep research"], iframe[title="Deep Research"]'));
     const pending = frames.filter(frame => !this.researchReports.has(frame.src));
     if (pending.length) {
       let response;
@@ -297,17 +350,22 @@ export class ChatGPTParser extends BaseParser {
       for (const [index, citation] of citations.entries()) {
         const cacheKey = `${key}:citation:${index}:${citation.href}:${citation.getAttribute('aria-label')}`;
         const failure = this.citationFailures.get(cacheKey);
-        // Keep successful results only. Allow another mounted-window attempt,
-        // but bound persistent failures so a long scroll cannot retry forever.
-        if (!this.citationSources.has(cacheKey) && (failure?.attempts || 0) < 2) {
+        // One retry owner: at most four openings across the entire walk,
+        // with two per mounted window so a later window can still recover.
+        let attempts = failure?.attempts || 0;
+        for (let opening = 0; opening < 2 && attempts < 4 && !this.citationSources.has(cacheKey); opening++) {
+          attempts++;
           try {
             this.citationSources.set(cacheKey, await readCitationSources(citation));
             this.citationFailures.delete(cacheKey);
           } catch (error) {
+            if (error instanceof CitationStructureError) attempts = 4;
             this.citationFailures.set(cacheKey, {
-              attempts: (failure?.attempts || 0) + 1,
+              attempts,
               warning: `ChatGPT: Could not collect every source for ${citation.href}: ${(error as Error).message}`,
             });
+            if (!citation.isConnected) break;
+            if (opening === 0 && attempts < 4) await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
         const sources = this.citationSources.get(cacheKey) || [];

@@ -493,3 +493,25 @@ uses the current same-origin session only in memory, and returns only source
 titles, URLs and warnings. Do not export session tokens, raw API responses, or
 generated component code; do not execute that code. No source card clicks,
 external tabs, extra host permissions, or permanent page hooks are required.
+
+
+### ChatGPT Export Conversation Scope (2026-10-13)
+
+Resolve one visible `.thread-scroll-container` at export start and use that same
+root for message collection, generation/history-loading indicators, research frames and
+scroll-container discovery. Ignore hidden/inert conversation roots, but keep
+messages outside the viewport. Fail on ambiguous visible roots, navigation, or
+replacement of the selected root instead of merging unrelated conversations.
+Legacy pages fall back to a visible `main`, then the body.
+
+Legacy grouped citations need pointer movement as well as hover-entry events.
+Prefer a popup linked by `aria-describedby` or `aria-controls`; otherwise require
+a unique tooltip whose primary URL matches the badge. The parser owns retries:
+two openings per mounted window, at most four across the walk. A loaded popup
+with incompatible navigation controls fails once and records a warning. Keep
+successful sources, original visible links on failure, and later-window recovery.
+
+Regression coverage: `tests/unit/parsers/chatgpt-scope.test.ts` and the scoped
+source export in `tests/e2e/export-flow.test.ts`. The observed failures and timing
+were diagnosed on the user's Circle/Arc conversation; fixture timing does not
+establish live-site export timing.

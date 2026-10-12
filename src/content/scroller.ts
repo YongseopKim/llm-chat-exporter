@@ -41,6 +41,9 @@ const STEP_RATIO = 0.9;
 const FALLBACK_STEP_PX = 800;
 
 export interface ScrollOptions {
+  /** Restrict discovery to the conversation being exported. */
+  root?: HTMLElement;
+
   /**
    * Upper bound on how long a single scroll step may wait, in ms. Default: 400
    *
@@ -233,8 +236,9 @@ function readOverflowY(el: HTMLElement): string {
  * @param contentSelector - Selector for content that must live in the container
  * @returns The scroll container, or null when the page scrolls in the window
  */
-export function findScrollContainer(contentSelector?: string): HTMLElement | null {
-  const candidates = document.querySelectorAll<HTMLElement>('div, main, section, article');
+export function findScrollContainer(contentSelector?: string, root: ParentNode = document): HTMLElement | null {
+  const candidates = Array.from(root.querySelectorAll<HTMLElement>('div, main, section, article'));
+  if (root.nodeType === 1) candidates.unshift(root as HTMLElement);
 
   let best: HTMLElement | null = null;
   let bestHoldsContent = false;
@@ -325,7 +329,7 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
     onWarning,
   } = options;
 
-  const container = findScrollContainer(contentSelector);
+  const container = findScrollContainer(contentSelector, options.root);
 
   if (!container) {
     window.scrollTo(0, 0);

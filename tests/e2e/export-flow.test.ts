@@ -365,6 +365,56 @@ describe('E2E: Export Flow', () => {
     }
   }, 30000);
 
+  it('exports only the active thread and opens its grouped source popup on pointer movement', async () => {
+    const url = 'https://chatgpt.com/c/e2e-scoped-sources';
+    const html = `<!doctype html><html><head><title>Scoped sources</title><style>
+      .thread-scroll-container {height:400px;overflow-y:auto}
+    </style></head><body>
+      <aside style="display:none"><div class="thread-scroll-container"><section data-turn="assistant" data-turn-id="other"><div class="markdown">Other conversation <a data-testid="chatgpt-citation" href="https://example.com/other" aria-label="Other, https://example.com/other, 1 more source">Other+1</a></div><div style="height:10000px"></div></section></div></aside>
+      <main><div class="thread-scroll-container"><section data-turn="assistant" data-turn-id="current"><div class="markdown">Current answer <a data-testid="chatgpt-citation" href="https://example.com/primary" aria-label="Example: Primary, https://example.com/primary, 1 more source">Example+1</a></div></section><div style="height:1000px"></div></div></main>
+      <script>
+        window.hiddenSourceOpenings = 0;
+        document.querySelector('aside a').addEventListener('mouseover', () => window.hiddenSourceOpenings++);
+        const citation = document.querySelector('main a');
+        citation.addEventListener('pointermove', () => {
+          if (document.getElementById('source-popup')) return;
+          const tip = document.createElement('div');
+          tip.id = 'source-popup'; tip.setAttribute('role', 'tooltip');
+          tip.innerHTML = '<span>1/2</span><button aria-label="Next source"></button><a href="https://example.com/primary">Primary</a>';
+          tip.querySelector('button').onclick = () => {
+            tip.querySelector('span').textContent = '2/2';
+            tip.querySelector('a').href = 'https://example.com/secondary';
+            tip.querySelector('a').textContent = 'Secondary';
+          };
+          document.body.append(tip);
+        });
+        citation.addEventListener('mouseout', () => document.getElementById('source-popup')?.remove());
+      </script></body></html>`;
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.isNavigationRequest() && request.url() === url) {
+        void request.respond({status:200,contentType:'text/html; charset=utf-8',body:html});
+      } else void request.continue();
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(url, {waitUntil:'domcontentloaded'});
+      const started = Date.now();
+      const response = await exportCurrentPage(browser, url);
+      console.log(`Scoped source export elapsed: ${Date.now() - started}ms`);
+      expect(response.success, response.error).toBe(true);
+      const records = response.data!.split('\n').map(line => JSON.parse(line));
+      expect(records.slice(1)).toHaveLength(1);
+      expect(records[1].content).toContain('[Primary](https://example.com/primary)');
+      expect(records[1].content).toContain('[Secondary](https://example.com/secondary)');
+      expect(records[0].warnings).toBeUndefined();
+      expect(await page.evaluate(() => (window as any).hiddenSourceOpenings)).toBe(0);
+    } finally {
+      page.off('request', intercept);
+      await page.setRequestInterception(false);
+    }
+  }, 30000);
+
   it('embeds CDN images in Markdown and the HTML artifact and renders them offline', async () => {
     const url = 'https://chatgpt.com/c/e2e-embedded-images';
     const imageUrl = 'https://images.openai.com/static-rsc-4/e2e-image?purpose=inline';

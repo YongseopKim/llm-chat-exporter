@@ -282,7 +282,8 @@ describe('ChatGPTParser', () => {
       global.document = doc as any;
 
       // Mock window.scrollTo
-      global.window = { scrollTo: vi.fn() } as any;
+      global.window = doc.defaultView as any;
+      vi.spyOn(global.window, 'scrollTo').mockImplementation(() => {});
 
       await parser.loadAllMessages();
 
