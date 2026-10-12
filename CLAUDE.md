@@ -315,8 +315,8 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - **Browser**: Chrome desktop only (Manifest V3)
 - **Platforms**: `chatgpt.com`, `claude.ai`, `gemini.google.com`, `grok.com`
 - **Scope**: Single conversation per export (no batch/history export)
-- **Privacy**: No third-party requests; the only requests go to the chat site itself (Claude's conversation and project APIs, Grok's project file API, same-origin images), with the user's own session, plus the signed storage URL Grok's API returns for a project file, fetched without cookies
-- **Images**: Store URLs/placeholders only, no binary download
+- **Privacy**: Requests go to the chat site itself (Claude's conversation and project APIs, Grok's project file API, same-origin images), with the user's own session, plus the signed storage URL Grok's API returns for a project file, fetched without cookies, and images.openai.com for ChatGPT image exports, also without cookies
+- **Images**: Embed same-origin images and images.openai.com ChatGPT images as data URIs in message Markdown and HTML artifacts, up to 5 MiB per image. Retain failed or unsupported URLs with metadata warnings.
 - **Timestamps**: Claude has real message times; DOM platforms fall back to export time
 - **Title**: Not extracted (removed in Phase 5 - unstable selectors across platforms)
 - **Mermaid on Grok**: Auto-converts via "원본 보기" button click during export

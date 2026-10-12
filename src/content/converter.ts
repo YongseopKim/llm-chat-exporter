@@ -14,6 +14,7 @@
  * - Tables: ✅ Custom rule for proper conversion
  */
 
+import { isRemoteImageUrl, MAX_IMAGE_BYTES } from '../image-assets';
 import TurndownService from 'turndown';
 
 /**
@@ -395,9 +396,6 @@ turndownService.addRule('exportPlaceholder', {
  * const md = htmlToMarkdown('<p>Hello <strong>world</strong></p>');
  * // Returns: "Hello **world**"
  */
-/** Max size (bytes) of an image to inline as base64; larger images fall back to their original URL */
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
 /**
  * Read a Blob as a base64 data URI (e.g. "data:image/png;base64,...")
  */
@@ -432,66 +430,72 @@ function resolveSameOriginImageUrl(src: string): string | null {
   }
 }
 
-/**
- * Inline every <img src> in the HTML as a base64 data URI
- *
- * ChatGPT/Claude serve generated and uploaded images from authenticated,
- * often time-limited endpoints (signed URLs, session-cookie-gated APIs).
- * The raw src would break once the browser session or signature expires,
- * so same-origin images are fetched with page credentials and embedded
- * directly. Cross-origin sources are left untouched rather than fetched,
- * since message content is untrusted (see resolveSameOriginImageUrl).
- *
- * Falls back to leaving the original src untouched when the fetch fails,
- * the response isn't ok, or the image exceeds MAX_IMAGE_BYTES.
- *
- * @param html - Raw HTML string (before markdown conversion)
- * @returns HTML string with <img src> replaced by data URIs where possible
- */
-export async function inlineImages(html: string): Promise<string> {
-  if (!html || html.trim() === '') {
-    return html;
-  }
+/** Share image reads between message Markdown and HTML artifacts in one export. */
+export interface ImageInliningOptions {
+  cache?: Map<string, Promise<string | null>>;
+  warnings?: string[];
+}
 
+/** Embed same-origin images and ChatGPT CDN images, retaining failed URLs with warnings. */
+export async function inlineImages(html: string, options: ImageInliningOptions = {}): Promise<string> {
+  if (!html || html.trim() === '') return html;
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  const images = Array.from(doc.querySelectorAll('img[src]'));
-
-  await Promise.all(
-    images.map(async (img) => {
-      const src = img.getAttribute('src') || '';
-      if (!src || src.startsWith('data:')) {
-        return;
-      }
-
+  const images = Array.from(doc.querySelectorAll('img[src]')).filter(img => {
+    const src = img.getAttribute('src');
+    return src && !src.startsWith('data:');
+  });
+  if (images.length === 0) return html;
+  const cache = options.cache ?? new Map<string, Promise<string | null>>();
+  const warn = (src: string, reason: string) => {
+    const warning = `Image was not embedded (${reason}): ${src}`;
+    if (options.warnings && !options.warnings.includes(warning)) options.warnings.push(warning);
+    console.warn(`LLM Chat Exporter: ${warning}`);
+  };
+  const read = async (src: string): Promise<string | null> => {
+    try {
       const sameOriginUrl = resolveSameOriginImageUrl(src);
       if (!sameOriginUrl) {
-        return;
-      }
-
-      try {
-        const response = await fetch(sameOriginUrl, { credentials: 'include' });
-        if (!response.ok) {
-          return;
+        if (!isRemoteImageUrl(src)) throw new Error('unsupported external image origin');
+        const response = await chrome.runtime.sendMessage({ type: 'READ_EXPORT_IMAGE', url: src });
+        if (!response?.success || typeof response.dataUri !== 'string'
+            || !/^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/i.test(response.dataUri)) {
+          throw new Error(response?.error || 'could not read external image');
         }
-
-        const blob = await response.blob();
-        if (blob.size > MAX_IMAGE_BYTES) {
-          console.warn(
-            `LLM Chat Exporter: Skipping image over ${MAX_IMAGE_BYTES} byte limit ` +
-              `(${blob.size} bytes): ${src}`
-          );
-          return;
-        }
-
-        const dataUri = await blobToDataUri(blob);
-        img.setAttribute('src', dataUri);
-      } catch (error) {
-        console.warn('LLM Chat Exporter: Failed to inline image, keeping original URL', src, error);
+        return response.dataUri;
       }
-    })
-  );
-
-  return doc.body.innerHTML;
+      const response = await fetch(sameOriginUrl, { credentials: 'include' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      if (!blob.type.startsWith('image/')) throw new Error('response is not an image');
+      if (blob.size > MAX_IMAGE_BYTES) throw new Error('image exceeds the 5 MiB limit');
+      if (blob.size === 0) throw new Error('image response is empty');
+      return await blobToDataUri(blob);
+    } catch (error) {
+      warn(src, error instanceof Error ? error.message : String(error));
+      return null;
+    }
+  };
+  await Promise.all(images.map(async (img) => {
+    const src = img.getAttribute('src') || '';
+    if (!src || src.startsWith('data:')) return;
+    let pending = cache.get(src);
+    if (!pending) {
+      pending = read(src);
+      cache.set(src, pending);
+    }
+    const dataUri = await pending;
+    if (dataUri) {
+      img.setAttribute('src', dataUri);
+      // Otherwise the browser can choose an external candidate over the embedded src.
+      img.removeAttribute('srcset');
+      img.removeAttribute('sizes');
+      img.closest('picture')?.querySelectorAll('source').forEach(source => source.remove());
+    }
+  }));
+  // HTML artifacts include their captured CSS and SVG layout in the head/body.
+  return /^\s*(?:<!doctype\s+html|<html[\s>])/i.test(html)
+    ? '<!doctype html>\n' + doc.documentElement.outerHTML
+    : doc.body.innerHTML;
 }
 
 export function htmlToMarkdown(html: string): string {

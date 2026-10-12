@@ -81,7 +81,7 @@ npm run validate:selectors # 셀렉터 설정 검증
 ## 알려진 제한사항
 
 - DOM 구조 변경 시 셀렉터 업데이트 필요
-- 이미지는 URL만 저장 (바이너리 다운로드 없음)
+- 같은 출처 이미지와 images.openai.com의 ChatGPT 이미지는 Markdown과 HTML에 데이터 URI로 포함합니다(이미지당 최대 5 MiB). 지원하지 않는 출처나 저장 실패 시 URL을 유지하고 내보내기 경고를 남깁니다.
 - Claude artifact는 마지막 artifact의 최신 버전만 내보냄
 - Claude 대화 API에 Markdown 문서 원본이 없으면 문서 패널에서 읽습니다. 이때 `_artifact` 줄에 `version: "rendered"`를 기록하고 메타데이터에 경고를 남깁니다. 대화 메시지는 계속 API에서 읽습니다.
 - Claude 문서 본문이 API에 있어도 출처 URL이 빠져 있으면 제목이 일치하는 문서 패널에서 읽어 "Research sources" 아래에 보충합니다. API 본문과 버전은 유지하며, 출처 확인에 실패하면 경고를 남깁니다.

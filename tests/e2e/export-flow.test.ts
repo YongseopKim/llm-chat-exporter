@@ -365,6 +365,59 @@ describe('E2E: Export Flow', () => {
     }
   }, 30000);
 
+  it('embeds CDN images in Markdown and the HTML artifact and renders them offline', async () => {
+    const url = 'https://chatgpt.com/c/e2e-embedded-images';
+    const imageUrl = 'https://images.openai.com/static-rsc-4/e2e-image?purpose=inline';
+    // A valid transparent PNG, verified by decoding it in the offline preview below.
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+    const target = await browser.waitForTarget(t => t.type() === 'service_worker' && t.url().startsWith('chrome-extension://'));
+    const worker = (await target.worker())!;
+    await worker.evaluate((imageUrl, png) => {
+      const original = globalThis.fetch;
+      (globalThis as any).__restoreImageFetch = () => { globalThis.fetch = original; };
+      globalThis.fetch = (async (input: RequestInfo | URL, options?: RequestInit) => {
+        if (String(input) !== imageUrl) return original(input, options);
+        if (options?.credentials !== 'omit' || options?.redirect !== 'error') throw new Error('Unsafe image fetch');
+        return new Response(Uint8Array.from(atob(png), c => c.charCodeAt(0)), { headers: { 'Content-Type': 'image/png' } });
+      }) as typeof fetch;
+    }, imageUrl, png);
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.url() === url) {
+        void request.respond({ status: 200, contentType: 'text/html', body: `<!doctype html><html><body><main>
+          <div data-turn-key="image-turn"><div data-content-search-unit-key="fallback-turn-0:2:assistant"><div data-markdown-text-style="assistant-message"><div data-dil-message-id="image-answer"><p>Report image</p>
+          <picture><source srcset="${imageUrl} 2x"><img alt="Report" src="${imageUrl}"></picture>
+          <svg data-d-component="icon" viewBox="0 0 24 24"><path d="M0 0L24 24"/></svg>
+          </div></div></div></div></main></body></html>` });
+      } else if (request.url() === imageUrl) {
+        void request.respond({ status: 200, contentType: 'image/png', body: Buffer.from(png, 'base64') });
+      } else void request.abort();
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(url, { waitUntil: 'load' });
+      const response = await exportCurrentPage(browser, url);
+      expect(response.success, response.error).toBe(true);
+      const rows = response.data!.split('\n').map(line => JSON.parse(line));
+      expect(rows[0].warnings).toBeUndefined();
+      expect(rows.find(row => row.role === 'assistant').content).toContain(`data:image/png;base64,${png}`);
+      const html = rows.find(row => row._artifact).content;
+      expect(html).toContain(`data:image/png;base64,${png}`);
+      expect(html).not.toContain(imageUrl);
+      expect(html).toContain('M0 0L24 24');
+      const preview = await browser.newPage();
+      try {
+        await preview.setOfflineMode(true);
+        await preview.setContent(html);
+        expect(await preview.$eval('img', img => img.complete && img.naturalWidth === 1)).toBe(true);
+      } finally { await preview.close(); }
+    } finally {
+      await worker.evaluate(() => { (globalThis as any).__restoreImageFetch(); delete (globalThis as any).__restoreImageFetch; });
+      page.off('request', intercept);
+      await page.setRequestInterception(false);
+    }
+  }, 30000);
+
   it('should export the current ChatGPT DOM through the loaded extension', async () => {
     await page.setRequestInterception(true);
     const intercept = (request: HTTPRequest) => {

@@ -7,12 +7,22 @@ import { isSupportedUrl, generateFilename } from './utils/background-utils';
 import { collectRichSources } from './chatgpt-rich-sources';
 import { collectResearchFrames } from './research-frames';
 import { collectClaudeDoc } from './claude-doc-frames';
+import { handleImageRequest } from './image-assets';
 import {
   executeVersionedContentScript,
   type ExportResponse,
 } from './content-script-loader';
 
 declare const __LLM_CHAT_EXPORTER_BUILD_ID__: string;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type !== 'READ_EXPORT_IMAGE') return false;
+  handleImageRequest(message.url, sender).then(
+    dataUri => sendResponse({ success: true, dataUri }),
+    error => sendResponse({ success: false, error: error.message }),
+  );
+  return true;
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== 'READ_RICH_SOURCES') return false;

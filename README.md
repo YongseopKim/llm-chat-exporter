@@ -11,7 +11,7 @@ A Chrome Extension that exports conversations from ChatGPT, Claude, Gemini, Grok
 ### Core Values
 
 - **Context Preservation**: Captures the complete web UI experience, not just raw API responses
-- **Local-First**: All processing happens in-browser; the only requests go to the chat site itself (Claude's conversation and project APIs, Grok's project file API, same-origin images) and to the signed storage URL Grok's API returns for a project file
+- **Local-First**: All processing happens in-browser; the only requests go to the chat site itself (Claude's conversation and project APIs, Grok's project file API, same-origin images), to the signed storage URL Grok's API returns for a project file, and to images.openai.com for ChatGPT image exports (without cookies)
 - **Data Ownership**: Your conversations stay on your machine permanently
 
 ### Use Cases
@@ -216,7 +216,7 @@ See `config/README.md` for detailed selector update guide.
 ## Known Limitations
 
 - DOM structure changes may require selector updates
-- Images are stored as URLs only (no binary download)
+- Same-origin images and ChatGPT images from images.openai.com are embedded as data URIs in Markdown and HTML exports (up to 5 MiB per image). Unsupported or failed images retain their URLs and add export warnings.
 - Claude artifacts: only the latest version of the latest artifact is exported
 - Project files (Claude `project_write` with a card, Grok file cards) are read as the project stores them at export time; a later edit or overwrite of the same file is what gets exported. A file that cannot be read keeps its `[Artifact: ...]` marker and produces a warning.
 - A question Claude asked with AskUserQuestion is exported inside the assistant message as `[Question: ...]`, its options, and `[User answer: ...]`

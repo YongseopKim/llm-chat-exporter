@@ -129,8 +129,8 @@ describe('buildJsonl', () => {
     await buildJsonl(messages, metadata);
 
     expect(inlineImages).toHaveBeenCalledTimes(2);
-    expect(inlineImages).toHaveBeenCalledWith('<p>Message 1</p>');
-    expect(inlineImages).toHaveBeenCalledWith('<p>Message 2</p>');
+    expect(inlineImages).toHaveBeenCalledWith('<p>Message 1</p>', expect.objectContaining({ cache: expect.any(Map), warnings: [] }));
+    expect(inlineImages).toHaveBeenCalledWith('<p>Message 2</p>', expect.objectContaining({ cache: expect.any(Map), warnings: [] }));
     expect(htmlToMarkdown).toHaveBeenCalledTimes(2);
     expect(htmlToMarkdown).toHaveBeenCalledWith('<p>Message 1</p>');
     expect(htmlToMarkdown).toHaveBeenCalledWith('<p>Message 2</p>');

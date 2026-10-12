@@ -37,31 +37,31 @@ export async function buildJsonl(
   metadata: ExportMetadata,
   artifacts: ArtifactData[] = []
 ): Promise<string> {
-  // Line 1: Metadata
-  const metaLine = JSON.stringify({
-    _meta: true,
-    ...metadata
-  });
+  const warnings = [...(metadata.warnings ?? [])];
+  const images = { cache: new Map<string, Promise<string | null>>(), warnings };
 
   // Lines 2-N: Messages
   const messageLines = await Promise.all(
     parsedMessages.map(async (pm) => {
       const message: ExportedMessage = {
         role: pm.role,
-        content: pm.contentMarkdown ?? htmlToMarkdown(await inlineImages(pm.contentHtml ?? '')),
+        content: pm.contentMarkdown ?? htmlToMarkdown(await inlineImages(pm.contentHtml ?? '', images)),
         timestamp: pm.timestamp || new Date().toISOString()
       };
       return JSON.stringify(message);
     })
   );
 
-  const lines = [metaLine, ...messageLines];
+  const lines = [...messageLines];
 
   // One line per document the answers produced, after the messages
   for (const artifact of artifacts) {
-    lines.push(JSON.stringify({ _artifact: true, ...artifact }));
+    const content = /\.html$/i.test(artifact.title) && /^\s*(?:<!doctype\s+html|<html[\s>])/i.test(artifact.content)
+      ? await inlineImages(artifact.content, images)
+      : artifact.content;
+    lines.push(JSON.stringify({ _artifact: true, ...artifact, content }));
   }
 
   // Combine all lines with newline separator
-  return lines.join('\n');
+  return [JSON.stringify({ _meta: true, ...metadata, ...(warnings.length ? { warnings } : {}) }), ...lines].join('\n');
 }

@@ -56,9 +56,6 @@ async function exportConversation(): Promise<ExportResponse> {
   }
 
   console.log(`LLM Chat Exporter: Found ${conversation.messages.length} messages`);
-  for (const warning of conversation.warnings) {
-    console.warn(`LLM Chat Exporter: ${warning}`);
-  }
 
   const jsonl = await buildJsonl(conversation.messages, {
     platform: getPlatformName(window.location.href) as ExportMetadata['platform'],
@@ -69,12 +66,14 @@ async function exportConversation(): Promise<ExportResponse> {
     ...(conversation.warnings.length > 0 && { warnings: conversation.warnings }),
   }, conversation.artifacts);
 
+  const warnings: string[] = JSON.parse(jsonl.split('\n')[0]).warnings ?? [];
+  for (const warning of warnings) console.warn(`LLM Chat Exporter: ${warning}`);
   console.log('LLM Chat Exporter: Export complete');
   return {
     success: true,
     data: jsonl,
     messageCount: conversation.messages.length,
-    warnings: conversation.warnings,
+    warnings,
   };
 }
 
