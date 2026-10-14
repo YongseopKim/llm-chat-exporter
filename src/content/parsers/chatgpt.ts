@@ -303,6 +303,44 @@ export class ChatGPTParser extends BaseParser {
       this.researchByTurn.set(key, reports);
     }
 
+    const pendingRich = live.flatMap(node => {
+      const key = this.getTurnKey(node);
+      return Array.from(node.querySelectorAll<HTMLElement>(DIL_SELECTOR)).flatMap((rich, index) => {
+        const id = rich.getAttribute('data-dil-message-id') || `${key}-${index}`;
+        const cacheKey = `${key}:rich:${id}`;
+        const cached = this.richSources.get(id);
+        return rich.querySelector('[data-d-component="popover-trigger"]')
+          && (!cached || cached.warnings.length > 0) && (this.citationFailures.get(cacheKey)?.attempts || 0) < 2
+          ? [{ id, cacheKey }] : [];
+      });
+    });
+    if (pendingRich.length) {
+      const ids = [...new Set(pendingRich.map(answer => answer.id))];
+      let response;
+      let error: unknown;
+      try {
+        response = await chrome.runtime.sendMessage({ type: 'READ_RICH_SOURCES', id: ids[0], ...(ids.length > 1 ? { ids } : {}) });
+        if (!response?.success) throw new Error(response?.error || 'Source reader unavailable.');
+      } catch (failure) { error = failure; }
+      for (const { id, cacheKey } of pendingRich) {
+        try {
+          if (error) throw error;
+          const result = response.answers?.[id] || (id === ids[0] ? response : undefined);
+          if (!result) throw new Error('Source reader returned no answer.');
+          const previous = this.richSources.get(id);
+          const groups = result.groups.map((group: CitationSource[], index: number) => group.length ? group : previous?.groups[index] || []);
+          this.richSources.set(id, { groups, warnings: result.warnings });
+          if (result.warnings.length) throw new Error(result.warnings.join(' '));
+          this.citationFailures.delete(cacheKey);
+        } catch (failure) {
+          this.citationFailures.set(cacheKey, {
+            attempts: (this.citationFailures.get(cacheKey)?.attempts || 0) + 1,
+            warning: `ChatGPT: Could not collect rich response sources: ${(failure as Error).message}`,
+          });
+        }
+      }
+    }
+
     for (const node of live) {
       const key = this.getTurnKey(node);
       if (key === null) {
@@ -321,25 +359,6 @@ export class ChatGPTParser extends BaseParser {
       for (const [index, rich] of richAnswers.entries()) {
         const id = rich.getAttribute('data-dil-message-id') || `${key}-${index}`;
         const title = `chatgpt-answer-${id}.html`;
-        const cacheKey = `${key}:rich:${id}`;
-        const failure = this.citationFailures.get(cacheKey);
-        if (rich.querySelector('[data-d-component="popover-trigger"]')
-            && (!this.richSources.has(id) || this.richSources.get(id)!.warnings.length > 0) && (failure?.attempts || 0) < 2) {
-          try {
-            const result = await chrome.runtime.sendMessage({ type: 'READ_RICH_SOURCES', id });
-            if (!result?.success) throw new Error(result?.error || 'Source reader unavailable.');
-            const previous = this.richSources.get(id);
-            result.groups = result.groups.map((group: CitationSource[], groupIndex: number) => group.length ? group : previous?.groups[groupIndex] || []);
-            this.richSources.set(id, result);
-            if (result.warnings.length) throw new Error(result.warnings.join(' '));
-            this.citationFailures.delete(cacheKey);
-          } catch (error) {
-            this.citationFailures.set(cacheKey, {
-              attempts: (failure?.attempts || 0) + 1,
-              warning: `ChatGPT: Could not collect rich response sources: ${(error as Error).message}`,
-            });
-          }
-        }
         const applySources = (target: HTMLElement) => {
           const badges = target.querySelectorAll<HTMLElement>('[data-d-component="popover-trigger"]');
           this.richSources.get(id)?.groups.forEach((sources, badgeIndex) => {

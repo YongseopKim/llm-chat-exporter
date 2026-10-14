@@ -174,6 +174,26 @@ describe('ClaudeParser', () => {
       expect(result.warnings).toEqual([]);
     });
 
+    it('focuses the history control to mount an earlier visualization', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation({ chat_messages: [
+        message({ uuid: 'h0', content: [text('Draw it')] }),
+        message({ uuid: 'a1', sender: 'assistant', parent_message_uuid: 'h0', content: [
+          { type: 'tool_use', name: 'visualize:show_widget', input: { title: 'payment_flow' } },
+        ] }),
+      ] }) } });
+      document.body.innerHTML = '<input id="original-focus"><div role="article" aria-posinset="2"></div><button tabindex="-1">Load earlier messages</button>';
+      const input = document.querySelector<HTMLInputElement>('input')!; input.focus();
+      document.querySelector('button')!.addEventListener('focus', () => {
+        document.querySelector('button')!.remove();
+        document.body.insertAdjacentHTML('beforeend', '<iframe title="visualize: Payment flow" src="https://test.claudemcpcontent.com/mcp_apps"></iframe>');
+      });
+      vi.mocked(chrome.runtime.sendMessage).mockResolvedValue({ success: true, html: '<!doctype html><html><body>Original diagram</body></html>' });
+      const result = await parser.readConversation();
+      expect(result.warnings).toEqual([]);
+      expect(result.artifacts).toHaveLength(1);
+      expect(document.activeElement).toBe(input);
+    });
+
     it('keeps the text and reports a failed visualization capture without changing the frame', async () => {
       mockFetch({ [conversationPath]: { status: 200, body: conversation({ chat_messages: [
         message({ uuid: 'h0', content: [text('Draw it')] }),

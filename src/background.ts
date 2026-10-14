@@ -43,11 +43,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== 'READ_RICH_SOURCES') return false;
   if (!sender.tab?.id || !sender.tab.url || new URL(sender.tab.url).hostname !== 'chatgpt.com' || sender.frameId !== 0
-      || typeof message.id !== 'string' || !message.id) {
+      || typeof message.id !== 'string' || !message.id
+      || (message.ids !== undefined && (!Array.isArray(message.ids) || !message.ids.includes(message.id) || message.ids.some((id: unknown) => typeof id !== 'string' || !id)))) {
     sendResponse({ success: false, error: 'Rich sources must be requested by the ChatGPT conversation.' });
     return false;
   }
-  collectRichSources(sender.tab.id, message.id).then(
+  collectRichSources(sender.tab.id, message.id, message.ids).then(
     result => sendResponse({ success: true, ...result }),
     error => sendResponse({ success: false, error: error.message }),
   );

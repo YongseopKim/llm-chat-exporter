@@ -415,6 +415,39 @@ describe('E2E: Export Flow', () => {
     }
   }, 30000);
 
+  it('shares one source API read across mounted ChatGPT answers without mixing their URLs', async () => {
+    const url = 'https://chatgpt.com/c/e2e-batched-sources';
+    const ids = ['answer-a', 'answer-b'];
+    const entry = (id: string) => ({ message: { metadata: { model_dil_v2: { appData: { opGenui: { componentResults: {
+      sources: { state: { items: [{ title: 'Original evidence', url: `https://example.org/${id}` }] } },
+    } } } } } } });
+    const fixture = `<!doctype html><html><body><main>${ids.map(id => `<div data-turn-key="${id}"><div data-content-search-unit-key="fallback-turn-0:2:assistant"><div data-markdown-text-style="assistant-message"><div data-dil-message-id="${id}"><p>${id}</p><button data-d-component="popover-trigger" aria-expanded="false">Sources</button></div></div></div></div>`).join('')}</main><script>
+      document.querySelectorAll('[data-d-component="popover-trigger"]').forEach(button=>{button.onclick=()=>{const id=button.closest('[data-dil-message-id]').dataset.dilMessageId+'-popup';const old=document.getElementById(id);if(old){old.remove();button.setAttribute('aria-expanded','false');return;}button.setAttribute('aria-expanded','true');button.setAttribute('aria-controls',id);const popup=document.createElement('div');popup.id=id;popup.innerHTML='<button data-d-component="pressable"><span data-d-weight="medium">Original evidence</span></button>';document.body.append(popup);};});
+    </script></body></html>`;
+    let sessions = 0, conversations = 0;
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      const path = new URL(request.url()).pathname;
+      if (request.url() === url) void request.respond({ status: 200, contentType: 'text/html', body: fixture });
+      else if (path === '/api/auth/session') { sessions++; void request.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ accessToken: 'fixture-token' }) }); }
+      else if (path === '/backend-api/conversation/e2e-batched-sources') { conversations++; void request.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ mapping: Object.fromEntries(ids.map(id => [id, entry(id)])) }) }); }
+      else void request.abort();
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(url, { waitUntil: 'load' });
+      const response = await exportCurrentPage(browser, url);
+      expect(response.success, response.error).toBe(true);
+      const records = response.data!.split('\n').map(line => JSON.parse(line));
+      expect(records[0].warnings).toBeUndefined();
+      expect(sessions).toBe(1); expect(conversations).toBe(1);
+      for (const [index, id] of ids.entries()) {
+        expect(records.filter(row => row.role)[index].content).toContain(`https://example.org/${id}`);
+        expect(records.find(row => row.title === `chatgpt-answer-${id}.html`).content).toContain(`https://example.org/${id}`);
+      }
+    } finally { page.off('request', intercept); await page.setRequestInterception(false); }
+  }, 30000);
+
   it('embeds CDN images in Markdown and the HTML artifact and renders them offline', async () => {
     const url = 'https://chatgpt.com/c/e2e-embedded-images';
     const imageUrl = 'https://images.openai.com/static-rsc-4/e2e-image?purpose=inline';
@@ -817,15 +850,19 @@ describe('E2E: Export Flow', () => {
       (globalThis as any).__restoreGrokImage = () => { globalThis.fetch = original; };
       globalThis.fetch = (async (input: RequestInfo | URL, options?: RequestInit) => {
         if (String(input) !== imageUrl) return original(input, options);
-        if (options?.credentials !== 'include') return new Response('denied', { status: 403 });
-        if (options.redirect !== 'error') throw new Error('Unsafe image redirect');
-        return new Response(Uint8Array.from(atob(png), c => c.charCodeAt(0)), { headers: { 'Content-Type': 'image/png' } });
+        return new Response('Worker requests are denied by the CDN', { status: 403 });
       }) as typeof fetch;
     }, imageUrl, png);
     await page.setRequestInterception(true);
+    let pageReads = 0;
     const intercept = (request: HTTPRequest) => {
       if (request.url() === url) void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: `<!doctype html><html><body><main><div id="response-image"><div class="message-bubble" data-testid="assistant-message"><p>Original diagram</p><img src="${imageUrl}" alt="Participants"></div><button aria-label="Regenerate"></button></div></main></body></html>` });
-      else if (request.url() === imageUrl) void request.respond({ status: 200, contentType: 'image/png', body: Buffer.from(png, 'base64') });
+      else if (request.url() === imageUrl) {
+        if (request.resourceType() === 'fetch') pageReads++;
+        void request.respond({ status: 200, contentType: 'image/png', headers: {
+          'Access-Control-Allow-Origin': 'https://grok.com', 'Access-Control-Allow-Credentials': 'true',
+        }, body: Buffer.from(png, 'base64') });
+      }
       else void request.abort();
     };
     page.on('request', intercept);
@@ -836,6 +873,7 @@ describe('E2E: Export Flow', () => {
       const records = response.data!.split('\n').map(line => JSON.parse(line));
       expect(records[1].content).toContain(`![Participants](data:image/png;base64,${png})`);
       expect(records[0].warnings).toBeUndefined();
+      expect(pageReads).toBe(1);
     } finally {
       await worker.evaluate(() => { (globalThis as any).__restoreGrokImage(); delete (globalThis as any).__restoreGrokImage; });
       page.off('request', intercept); await page.setRequestInterception(false);
@@ -852,8 +890,8 @@ describe('E2E: Export Flow', () => {
       { type: 'text', text: 'After' },
     ];
     const widget = '<style>.node rect{fill:rgb(232,218,255)}.node text{font-size:14px;fill:rgb(50,40,60)}</style><svg width="0" height="0"><defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9"/></marker></defs></svg><div id="vis-container"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 400"><g class="node" onclick="sendPrompt()"><rect x="40" y="60" width="160" height="56"/><text x="120" y="78">Original diagram</text></g><line x1="258" y1="88" x2="204" y2="88" marker-end="url(#arrow)"/><script>window.unsafe=1</script></svg></div>';
-    const root = getClaudeHtml().replace('</body>', `<iframe title="visualize: Other widget" name="other" src="${proxy}" onload="this.contentWindow.postMessage('Other diagram','https://test.claudemcpcontent.com')"></iframe><button id="earlier">Load earlier messages</button><script>
-      document.getElementById('earlier').onclick=function(){this.remove();const article=document.createElement('div');article.setAttribute('role','article');article.setAttribute('aria-posinset','0');document.body.append(article);const f=document.createElement('iframe');f.title='visualize: Payment flow';f.name='original';f.onload=()=>f.contentWindow.postMessage(${JSON.stringify(widget).replace(/</g, '\\u003c')},'https://test.claudemcpcontent.com');f.src='${proxy}';document.body.append(f);};
+    const root = getClaudeHtml().replace('</body>', `<iframe title="visualize: Other widget" name="other" src="${proxy}" onload="this.contentWindow.postMessage('Other diagram','https://test.claudemcpcontent.com')"></iframe><button id="earlier" tabindex="-1" class="sr-only">Load earlier messages</button><script>
+      document.getElementById('earlier').addEventListener('focusin',function(){this.remove();const article=document.createElement('div');article.setAttribute('role','article');article.setAttribute('aria-posinset','0');document.body.append(article);const f=document.createElement('iframe');f.title='visualize: Payment flow';f.name='original';f.onload=()=>f.contentWindow.postMessage(${JSON.stringify(widget).replace(/</g, '\\u003c')},'https://test.claudemcpcontent.com');f.src='${proxy}';document.body.append(f);});
     </script></body>`);
     await page.setRequestInterception(true);
     const intercept = (request: HTTPRequest) => {

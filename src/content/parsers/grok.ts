@@ -23,6 +23,7 @@ import { mergeTurnOrder } from './message-order';
 import { readGrokSources } from './grok-sources';
 import { readGrokFile } from './grok-files';
 import { markLineBreaks } from './line-breaks';
+import { inlineImages } from '../converter';
 
 /**
  * Name of the file a card in an answer stands for, or null for other buttons
@@ -77,6 +78,7 @@ export class GrokParser extends BaseParser {
   private readonly sources = new Map<string, string>();
   /** Names of the files each message's cards stand for */
   private readonly files = new Map<string, string[]>();
+  private readonly imageCache = new Map<string, Promise<string | null>>();
   private order: string[] = [];
   constructor() {
     super('grok');
@@ -133,6 +135,7 @@ export class GrokParser extends BaseParser {
     this.collected.clear();
     this.sources.clear();
     this.files.clear();
+    this.imageCache.clear();
     this.order = [];
     await super.loadAllMessages({
       ...options,
@@ -196,6 +199,9 @@ export class GrokParser extends BaseParser {
       this.files.set(key, this.replaceFileCards(snapshot));
       if (this.extractRole(node) === 'user') restoreTypedHeadings(snapshot);
       snapshot.insertAdjacentHTML('beforeend', this.sources.get(key)!);
+      if (snapshot.querySelector('img[src^="https://assets.grok.com/"]')) {
+        snapshot.innerHTML = await inlineImages(snapshot.innerHTML, { cache: this.imageCache, warnings: this.loadingWarnings });
+      }
       this.collected.set(key, snapshot);
     }
     this.order = mergeTurnOrder(this.order, keys);

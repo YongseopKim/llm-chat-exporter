@@ -10,14 +10,22 @@ export function isRemoteImageUrl(value: string): boolean {
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** Grok generated images require its CDN session; public ChatGPT images do not. */
-export async function readRemoteImage(url: string): Promise<string> {
-  if (!isRemoteImageUrl(url)) throw new Error('Unsupported external image origin');
+/** Serialized into MAIN for the Grok fallback; keep runtime dependencies local. */
+export async function readRemoteImage(url: string, fromGrokPage = false): Promise<string> {
+  const parsed = new URL(url);
+  if (!['https://images.openai.com', 'https://assets.grok.com'].includes(parsed.origin) || parsed.username || parsed.password) {
+    throw new Error('Unsupported external image origin');
+  }
+  if (fromGrokPage && (document.location.origin !== 'https://grok.com' || parsed.origin !== 'https://assets.grok.com'
+      || !Array.from(document.querySelectorAll<HTMLImageElement>('.message-bubble img[src]')).some(img => img.src === url))) {
+    throw new Error('Grok: the requested image is not mounted in this conversation.');
+  }
+  const maxBytes = 5 * 1024 * 1024;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const response = await fetch(url, {
-      credentials: new URL(url).origin === 'https://assets.grok.com' ? 'include' : 'omit', redirect: 'error', referrerPolicy: 'no-referrer', signal: controller.signal,
+      credentials: new URL(url).origin === 'https://assets.grok.com' ? 'include' : 'omit', redirect: 'error', referrerPolicy: fromGrokPage ? 'strict-origin-when-cross-origin' : 'no-referrer', signal: controller.signal,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const mime = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
@@ -25,7 +33,7 @@ export async function readRemoteImage(url: string): Promise<string> {
       await response.body?.cancel();
       throw new Error('Response is not a supported image');
     }
-    if (Number(response.headers.get('content-length')) > MAX_IMAGE_BYTES) {
+    if (Number(response.headers.get('content-length')) > maxBytes) {
       await response.body?.cancel();
       throw new Error('Image exceeds the 5 MiB limit');
     }
@@ -37,7 +45,7 @@ export async function readRemoteImage(url: string): Promise<string> {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > MAX_IMAGE_BYTES) {
+      if (size > maxBytes) {
         await reader.cancel();
         throw new Error('Image exceeds the 5 MiB limit');
       }
@@ -66,5 +74,18 @@ export async function handleImageRequest(url: unknown, sender: chrome.runtime.Me
       || ({ 'https://chatgpt.com': 'https://images.openai.com', 'https://grok.com': 'https://assets.grok.com' } as Record<string, string>)[new URL(sender.url).origin] !== new URL(url).origin) {
     throw new Error('Images must be requested by the matching ChatGPT or Grok conversation');
   }
-  return readRemoteImage(url);
+  try {
+    return await readRemoteImage(url);
+  } catch (error) {
+    if (new URL(url).origin !== 'https://assets.grok.com'
+        || (!(error instanceof TypeError) && (error as Error).message !== 'HTTP 403')) throw error;
+    // The CDN can reject extension-origin requests even with cookies. Use the
+    // provider page's own request context while its original image is mounted.
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: 'MAIN', func: readRemoteImage, args: [url, true],
+    });
+    const dataUri = results[0]?.result;
+    if (typeof dataUri !== 'string' || !dataUri.startsWith('data:image/')) throw new Error('Grok: could not read the displayed image.');
+    return dataUri;
+  }
 }

@@ -219,7 +219,7 @@ Virtualized rows, a paginated "Load earlier messages" button, thinking/tool step
 - **Body**: `text` blocks; `thinking`, `tool_use`, `tool_result` are skipped, except the two tools the page shows (see "Answers Keep What The Page Shows Outside The Text")
 - **Citations**: ` [n]` after each cited span (`end_index`), `[n]: url "title"` definitions under the turn
 - **Artifacts**: `[Artifact: title]` inline; the latest artifact is rebuilt by replaying its `create`/`update`/`rewrite` commands into the `_artifact` line
-- **Visualizations**: `[Artifact: title.html]` with a static HTML capture of the displayed widget. An unreadable widget keeps `[Visualization unavailable: title]` and emits a metadata warning. Visualization help calls are skipped.
+- **Visualizations**: `[Artifact: title.html]` with a static HTML capture of the displayed widget. An unreadable widget keeps `[Visualization unavailable: title]` and emits a metadata warning. Visualization help calls are skipped. Focus the history pagination control before clicking it, because Claude mounts adjacent virtualized ranges on focus. Restore focus and scroll positions afterwards.
 
 ### 4. Silent Partial Exports
 **Problem**: A selector that stops matching a message body exports an empty or truncated message with no error.
@@ -316,7 +316,7 @@ console.log('Content:', messages[0]?.querySelector('.markdown')?.textContent);
 - **Platforms**: `chatgpt.com`, `claude.ai`, `gemini.google.com`, `grok.com`
 - **Scope**: Single conversation per export (no batch/history export)
 - **Privacy**: Requests go to the chat site itself (Claude's conversation and project APIs, Grok's project file API, same-origin images), with the user's own session, plus the signed storage URL Grok's API returns for a project file, fetched without cookies. Image CDN reads go to images.openai.com for ChatGPT and assets.grok.com for Grok. Grok CDN requests use its existing session; ChatGPT CDN requests omit cookies. Claude visualization captures read already displayed claudemcpcontent.com frames locally.
-- **Images**: Embed same-origin images, images.openai.com ChatGPT images and assets.grok.com Grok images as data URIs in message Markdown and HTML artifacts, up to 5 MiB per image. Retain failed or unsupported URLs with metadata warnings. Only the corresponding provider's top-level page may request its CDN.
+- **Images**: Embed same-origin images, images.openai.com ChatGPT images and assets.grok.com Grok images as data URIs in message Markdown and HTML artifacts, up to 5 MiB per image. Retain failed or unsupported URLs with metadata warnings. Only the corresponding provider's top-level page may request its CDN. If the Grok CDN rejects an extension request, retry in MAIN only while that exact image remains mounted in the Grok conversation.
 - **Timestamps**: Claude has real message times; DOM platforms fall back to export time
 - **Title**: Not extracted (removed in Phase 5 - unstable selectors across platforms)
 - **Mermaid on Grok**: Auto-converts via "원본 보기" button click during export
@@ -489,7 +489,8 @@ visible anchors directly. Ambiguous or missing groups must emit metadata
 warnings, retain successful groups, and receive bounded retries.
 
 The source reader runs in MAIN through the existing scripting permission,
-uses the current same-origin session only in memory, and returns only source
+shares one API read across the mounted answers in each scroll window, uses the
+current same-origin session only in memory, and returns only source
 titles, URLs and warnings. Do not export session tokens, raw API responses, or
 generated component code; do not execute that code. No source card clicks,
 external tabs, extra host permissions, or permanent page hooks are required.

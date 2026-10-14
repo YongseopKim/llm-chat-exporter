@@ -19,6 +19,15 @@ describe('external image reader', () => {
     await expect(handleImageRequest(url, grok)).rejects.toThrow();
   });
 
+  it('retries a worker 403 inside the matching Grok page instead of exporting a broken image', async () => {
+    const image = 'https://assets.grok.com/users/user/generated/image/image.jpg';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('denied', { status: 403 })));
+    vi.mocked(chrome.scripting.executeScript).mockResolvedValue([{ frameId: 0, result: 'data:image/jpeg;base64,AQID' }]);
+    const grok = { tab: { id: 8, url: 'https://grok.com/c/test' }, url: 'https://grok.com/c/test', frameId: 0 } as chrome.runtime.MessageSender;
+    expect(await handleImageRequest(image, grok)).toBe('data:image/jpeg;base64,AQID');
+    expect(chrome.scripting.executeScript).toHaveBeenCalledWith(expect.objectContaining({ target: { tabId: 8 }, world: 'MAIN', args: [image, true] }));
+  });
+
   it('reads actual response bytes without cookies or redirects', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { headers: { 'Content-Type': 'image/png' } }));
     vi.stubGlobal('fetch', fetchMock);

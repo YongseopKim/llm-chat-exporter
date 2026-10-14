@@ -144,6 +144,23 @@ describe('ChatGPT rich response rendering', () => {
     expect((await parser.readConversation()).artifacts![0].content).toContain('Updated report');
   });
 
+  it('reads sources for all mounted rich answers in one background request', async () => {
+    const first = node();
+    first.querySelector('[data-dil-message-id]')!.insertAdjacentHTML('beforeend', '<span data-d-component="popover-trigger">Sources</span>');
+    const second = first.parentElement!.cloneNode(true) as HTMLElement;
+    second.setAttribute('data-turn-key', 'second-turn');
+    second.querySelector('[data-dil-message-id]')!.setAttribute('data-dil-message-id', 'second-answer');
+    document.body.append(second);
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const source = { groups: [[{ title: 'Evidence', url: 'https://example.org/evidence' }]], warnings: [] };
+    vi.mocked(chrome.runtime.sendMessage).mockReset().mockResolvedValue({ success: true, ...source,
+      answers: { answer: source, 'second-answer': source } });
+    const result = await new ChatGPTParser().readConversation();
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(1);
+    expect(result.artifacts).toHaveLength(2);
+    for (const artifact of result.artifacts!) expect(artifact.content).toContain('https://example.org/evidence');
+  });
+
   it('writes popup source URLs into both the readable answer and its HTML artifact', async () => {
     const message = node();
     message.querySelector('[data-dil-message-id]')!.insertAdjacentHTML('beforeend',

@@ -18,6 +18,7 @@ export async function readClaudeVisualizations(calls: Call[]): Promise<{
   const frames = () => Array.from(document.querySelectorAll<HTMLIFrameElement>('iframe[title^="visualize:"]'));
   const signature = () => Array.from(document.querySelectorAll('[role="article"][aria-posinset]')).map(e => e.getAttribute('aria-posinset')).join(',');
   const scrolls = Array.from(document.querySelectorAll<HTMLElement>('div')).filter(e => e.scrollHeight > e.clientHeight && /auto|scroll/.test(getComputedStyle(e).overflowY)).map(element => ({ element, top: element.scrollTop }));
+  const previousFocus = document.activeElement as HTMLElement | null;
   const names = new Set<string>();
   try {
     for (const call of calls.filter(c => c.name?.startsWith('visualize') && !/read_me$/.test(c.name))) {
@@ -36,6 +37,14 @@ export async function readClaudeVisualizations(calls: Call[]): Promise<{
             .find(e => /^(?:Load earlier messages|Load later messages)$/.test(e.textContent?.trim() || ''));
           if (!control || !title) break;
           const previous = signature();
+          // Claude mounts the adjacent range on focus, including its sr-only
+          // pagination controls. HTMLElement.click() alone does not focus.
+          control.focus({ preventScroll: true });
+          // In an inactive browser window Chrome changes activeElement without
+          // delivering focus events. Notify the virtual list in that case too.
+          if (!document.hasFocus() && control.isConnected) {
+            control.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+          }
           control.click();
           await waitForDom(() => signature() !== previous || frames().some(e => normalize(e.title) === normalize(title)) ? true : null);
         }
@@ -71,7 +80,10 @@ export async function readClaudeVisualizations(calls: Call[]): Promise<{
       }
     }
   } finally {
-    if (document.location.href === originalUrl) scrolls.forEach(({ element, top }) => { if (element.isConnected) element.scrollTop = top; });
+    if (document.location.href === originalUrl) {
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+      scrolls.forEach(({ element, top }) => { if (element.isConnected) element.scrollTop = top; });
+    }
   }
   return { markers, artifacts, warnings };
 }

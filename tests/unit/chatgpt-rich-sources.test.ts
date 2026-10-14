@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { readRichSources, collectRichSources } from '../../src/chatgpt-rich-sources';
+import { readRichSources, readRichSourcesBatch, collectRichSources } from '../../src/chatgpt-rich-sources';
 
 // Schema observed in the user's conversation API on 2026-10-09. The source
 // component's state.items carries titles and URLs absent from popup buttons.
@@ -59,7 +59,32 @@ it('rejects a missing answer and HTTP errors without leaking response bodies', a
 });
 
 it('uses MAIN only for the requested tab and answer', async () => {
-  vi.mocked(chrome.scripting.executeScript).mockResolvedValue([{ frameId: 0, result: { groups: [[release]], warnings: [] } }]);
+  vi.mocked(chrome.scripting.executeScript).mockResolvedValue([{ frameId: 0, result: { answer: { groups: [[release]], warnings: [] } } }]);
   expect(await collectRichSources(7, 'answer')).toEqual({ groups: [[release]], warnings: [] });
-  expect(chrome.scripting.executeScript).toHaveBeenCalledWith({ target: { tabId: 7 }, world: 'MAIN', func: readRichSources, args: ['answer'] });
+  expect(chrome.scripting.executeScript).toHaveBeenCalledWith({ target: { tabId: 7 }, world: 'MAIN', func: readRichSourcesBatch, args: [['answer']] });
+});
+
+it('fetches the conversation once for mounted answers and keeps identical titles scoped to their answer', async () => {
+  const { fetch } = fixture();
+  const secondSources = [release, statement].map(source => ({ ...source, url: source.url + '/second' }));
+  const second = document.createElement('div'); second.setAttribute('data-dil-message-id', 'second');
+  second.innerHTML = '<button data-d-component="popover-trigger" aria-expanded="false">Sources</button>';
+  const trigger = second.querySelector('button')!;
+  trigger.onclick = () => {
+    const old = document.getElementById('second-popup');
+    if (old) { old.remove(); trigger.setAttribute('aria-expanded', 'false'); return; }
+    trigger.setAttribute('aria-expanded', 'true'); trigger.setAttribute('aria-controls', 'second-popup');
+    const popup = document.createElement('div'); popup.id = 'second-popup';
+    popup.innerHTML = secondSources.map(source => `<button data-d-component="pressable"><span data-d-weight="medium">${source.title}</span></button>`).join('');
+    document.body.append(popup);
+  };
+  document.body.append(second);
+  const entry = (items: typeof secondSources) => ({ message: { metadata: { model_dil_v2: { appData: { opGenui: { componentResults: { result: { state: { items } } } } } } } } });
+  fetch.mockReset().mockResolvedValueOnce({ ok: true, json: async () => ({ accessToken: 'fixture-token' }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ mapping: { answer: entry([release, statement]), second: entry(secondSources) } }) });
+  const result = await readRichSourcesBatch(['answer', 'second']);
+  expect(fetch).toHaveBeenCalledTimes(2); // Session and conversation, independent of answer count.
+  expect(result.answer).toEqual({ groups: [[release, statement]], warnings: [] });
+  expect(result.second).toEqual({ groups: [secondSources], warnings: [] });
+  expect(JSON.stringify(result)).not.toContain('fixture-token');
 });
