@@ -208,7 +208,7 @@ function getClaudeConversation(): unknown {
           { type: 'thinking', thinking: 'hidden reasoning' },
           { type: 'tool_use', name: 'web_search', input: { query: 'arc finality' } },
           { type: 'tool_result', name: 'web_search', content: [] },
-          { type: 'tool_use', name: 'visualize', input: { title: 'Treasury flow' } },
+          { type: 'tool_use', name: 'visualize:read_me', input: {} },
           {
             type: 'text',
             text: answer,
@@ -687,7 +687,6 @@ describe('E2E: Export Flow', () => {
         {
           role: 'assistant',
           content:
-            '[Visualization omitted: Treasury flow]\n\n' +
             'Arc settles in one block. [1][2]\n\n' +
             '[1]: https://primary.example/report "Primary report"\n' +
             '[2]: https://second.example/article "Second article"',
@@ -779,6 +778,113 @@ describe('E2E: Export Flow', () => {
       page.off('request', intercept);
       await page.setRequestInterception(false);
     }
+  }, 30000);
+
+  it('keeps a current ChatGPT image-only answer after virtualization revokes its blob', async () => {
+    const url = 'https://chatgpt.com/c/e2e-generated-blob';
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+    const html = `<!doctype html><html><head><style>#chat{height:400px;overflow-y:auto}#history{height:1000px}</style></head><body><main><div class="thread-scroll-container" id="chat"><div id="history"></div></div></main><script>
+      const chat=document.getElementById('chat'),history=document.getElementById('history');let blob=null;
+      function mount(){
+        if(chat.scrollTop>250){if(blob){URL.revokeObjectURL(blob);blob=null;}history.innerHTML='<div data-turn-key="last"><div data-content-search-unit-key="t:0:user"><div class="whitespace-pre-wrap">Next question</div></div><div data-content-search-unit-key="t:2:assistant"><div class="markdown">Next answer</div></div></div>';}
+        else {if(!blob)blob=URL.createObjectURL(new Blob([Uint8Array.from(atob('${png}'),c=>c.charCodeAt(0))],{type:'image/png'}));history.innerHTML='<div data-turn-key="first"><div data-content-search-unit-key="t:0:user"><div class="whitespace-pre-wrap">Draw it</div></div><div><h4 class="sr-only" data-conversation-role="assistant">Answer</h4><div data-chatgpt-search-message-ids="generated"><button data-testid="generated-image-preview"><img alt="Original image" src="'+blob+'"></button></div></div></div>';}
+      }chat.addEventListener('scroll',mount);chat.scrollTop=600;mount();
+    </script></body></html>`;
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.url() === url) void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: html });
+      else void request.abort();
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(url, { waitUntil: 'load' });
+      const response = await exportCurrentPage(browser, url);
+      expect(response.success, response.error).toBe(true);
+      const records = response.data!.split('\n').map(line => JSON.parse(line));
+      expect(records.slice(1).map(r => r.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
+      expect(records[2].content).toBe(`![Original image](data:image/png;base64,${png})`);
+      expect(records[0].warnings).toBeUndefined();
+    } finally { page.off('request', intercept); await page.setRequestInterception(false); }
+  }, 30000);
+
+  it('exports Grok generated images as offline image bytes through the loaded extension', async () => {
+    const url = 'https://grok.com/c/e2e-generated-image';
+    const imageUrl = 'https://assets.grok.com/users/test/generated/diagram/image.jpg';
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+    const worker = (await (await browser.waitForTarget(t => t.type() === 'service_worker')).worker())!;
+    await worker.evaluate((imageUrl, png) => {
+      const original = globalThis.fetch;
+      (globalThis as any).__restoreGrokImage = () => { globalThis.fetch = original; };
+      globalThis.fetch = (async (input: RequestInfo | URL, options?: RequestInit) => {
+        if (String(input) !== imageUrl) return original(input, options);
+        if (options?.credentials !== 'omit' || options.redirect !== 'error') throw new Error('Unsafe image fetch');
+        return new Response(Uint8Array.from(atob(png), c => c.charCodeAt(0)), { headers: { 'Content-Type': 'image/png' } });
+      }) as typeof fetch;
+    }, imageUrl, png);
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.url() === url) void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: `<!doctype html><html><body><main><div id="response-image"><div class="message-bubble" data-testid="assistant-message"><p>Original diagram</p><img src="${imageUrl}" alt="Participants"></div><button aria-label="Regenerate"></button></div></main></body></html>` });
+      else if (request.url() === imageUrl) void request.respond({ status: 200, contentType: 'image/png', body: Buffer.from(png, 'base64') });
+      else void request.abort();
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(url, { waitUntil: 'load' });
+      const response = await exportCurrentPage(browser, url);
+      expect(response.success, response.error).toBe(true);
+      const records = response.data!.split('\n').map(line => JSON.parse(line));
+      expect(records[1].content).toContain(`![Participants](data:image/png;base64,${png})`);
+      expect(records[0].warnings).toBeUndefined();
+    } finally {
+      await worker.evaluate(() => { (globalThis as any).__restoreGrokImage(); delete (globalThis as any).__restoreGrokImage; });
+      page.off('request', intercept); await page.setRequestInterception(false);
+    }
+  }, 30000);
+
+  it('captures only the requested Claude widget from identical proxy URLs and renders SVG offline', async () => {
+    const proxy = 'https://test.claudemcpcontent.com/mcp_apps';
+    const data = getClaudeConversation() as any;
+    data.chat_messages[1].content = [
+      { type: 'text', text: 'Before' },
+      { type: 'tool_use', name: 'visualize:read_me', input: {} },
+      { type: 'tool_use', name: 'visualize:show_widget', input: { title: 'payment_flow' } },
+      { type: 'text', text: 'After' },
+    ];
+    const widget = '<style>.node rect{fill:rgb(232,218,255)}.node text{font-size:14px;fill:rgb(50,40,60)}</style><svg width="0" height="0"><defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9"/></marker></defs></svg><div id="vis-container"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 400"><g class="node" onclick="sendPrompt()"><rect x="40" y="60" width="160" height="56"/><text x="120" y="78">Original diagram</text></g><line x1="258" y1="88" x2="204" y2="88" marker-end="url(#arrow)"/><script>window.unsafe=1</script></svg></div>';
+    const root = getClaudeHtml().replace('</body>', `<iframe title="visualize: Other widget" name="other" src="${proxy}" onload="this.contentWindow.postMessage('Other diagram','https://test.claudemcpcontent.com')"></iframe><button id="earlier">Load earlier messages</button><script>
+      document.getElementById('earlier').onclick=function(){this.remove();const article=document.createElement('div');article.setAttribute('role','article');article.setAttribute('aria-posinset','0');document.body.append(article);const f=document.createElement('iframe');f.title='visualize: Payment flow';f.name='original';f.onload=()=>f.contentWindow.postMessage(${JSON.stringify(widget).replace(/</g, '\\u003c')},'https://test.claudemcpcontent.com');f.src='${proxy}';document.body.append(f);};
+    </script></body>`);
+    await page.setRequestInterception(true);
+    const intercept = (request: HTTPRequest) => {
+      if (request.url() === CLAUDE_URL) void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: root });
+      else if (new URL(request.url()).pathname === CLAUDE_API_PATH) void request.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
+      else if (request.url() === proxy) void request.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: '<!doctype html><html><body><iframe sandbox="allow-scripts allow-same-origin"></iframe><script>addEventListener("message",e=>{if(typeof e.data!=="string")return;const d=document.querySelector("iframe").contentDocument;d.open();d.write(e.data);d.close();});</script></body></html>' });
+      else void request.abort();
+    };
+    page.on('request', intercept);
+    try {
+      await page.goto(CLAUDE_URL, { waitUntil: 'load' });
+      const response = await exportCurrentPage(browser, CLAUDE_URL);
+      expect(response.success, response.error).toBe(true);
+      const records = response.data!.split('\n').map(line => JSON.parse(line));
+      expect(records[0].warnings).toBeUndefined();
+      expect(records.find(r => r.role === 'assistant').content).toBe('Before\n\n[Artifact: payment_flow.html]\n\nAfter');
+      const artifacts = records.filter(r => r._artifact);
+      expect(artifacts).toHaveLength(1);
+      expect(artifacts[0].content).toContain('Original diagram');
+      expect(artifacts[0].content).not.toContain('Other diagram');
+      expect(artifacts[0].content).not.toContain('onclick');
+      expect(artifacts[0].content).not.toContain('<script');
+      expect(await page.$eval('iframe[title="visualize: Payment flow"]', e => e.getAttribute('name'))).toBe('original');
+      const preview = await browser.newPage();
+      try {
+        await preview.setOfflineMode(true);
+        await preview.setContent(artifacts[0].content);
+        expect(await preview.$eval('rect', e => getComputedStyle(e).fill)).toBe('rgb(232, 218, 255)');
+        expect(await preview.$eval('line', e => e.getAttribute('marker-end'))).toBe('url(#arrow)');
+        expect(await preview.$('#arrow')).not.toBeNull();
+      } finally { await preview.close(); }
+    } finally { page.off('request', intercept); await page.setRequestInterception(false); }
   }, 30000);
 
   // The command/download layer is covered by background utility tests; the

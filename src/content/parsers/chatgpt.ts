@@ -23,6 +23,7 @@ import { readCitationSources, writeCitationSources, CitationStructureError, type
 import type { ScrollOptions } from '../scroller';
 import type { ProjectInfo, Conversation, ArtifactData } from './interface';
 import type { RichSources } from '../../chatgpt-rich-sources';
+import { inlineImages } from '../converter';
 import { DIL_SELECTOR, normalizeDil, captureDilHtml } from './chatgpt-dil';
 
 /**
@@ -95,12 +96,20 @@ export class ChatGPTParser extends BaseParser {
   protected override getNodesWithFallback(): HTMLElement[] {
     const root = this.getConversationRoot();
     const { primary, fallbacks = [] } = this.selectors.messages;
+    let messages: HTMLElement[] = [];
     for (const selector of [primary, ...fallbacks]) {
       if (!selector) continue;
       const nodes = Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(node => this.isRendered(node));
-      if (nodes.length) return nodes;
+      if (nodes.length) { messages = nodes; break; }
     }
-    return [];
+    // Current generated answers have an assistant heading but no search-unit
+    // wrapper. Keep the heading's own answer container, never the whole pair.
+    for (const heading of root.querySelectorAll('[data-conversation-role="assistant"]')) {
+      const answer = heading.parentElement;
+      if (!answer || !this.isRendered(answer) || !answer.querySelector('[data-testid="generated-image-preview"] img[src]')) continue;
+      if (!messages.some(node => node.contains(answer) || answer.contains(node))) messages.push(answer);
+    }
+    return messages.sort((a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
   }
 
   /** Conversation order of every collected key, oldest first */
@@ -114,6 +123,7 @@ export class ChatGPTParser extends BaseParser {
   private readonly richSources = new Map<string, RichSources>();
 
   private readonly renderedAnswers = new Map<string, ArtifactData>();
+  private readonly imageCache = new Map<string, Promise<string | null>>();
 
   override async readConversation(): Promise<Conversation> {
     const conversation = await super.readConversation();
@@ -142,6 +152,7 @@ export class ChatGPTParser extends BaseParser {
 
   /** The current DOM stores each message's role at the end of its unit key. */
   protected override extractRole(node: HTMLElement): 'user' | 'assistant' {
+    if (node.querySelector('[data-conversation-role="assistant"]') && node.querySelector('[data-testid="generated-image-preview"]')) return 'assistant';
     const unitKey = node.getAttribute('data-content-search-unit-key');
     if (unitKey) {
       const role = unitKey.match(/:(user|assistant)$/)?.[1];
@@ -161,6 +172,7 @@ export class ChatGPTParser extends BaseParser {
     this.conversationRoot = this.getConversationRoot();
     this.collected.clear();
     this.renderedAnswers.clear();
+    this.imageCache.clear();
     this.richSources.clear();
     this.order = [];
     this.citationSources.clear();
@@ -298,6 +310,11 @@ export class ChatGPTParser extends BaseParser {
       }
       keys.push(key);
       const snapshot = node.cloneNode(true) as HTMLElement;
+      // A generated blob URL can be revoked when its answer unmounts. Read its
+      // bytes while mounted, before the scroll walk detaches this window.
+      if (snapshot.querySelector('img[src^="blob:"]')) {
+        snapshot.innerHTML = await inlineImages(snapshot.innerHTML, { cache: this.imageCache, warnings: this.loadingWarnings });
+      }
       const richAnswers = Array.from(node.querySelectorAll<HTMLElement>(DIL_SELECTOR));
       for (const [index, rich] of richAnswers.entries()) {
         const id = rich.getAttribute('data-dil-message-id') || `${key}-${index}`;
@@ -396,6 +413,12 @@ export class ChatGPTParser extends BaseParser {
    * @returns A key, or null when the node cannot be identified
    */
   private getTurnKey(node: HTMLElement): string | null {
+    if (node.querySelector('[data-testid="generated-image-preview"]') && !node.hasAttribute('data-content-search-unit-key')) {
+      const id = node.querySelector('[data-chatgpt-search-message-ids]')?.getAttribute('data-chatgpt-search-message-ids')?.trim();
+      const pair = node.closest('[data-turn-key]')?.getAttribute('data-turn-key');
+      if (id) return `image:${id}`;
+      if (pair) return `turn:${pair}:image`;
+    }
     const unitKey = node.getAttribute('data-content-search-unit-key');
     if (unitKey) {
       // One data-turn-key now wraps both messages. The unit's position and

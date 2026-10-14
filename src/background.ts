@@ -8,12 +8,28 @@ import { collectRichSources } from './chatgpt-rich-sources';
 import { collectResearchFrames } from './research-frames';
 import { collectClaudeDoc } from './claude-doc-frames';
 import { handleImageRequest } from './image-assets';
+import { collectClaudeVisualization } from './claude-visualization-frames';
 import {
   executeVersionedContentScript,
   type ExportResponse,
 } from './content-script-loader';
 
 declare const __LLM_CHAT_EXPORTER_BUILD_ID__: string;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type !== 'READ_CLAUDE_VISUALIZATION') return false;
+  if (!sender.tab?.id || !sender.tab.url || !sender.url || sender.frameId !== 0
+      || new URL(sender.url).origin !== 'https://claude.ai' || new URL(sender.tab.url).origin !== 'https://claude.ai'
+      || typeof message.frameName !== 'string' || typeof message.frameUrl !== 'string') {
+    sendResponse({ success: false, error: 'Visualizations must be requested by the Claude conversation.' });
+    return false;
+  }
+  collectClaudeVisualization(sender.tab.id, message.frameName, message.frameUrl).then(
+    html => sendResponse({ success: true, html }),
+    error => sendResponse({ success: false, error: error.message }),
+  );
+  return true;
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== 'READ_EXPORT_IMAGE') return false;

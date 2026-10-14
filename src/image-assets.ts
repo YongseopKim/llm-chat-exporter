@@ -1,8 +1,8 @@
-/** The only foreign image origin currently emitted by the ChatGPT page. */
+/** Image CDNs observed on the supported chat pages. */
 export function isRemoteImageUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.origin === 'https://images.openai.com' && !url.username && !url.password;
+    return ['https://images.openai.com', 'https://assets.grok.com'].includes(url.origin) && !url.username && !url.password;
   } catch {
     return false;
   }
@@ -57,13 +57,14 @@ export async function readRemoteImage(url: string): Promise<string> {
   }
 }
 
-/** Only the top-level ChatGPT page may use its image CDN permission. */
+/** Only a provider's own top-level page may use its image CDN permission. */
 export async function handleImageRequest(url: unknown, sender: chrome.runtime.MessageSender): Promise<string> {
   if (typeof url !== 'string' || !sender.tab?.id || sender.frameId !== 0
       || !sender.url || !sender.tab.url
-      || new URL(sender.url).origin !== 'https://chatgpt.com'
-      || new URL(sender.tab.url).origin !== 'https://chatgpt.com') {
-    throw new Error('Images must be requested by the ChatGPT conversation');
+      || new URL(sender.url).origin !== new URL(sender.tab.url).origin
+      || !isRemoteImageUrl(url)
+      || ({ 'https://chatgpt.com': 'https://images.openai.com', 'https://grok.com': 'https://assets.grok.com' } as Record<string, string>)[new URL(sender.url).origin] !== new URL(url).origin) {
+    throw new Error('Images must be requested by the matching ChatGPT or Grok conversation');
   }
   return readRemoteImage(url);
 }

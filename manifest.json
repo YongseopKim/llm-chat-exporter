@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LLM Chat Exporter",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "description": "ChatGPT, Claude, Gemini, Grok, Perplexity, Surf 대화를 JSONL로 저장",
 
   "icons": {
@@ -18,8 +18,10 @@
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://images.openai.com/*",
+    "https://assets.grok.com/*",
     "https://claude.ai/*",
     "https://*.frame.claudeusercontent.com/*",
+    "https://*.claudemcpcontent.com/*",
     "https://gemini.google.com/*",
     "https://grok.com/*",
     "https://www.perplexity.ai/*",

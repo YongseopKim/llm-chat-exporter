@@ -155,6 +155,39 @@ describe('ClaudeParser', () => {
   });
 
   describe('readConversation', () => {
+    it('preserves a displayed visualization as an HTML artifact at the original point in the answer', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation({ chat_messages: [
+        message({ uuid: 'h0', content: [text('Draw it')] }),
+        message({ uuid: 'a1', sender: 'assistant', parent_message_uuid: 'h0', content: [
+          { type: 'tool_use', name: 'visualize:read_me', input: {} },
+          text('Before'),
+          { type: 'tool_use', id: 'widget-1', name: 'visualize:show_widget', input: { title: 'payment_flow' } },
+          text('After'),
+        ] }),
+      ] }) } });
+      document.body.innerHTML = '<iframe title="visualize: Payment flow" src="https://test.claudemcpcontent.com/mcp_apps" name="original-frame"></iframe>';
+      vi.mocked(chrome.runtime.sendMessage).mockResolvedValue({ success: true, html: '<!doctype html><html><body><svg><text>Original diagram</text></svg></body></html>' });
+      const result = await parser.readConversation();
+      expect(result.messages[1].contentMarkdown).toBe('Before\n\n[Artifact: payment_flow.html]\n\nAfter');
+      expect(result.artifacts).toEqual([expect.objectContaining({ title: 'payment_flow.html', version: 'rendered', content: expect.stringContaining('Original diagram') })]);
+      expect(document.querySelector('iframe')!.name).toBe('original-frame');
+      expect(result.warnings).toEqual([]);
+    });
+
+    it('keeps the text and reports a failed visualization capture without changing the frame', async () => {
+      mockFetch({ [conversationPath]: { status: 200, body: conversation({ chat_messages: [
+        message({ uuid: 'h0', content: [text('Draw it')] }),
+        message({ uuid: 'a1', sender: 'assistant', parent_message_uuid: 'h0', content: [text('Before'), { type: 'tool_use', name: 'visualize:show_widget', input: { title: 'payment_flow' } }, text('After')] }),
+      ] }) } });
+      document.body.innerHTML = '<iframe title="visualize: Payment flow" src="https://test.claudemcpcontent.com/mcp_apps"></iframe>';
+      vi.mocked(chrome.runtime.sendMessage).mockResolvedValue({ success: false, error: 'Frame unavailable' });
+      const result = await parser.readConversation();
+      expect(result.messages[1].contentMarkdown).toBe('Before\n\n[Visualization unavailable: payment_flow]\n\nAfter');
+      expect(result.artifacts).toEqual([]);
+      expect(result.warnings).toEqual([expect.stringContaining('Frame unavailable')]);
+      expect(document.querySelector('iframe')!.hasAttribute('name')).toBe(false);
+    });
+
     it('exports a generated Markdown file report and preserves its tables and sources', async () => {
       mockFetch({ [conversationPath]: { status: 200, body: conversation() } });
       global.document.body.innerHTML = `<div data-sheet-kind="markdown"><button data-testid="file-card-open" aria-label="View File report"></button></div>
@@ -457,7 +490,7 @@ describe('ClaudeParser', () => {
       );
     });
 
-    it('marks a visualization where it was drawn', async () => {
+    it('keeps an unavailable visualization marker at its original position and warns', async () => {
       mockFetch({
         [conversationPath]: {
           status: 200,
@@ -479,11 +512,12 @@ describe('ClaudeParser', () => {
         },
       });
 
-      const { messages } = await parser.readConversation();
+      const { messages, warnings } = await parser.readConversation();
 
       expect(messages[1].contentMarkdown).toBe(
-        'Here is the flow:\n\n[Visualization omitted: Payment flow]\n\nIt settles in one block.'
+        'Here is the flow:\n\n[Visualization unavailable: Payment flow]\n\nIt settles in one block.'
       );
+      expect(warnings).toEqual([expect.stringContaining('could not preserve visualization')]);
     });
 
     it('rebuilds the latest artifact from its create and update commands', async () => {

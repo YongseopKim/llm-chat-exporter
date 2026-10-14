@@ -6,6 +6,15 @@ const sender = { tab: { id: 7, url: 'https://chatgpt.com/c/test' }, url: 'https:
 afterEach(() => vi.unstubAllGlobals());
 
 describe('external image reader', () => {
+  it('embeds Grok generated image bytes only for the Grok top-level conversation', async () => {
+    const image = 'https://assets.grok.com/users/user/generated/image/image.jpg';
+    const grok = { tab: { id: 8, url: 'https://grok.com/c/test' }, url: 'https://grok.com/c/test', frameId: 0 } as chrome.runtime.MessageSender;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { headers: { 'Content-Type': 'image/jpeg' } })));
+    expect(await handleImageRequest(image, grok)).toBe('data:image/jpeg;base64,AQID');
+    await expect(handleImageRequest(image, sender)).rejects.toThrow();
+    await expect(handleImageRequest(url, grok)).rejects.toThrow();
+  });
+
   it('reads actual response bytes without cookies or redirects', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { headers: { 'Content-Type': 'image/png' } }));
     vi.stubGlobal('fetch', fetchMock);

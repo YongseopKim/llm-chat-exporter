@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatGPTParser } from '../../../src/content/parsers/chatgpt';
 import { createDOMFromHTML } from './shared/fixtures';
 import { buildJsonl } from '../../../src/content/serializer';
@@ -45,8 +45,25 @@ describe('ChatGPTParser - current ChatGPT DOM', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     global.document = originalDocument;
     global.window = originalWindow;
+  });
+
+  // Reduced from the user's 2026-10-14 conversation: the image answer has
+  // an assistant heading and a message ID, but no search-unit wrapper.
+  it('keeps an image-only assistant answer between current text turns without duplicating either prompt', async () => {
+    document.body.innerHTML = `${pair('before', 0)}<div data-turn-key="image-turn">
+      <div data-content-search-unit-key="t:0:user"><div data-user-message-bubble><div class="whitespace-pre-wrap">Draw the participants</div></div></div>
+      <div><h4 class="sr-only" data-conversation-role="assistant">ChatGPT answer:</h4>
+        <div data-chatgpt-search-message-ids="image-answer"><button data-testid="generated-image-preview"><img alt="Generated diagram" src="blob:https://chatgpt.com/generated"></button></div>
+      </div></div>${pair('after', 2)}`;
+    vi.spyOn(global, 'fetch').mockImplementation(async () => ({ ok: true, blob: async () => new Blob(['diagram'], { type: 'image/png' }) }) as Response);
+    const conversation = await new ChatGPTParser().readConversation();
+    expect(conversation.messages.map(m => m.role)).toEqual(['user', 'assistant', 'user', 'assistant', 'user', 'assistant']);
+    const rows = (await buildJsonl(conversation.messages, { platform: 'chatgpt', url: window.location.href, exported_at: '2026-10-14' })).split('\n').map(JSON.parse);
+    expect(rows[4].content).toContain('![Generated diagram](data:image/png;base64,');
+    expect(conversation.warnings).toEqual([]);
   });
 
   it('finds and reads each message in order with its full body', async () => {

@@ -42,6 +42,7 @@ import type {
 import { htmlToMarkdown } from '../converter';
 import { waitForDom } from './dom-wait';
 import { reportHtml, sourceLinksHtml } from './report-html';
+import { readClaudeVisualizations } from './claude-visualizations';
 
 const HOSTNAME = 'claude.ai';
 
@@ -331,7 +332,8 @@ function userMarkdown(message: ApiMessage): string {
 function assistantMarkdown(
   message: ApiMessage,
   artifacts: ArtifactHistory,
-  projectFiles: ProjectFile[]
+  projectFiles: ProjectFile[],
+  visualizations: Map<{ name?: string; input?: Record<string, unknown> }, string>
 ): string {
   const sources = new SourceList();
   const parts: string[] = [];
@@ -348,8 +350,8 @@ function assistantMarkdown(
     } else if (block.type === 'tool_use' && block.name === ARTIFACT_TOOL) {
       parts.push(`[Artifact: ${artifacts.apply(block.input)}]`);
     } else if (block.type === 'tool_use' && block.name?.startsWith(VISUALIZATION_TOOL_PREFIX)) {
-      const title = stringField(block.input, 'title');
-      parts.push(title ? `[Visualization omitted: ${title}]` : '[Visualization omitted]');
+      const marker = visualizations.get(block);
+      if (marker) parts.push(marker);
     } else if (block.type === 'tool_use' && block.name === QUESTION_TOOL) {
       parts.push(questionMarkdown(block.input, results.get(block.id ?? '')));
     } else if (block.type === 'tool_use' && block.name === PROJECT_TOOL) {
@@ -386,15 +388,18 @@ export class ClaudeParser implements ChatParser {
     const { org, conversation } = await this.fetchConversation(conversationId);
     const artifacts = new ArtifactHistory();
     const projectFiles: ProjectFile[] = [];
-    const messages: ParsedMessage[] = currentBranch(conversation).map((message) => ({
+    const branch = currentBranch(conversation);
+    const visualizations = await readClaudeVisualizations(branch.flatMap(message => message.sender === 'assistant'
+      ? (message.content ?? []).filter(block => block.type === 'tool_use') : []));
+    const messages: ParsedMessage[] = branch.map((message) => ({
       role: message.sender === 'human' ? 'user' : 'assistant',
       contentMarkdown:
         message.sender === 'human'
           ? userMarkdown(message)
-          : assistantMarkdown(message, artifacts, projectFiles),
+          : assistantMarkdown(message, artifacts, projectFiles, visualizations.markers),
       timestamp: message.created_at,
     }));
-    const warnings = this.compareWithPage(messages.length);
+    const warnings = [...this.compareWithPage(messages.length), ...visualizations.warnings];
     let artifact = artifacts.latest();
     if (!artifact?.content.trim()) {
       const rendered = await this.readRenderedDocument();
@@ -417,6 +422,7 @@ export class ClaudeParser implements ChatParser {
       title: conversation.name || undefined,
       project: await this.readProject(org, conversation.project_uuid),
       artifacts: [
+        ...visualizations.artifacts,
         ...(artifact ? [artifact] : []),
         ...(await this.readProjectFiles(org, conversation.project_uuid, projectFiles, warnings)),
       ],
