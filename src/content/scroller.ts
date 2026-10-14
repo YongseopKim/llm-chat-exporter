@@ -44,6 +44,12 @@ export interface ScrollOptions {
   /** Restrict discovery to the conversation being exported. */
   root?: HTMLElement;
 
+  /** Include newer virtualized turns even when export begins at the top or middle. */
+  startFromBottom?: boolean;
+
+  /** Reacquire a scroller replaced while a platform source drawer is opened. */
+  recoverContainer?: boolean;
+
   /**
    * Upper bound on how long a single scroll step may wait, in ms. Default: 400
    *
@@ -76,7 +82,7 @@ export interface ScrollOptions {
   stableSteps?: number;
 
   /**
-   * Called once before scrolling and after every step.
+   * Called at the start of the upward walk and after every step.
    *
    * Virtualized lists unmount messages as they leave the viewport, so a caller
    * that only reads the DOM at the end sees a single window of the
@@ -329,9 +335,9 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
     onWarning,
   } = options;
 
-  const container = findScrollContainer(contentSelector, options.root);
+  const foundContainer = findScrollContainer(contentSelector, options.root);
 
-  if (!container) {
+  if (!foundContainer) {
     window.scrollTo(0, 0);
     await onStep?.();
     await wait(timeout);
@@ -339,19 +345,32 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
     return;
   }
 
+  let container: HTMLElement = foundContainer;
+  const refreshContainer = () => {
+    if (container.isConnected) return;
+    const replacement = options.recoverContainer ? findScrollContainer(contentSelector, options.root) : null;
+    if (!replacement?.isConnected || (contentSelector && !replacement.querySelector(contentSelector))) {
+      throw new Error('The conversation scroll container changed during export. Please export again.');
+    }
+    container = replacement;
+  };
   const originalTop = container.scrollTop;
   const reversed =
     container.ownerDocument.defaultView?.getComputedStyle(container).flexDirection === 'column-reverse';
   const topBoundary = () => (reversed ? container.clientHeight - container.scrollHeight : 0);
   const atBeginning = () => container.scrollTop <= topBoundary() + 1;
 
-  // Snapshot before moving: the newest messages are mounted right now, and
-  // scrolling away can unmount them.
-  await onStep?.();
-
   let stable = 0;
   let reachedTop = false;
   try {
+    if (options.startFromBottom) {
+      container.scrollTop = reversed ? 0 : container.scrollHeight;
+      await waitForStable(container, quietPeriod, stepDelay, contentSelector);
+    }
+    // Start collection at the newest window when requested. Mixing an earlier
+    // initial window into a later bottom window would reverse their order.
+    await onStep?.();
+    refreshContainer();
     for (let step = 0; step < maxSteps; step++) {
       const previousTop = container.scrollTop;
       const previousHeight = container.scrollHeight;
@@ -362,6 +381,7 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
       container.scrollTop = Math.max(topBoundary(), from - pageSize * STEP_RATIO);
       await waitForStable(container, quietPeriod, stepDelay, contentSelector);
       await onStep?.();
+      refreshContainer();
 
       // A quiet DOM is not a completed server request. ChatGPT keeps a loading
       // status at the top while older turns are still being fetched.
@@ -373,6 +393,7 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
           }
           await wait(Math.min(100, loadTimeout));
           await onStep?.();
+          refreshContainer();
         }
       }
 
@@ -403,6 +424,7 @@ export async function scrollToLoadAll(options: ScrollOptions = {}): Promise<void
       onWarning?.(warning);
     }
   } finally {
+    refreshContainer();
     container.scrollTop = originalTop;
     await waitForStable(container, quietPeriod, stepDelay, contentSelector);
     await onStep?.();

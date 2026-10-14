@@ -162,6 +162,25 @@ function getVirtualizedGrokHtml(): string {
   </script></body></html>`;
 }
 
+/** A source drawer remounts the conversation while the exporter holds its old scroller. */
+function getReplacedGrokHtml(): string {
+  return getVirtualizedGrokHtml().replace('const chat =', 'let chat =').replace('const history =', 'let history =')
+    .replace('chat.scrollTop=2500', 'chat.scrollTop=1000')
+    .replace('    }\n    chat.addEventListener', `
+      const message = history.querySelector('#response-3 .message-bubble');
+      if (message) {
+        const trigger = document.createElement('span'); trigger.setAttribute('role','button');trigger.setAttribute('aria-label','1 source');trigger.textContent='Sources';message.append(trigger);
+        trigger.onclick=()=>{
+          const drawer=document.createElement('aside');drawer.innerHTML='<button aria-label="Close">Close</button><h3><button aria-expanded="true" aria-controls="source-panel">Sources</button></h3><div id="source-panel"><a href="https://example.org/original">Original evidence</a></div>';document.body.append(drawer);
+          drawer.querySelector('[aria-label="Close"]').onclick=()=>{
+            drawer.remove();const top=chat.scrollTop;const replacement=chat.cloneNode(true);chat.replaceWith(replacement);chat=replacement;history=chat.querySelector('#history');chat.addEventListener('scroll',mount);chat.scrollTop=top;mount();
+          };
+        };
+      }
+    }
+    chat.addEventListener`);
+}
+
 /**
  * A claude.ai page whose DOM holds no message bodies at all: the export must
  * come from the conversation API, which the content script requests with the
@@ -612,6 +631,9 @@ describe('E2E: Export Flow', () => {
   it.each([
     ['https://chatgpt.com/c/e2e-reverse-sources', getReverseChatGptHtml, 'chatgpt'],
     ['https://grok.com/c/e2e-virtualized-sources', getVirtualizedGrokHtml, 'grok'],
+    ['https://grok.com/c/e2e-from-top', () => getVirtualizedGrokHtml().replace('chat.scrollTop=2500', 'chat.scrollTop=0'), 'grok'],
+    ['https://grok.com/c/e2e-from-middle', () => getVirtualizedGrokHtml().replace('chat.scrollTop=2500', 'chat.scrollTop=1000'), 'grok'],
+    ['https://grok.com/c/e2e-replaced-scroller', getReplacedGrokHtml, 'grok'],
   ] as const)('should preserve all virtualized bodies and source links on %s', async (url, fixture, platform) => {
     await page.setRequestInterception(true);
     const intercept = (request: HTTPRequest) => {

@@ -137,12 +137,17 @@ export class GrokParser extends BaseParser {
     this.files.clear();
     this.imageCache.clear();
     this.order = [];
+    const exportUrl = document.location.href;
     await super.loadAllMessages({
       ...options,
+      startFromBottom: true,
+      recoverContainer: true,
       onStep: async () => {
+        if (document.location.href !== exportUrl) throw new Error('Grok: the conversation changed during export.');
         await this.convertAllMermaidToCodeBlocks();
         await this.snapshotMountedMessages();
         await options.onStep?.();
+        if (document.location.href !== exportUrl) throw new Error('Grok: the conversation changed during export.');
       },
     });
   }

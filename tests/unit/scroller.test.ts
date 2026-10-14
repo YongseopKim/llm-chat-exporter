@@ -264,6 +264,23 @@ describe('scrollToLoadAll', () => {
       expect(window.scrollTo).not.toHaveBeenCalled();
     });
 
+    it('continues in a replaced conversation scroller instead of treating the detached one as complete', async () => {
+      chat.innerHTML = '<p class="msg">Original messages</p>';
+      let replaced = false;
+      const seen: number[] = [];
+      await scrollToLoadAll({ stepDelay: 0, contentSelector: '.msg', recoverContainer: true,
+        onStep: () => {
+          if (!replaced) {
+            const next = chat.cloneNode(true) as HTMLElement;
+            makeScrollable(next, { scrollHeight: 8000, clientHeight: 800, scrollTop: 6000 });
+            chat.replaceWith(next); chat = next; replaced = true;
+          }
+          seen.push(chat.scrollTop);
+        },
+      });
+      expect(seen).toContain(0);
+    });
+
     it('reaches the top of the container', async () => {
       const reached: number[] = [];
       await scrollToLoadAll({ stepDelay: 0, onStep: () => reached.push(chat.scrollTop) });
