@@ -817,7 +817,8 @@ describe('E2E: Export Flow', () => {
       (globalThis as any).__restoreGrokImage = () => { globalThis.fetch = original; };
       globalThis.fetch = (async (input: RequestInfo | URL, options?: RequestInit) => {
         if (String(input) !== imageUrl) return original(input, options);
-        if (options?.credentials !== 'omit' || options.redirect !== 'error') throw new Error('Unsafe image fetch');
+        if (options?.credentials !== 'include') return new Response('denied', { status: 403 });
+        if (options.redirect !== 'error') throw new Error('Unsafe image redirect');
         return new Response(Uint8Array.from(atob(png), c => c.charCodeAt(0)), { headers: { 'Content-Type': 'image/png' } });
       }) as typeof fetch;
     }, imageUrl, png);

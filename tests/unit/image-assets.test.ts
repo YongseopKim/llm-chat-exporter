@@ -6,11 +6,15 @@ const sender = { tab: { id: 7, url: 'https://chatgpt.com/c/test' }, url: 'https:
 afterEach(() => vi.unstubAllGlobals());
 
 describe('external image reader', () => {
-  it('embeds Grok generated image bytes only for the Grok top-level conversation', async () => {
+  it('embeds authenticated Grok generated image bytes only for the Grok top-level conversation', async () => {
     const image = 'https://assets.grok.com/users/user/generated/image/image.jpg';
     const grok = { tab: { id: 8, url: 'https://grok.com/c/test' }, url: 'https://grok.com/c/test', frameId: 0 } as chrome.runtime.MessageSender;
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { headers: { 'Content-Type': 'image/jpeg' } })));
+    const fetchMock = vi.fn(async (_url: string, options?: RequestInit) => options?.credentials === 'include'
+      ? new Response(new Uint8Array([1, 2, 3]), { headers: { 'Content-Type': 'image/jpeg' } })
+      : new Response('denied', { status: 403 }));
+    vi.stubGlobal('fetch', fetchMock);
     expect(await handleImageRequest(image, grok)).toBe('data:image/jpeg;base64,AQID');
+    expect(fetchMock).toHaveBeenCalledWith(image, expect.objectContaining({ credentials: 'include', redirect: 'error' }));
     await expect(handleImageRequest(image, sender)).rejects.toThrow();
     await expect(handleImageRequest(url, grok)).rejects.toThrow();
   });

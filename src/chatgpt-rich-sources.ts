@@ -23,6 +23,7 @@ export async function readRichSources(id: string): Promise<RichSources> {
       return await response.json();
     } finally { clearTimeout(timer); }
   };
+  const started = performance.now();
   const session = await getJson('/api/auth/session');
   if (typeof session.accessToken !== 'string') throw new Error('ChatGPT: source session unavailable.');
   const conversation = await getJson(`/backend-api/conversation/${conversationId}`, session.accessToken);
@@ -39,6 +40,7 @@ export async function readRichSources(id: string): Promise<RichSources> {
     });
     if (sources.length === items.length) candidates.push(sources);
   }
+  const fetchedMs = Math.round(performance.now() - started);
   const groups: RichSources['groups'] = [];
   const warnings: string[] = [];
   const previousFocus = document.activeElement as HTMLElement | null;
@@ -76,6 +78,7 @@ export async function readRichSources(id: string): Promise<RichSources> {
     }
   }
   if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+  console.log(`LLM Chat Exporter: Rich sources (groups=${groups.length}, fetch=${fetchedMs}ms, popups=${Math.round(performance.now() - started - fetchedMs)}ms)`);
   return { groups, warnings };
 }
 

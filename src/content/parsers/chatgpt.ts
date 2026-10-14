@@ -123,6 +123,7 @@ export class ChatGPTParser extends BaseParser {
   private readonly richSources = new Map<string, RichSources>();
 
   private readonly renderedAnswers = new Map<string, ArtifactData>();
+  private readonly renderedSignatures = new Map<string, string>();
   private readonly imageCache = new Map<string, Promise<string | null>>();
 
   override async readConversation(): Promise<Conversation> {
@@ -172,6 +173,7 @@ export class ChatGPTParser extends BaseParser {
     this.conversationRoot = this.getConversationRoot();
     this.collected.clear();
     this.renderedAnswers.clear();
+    this.renderedSignatures.clear();
     this.imageCache.clear();
     this.richSources.clear();
     this.order = [];
@@ -346,11 +348,20 @@ export class ChatGPTParser extends BaseParser {
         };
         const clonedRich = snapshot.querySelectorAll<HTMLElement>(DIL_SELECTOR)[index];
         if (clonedRich) applySources(clonedRich);
-        this.renderedAnswers.set(id, { title, version: 'rendered', content: captureDilHtml(rich) });
-        // Preserve computed layout from the live answer, then replace only source badges.
-        const artifactDoc = new DOMParser().parseFromString(this.renderedAnswers.get(id)!.content, 'text/html');
-        applySources(artifactDoc.body);
-        this.renderedAnswers.get(id)!.content = '<!DOCTYPE html>\n' + artifactDoc.documentElement.outerHTML;
+        // The walk revisits mounted answers. Reuse their resolved layout only
+        // while content, viewport width, inherited theme and sources match.
+        const ancestors: string[] = [];
+        for (let parent = rich.parentElement; parent; parent = parent.parentElement) {
+          ancestors.push(`${parent.className}:${parent.getAttribute('style')}:${parent.getAttribute('data-theme')}`);
+        }
+        const signature = JSON.stringify([rich.outerHTML, rich.getBoundingClientRect().width,
+          ancestors, this.richSources.get(id)?.groups]);
+        if (this.renderedSignatures.get(id) !== signature) {
+          const artifactDoc = new DOMParser().parseFromString(captureDilHtml(rich), 'text/html');
+          applySources(artifactDoc.body);
+          this.renderedAnswers.set(id, { title, version: 'rendered', content: '<!DOCTYPE html>\n' + artifactDoc.documentElement.outerHTML });
+          this.renderedSignatures.set(id, signature);
+        }
         const marker = node.ownerDocument.createElement('p');
         marker.setAttribute('data-export-placeholder', '');
         marker.textContent = `[Artifact: ${title}]`;

@@ -81,7 +81,7 @@ npm run validate:selectors # 셀렉터 설정 검증
 ## 알려진 제한사항
 
 - DOM 구조 변경 시 셀렉터 업데이트 필요
-- 같은 출처 이미지, images.openai.com의 ChatGPT 이미지, assets.grok.com의 Grok 이미지는 Markdown과 HTML에 데이터 URI로 포함합니다(이미지당 최대 5 MiB). 지원하지 않는 출처나 저장 실패 시 URL을 유지하고 내보내기 경고를 남깁니다.
+- 같은 출처 이미지, images.openai.com의 ChatGPT 이미지, assets.grok.com의 Grok 이미지는 Markdown과 HTML에 데이터 URI로 포함합니다(이미지당 최대 5 MiB). Grok CDN 요청은 기존 로그인 세션을 사용하며 ChatGPT CDN 요청에는 쿠키를 보내지 않습니다. 지원하지 않는 출처나 저장 실패 시 URL을 유지하고 내보내기 경고를 남깁니다.
 - Claude 시각화는 표시된 SVG 또는 canvas와 스타일을 정적 HTML `_artifact` 줄로 저장합니다. 현재 화면을 보존하며, 대화로 연결되는 클릭 동작은 포함하지 않습니다. 읽지 못하면 자리 표시자와 경고를 남깁니다. 시각화 프레임을 읽으려면 `*.claudemcpcontent.com` 접근 권한이 필요합니다.
 - Claude artifact는 마지막 artifact의 최신 버전만 내보냄
 - Claude 대화 API에 Markdown 문서 원본이 없으면 문서 패널에서 읽습니다. 이때 `_artifact` 줄에 `version: "rendered"`를 기록하고 메타데이터에 경고를 남깁니다. 대화 메시지는 계속 API에서 읽습니다.

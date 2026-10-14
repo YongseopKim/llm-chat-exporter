@@ -33,6 +33,7 @@ declare global {
  * Reads the conversation through the platform's parser and serializes it
  */
 async function exportConversation(): Promise<ExportResponse> {
+  const started = performance.now();
   console.log('LLM Chat Exporter: Starting export...');
 
   const parser = ParserFactory.getParser(window.location.href);
@@ -47,6 +48,7 @@ async function exportConversation(): Promise<ExportResponse> {
   }
 
   const conversation = await parser.readConversation();
+  const readMs = Math.round(performance.now() - started);
 
   if (conversation.messages.length === 0) {
     throw new Error(
@@ -68,7 +70,7 @@ async function exportConversation(): Promise<ExportResponse> {
 
   const warnings: string[] = JSON.parse(jsonl.split('\n')[0]).warnings ?? [];
   for (const warning of warnings) console.warn(`LLM Chat Exporter: ${warning}`);
-  console.log('LLM Chat Exporter: Export complete');
+  console.log(`LLM Chat Exporter: Export complete (read=${readMs}ms, serialize=${Math.round(performance.now() - started - readMs)}ms, total=${Math.round(performance.now() - started)}ms)`);
   return {
     success: true,
     data: jsonl,

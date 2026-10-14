@@ -10,14 +10,14 @@ export function isRemoteImageUrl(value: string): boolean {
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** Fetch without page credentials. Reject redirects and bound the streamed body. */
+/** Grok generated images require its CDN session; public ChatGPT images do not. */
 export async function readRemoteImage(url: string): Promise<string> {
   if (!isRemoteImageUrl(url)) throw new Error('Unsupported external image origin');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const response = await fetch(url, {
-      credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer', signal: controller.signal,
+      credentials: new URL(url).origin === 'https://assets.grok.com' ? 'include' : 'omit', redirect: 'error', referrerPolicy: 'no-referrer', signal: controller.signal,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const mime = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();

@@ -11,7 +11,7 @@ A Chrome Extension that exports conversations from ChatGPT, Claude, Gemini, Grok
 ### Core Values
 
 - **Context Preservation**: Captures the complete web UI experience, not just raw API responses
-- **Local-First**: All processing happens in-browser; requests go to the chat site itself (Claude's conversation and project APIs, Grok's project file API, same-origin images), to the signed storage URL Grok's API returns for a project file, and to images.openai.com for ChatGPT or assets.grok.com for Grok image exports (without cookies). Claude visualizations are captured locally from their displayed frames.
+- **Local-First**: All processing happens in-browser; requests go to the chat site itself (Claude's conversation and project APIs, Grok's project file API, same-origin images), to the signed storage URL Grok's API returns for a project file, and to images.openai.com for ChatGPT or assets.grok.com for Grok image exports (Grok CDN requests use its existing session; ChatGPT CDN requests omit cookies). Claude visualizations are captured locally from their displayed frames.
 - **Data Ownership**: Your conversations stay on your machine permanently
 
 ### Use Cases

@@ -124,6 +124,26 @@ describe('ChatGPT rich response rendering', () => {
     expect(lines.at(-1).content).toBe(artifact.content);
     expect(lines[1].content).toContain(`[Artifact: ${artifact.title}]`);
   });
+  it('reuses unchanged mounted layouts and recaptures changed answers', async () => {
+    const message = node();
+    const rich = message.querySelector<HTMLElement>('[data-dil-message-id]')!;
+    const child = rich.querySelector('h1')!;
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const style = vi.spyOn(window, 'getComputedStyle');
+    const parser = new ChatGPTParser();
+    // The real scroller calls this at every mounted window, including restore.
+    const snapshot = () => (parser as unknown as { snapshotMountedMessages(): Promise<void> }).snapshotMountedMessages();
+    await snapshot();
+    const firstReads = style.mock.calls.filter(([element]) => element === child).length;
+    expect(firstReads).toBeGreaterThan(0);
+    await snapshot();
+    expect(style.mock.calls.filter(([element]) => element === child)).toHaveLength(firstReads);
+    rich.querySelector('h1')!.textContent = 'Updated report';
+    await snapshot();
+    expect(style.mock.calls.filter(([element]) => element === child)).toHaveLength(firstReads * 2);
+    expect((await parser.readConversation()).artifacts![0].content).toContain('Updated report');
+  });
+
   it('writes popup source URLs into both the readable answer and its HTML artifact', async () => {
     const message = node();
     message.querySelector('[data-dil-message-id]')!.insertAdjacentHTML('beforeend',
